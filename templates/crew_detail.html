@@ -39,14 +39,14 @@
   <article class="panel">
     <div class="section-heading">
       <p class="eyebrow">Inputs</p>
-      <h2>What she needs</h2>
+      <h2>What this station needs</h2>
     </div>
     <div class="tag-list">{% for item in member.inputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
   </article>
   <article class="panel">
     <div class="section-heading">
       <p class="eyebrow">Outputs</p>
-      <h2>What she returns</h2>
+      <h2>What this station returns</h2>
     </div>
     <div class="tag-list">{% for item in member.outputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
   </article>
@@ -57,6 +57,6 @@
     <p class="eyebrow">Operational contract</p>
     <h2>How to work with {{ member.name }}</h2>
   </div>
-  <p class="muted">Use {{ member.name }} when the mission reaches <strong>{{ member.workflow_stage }}</strong>. Feed her the inputs above, expect the outputs above, and use the watch-outs as review checks before moving to the next crew station.</p>
+  <p class="muted">Use {{ member.name }} when the mission reaches <strong>{{ member.workflow_stage }}</strong>. Feed this station the inputs above, expect the outputs above, and use the watch-outs as review checks before moving to the next crew station.</p>
 </section>
 {% endblock %}
