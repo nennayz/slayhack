@@ -1275,6 +1275,43 @@ def _project_options(root: Path) -> list[dict]:
     return options
 
 
+def _read_review_note(root: Path) -> dict | None:
+    review_root = root / "review"
+    if not review_root.exists():
+        return None
+    notes = sorted(
+        review_root.glob("crew_final_style_v*/review_notes.md"),
+        key=lambda path: (path.stat().st_mtime, str(path)),
+        reverse=True,
+    )
+    if not notes:
+        return None
+    path = notes[0]
+    title = path.parent.name.replace("_", " ").title()
+    return {
+        "title": title,
+        "path": str(path.relative_to(root)),
+        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+        "body": path.read_text(encoding="utf-8"),
+    }
+
+
+def _latest_learning_brief(root: Path) -> dict | None:
+    daily_dir = root / "docs" / "learning" / "daily"
+    if not daily_dir.exists():
+        return None
+    briefs = sorted(daily_dir.glob("*.md"), key=lambda path: path.stat().st_mtime, reverse=True)
+    if not briefs:
+        return None
+    path = briefs[0]
+    return {
+        "title": path.stem.replace("-", " ").title(),
+        "path": str(path.relative_to(root)),
+        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+        "body": path.read_text(encoding="utf-8"),
+    }
+
+
 def _build_voyage_steps(job) -> list[dict]:
     order = [step.stage for step in WORKFLOW_STEPS]
     current_index = order.index(job.stage) if job.stage in order else 0
@@ -1493,8 +1530,8 @@ def _owner_for_ticket(ticket_type: ProductionTicketType, pm_name: str) -> str:
     return {
         ProductionTicketType.ARTICLE: "Bella",
         ProductionTicketType.INFOGRAPHIC: "Lila",
-        ProductionTicketType.SHORT_VIDEO: "Video Producer",
-        ProductionTicketType.LONG_VIDEO: "Video Producer",
+        ProductionTicketType.SHORT_VIDEO: "Vera Reel",
+        ProductionTicketType.LONG_VIDEO: "Vera Reel",
         ProductionTicketType.COMMUNITY_POST: "Emma",
         ProductionTicketType.DISTRIBUTION_PACK: "Roxy",
     }.get(ticket_type, pm_name)
@@ -2243,7 +2280,7 @@ def _workflow_lanes() -> list[dict[str, object]]:
             "steps": [
                 "Mia scans signals",
                 "Market & Monetization validates business potential",
-                "Archivist checks duplicates",
+                "Sage Ledger checks duplicates",
                 "Nora reviews feasibility",
             ],
         },
@@ -2252,7 +2289,7 @@ def _workflow_lanes() -> list[dict[str, object]]:
             "mission_type": MissionType.CONTENT_CALENDAR_PLAN.value,
             "owner": "Slay",
             "steps": [
-                "PM sets daily goals",
+                "Slay sets daily goals",
                 "Zoe proposes angles",
                 "Robin creates tickets",
                 "Nora checks coverage",
@@ -2261,23 +2298,23 @@ def _workflow_lanes() -> list[dict[str, object]]:
         {
             "label": "Production",
             "mission_type": MissionType.PRODUCTION_BATCH.value,
-            "owner": "Video Producer",
+            "owner": "Vera Reel",
             "steps": [
                 "Bella writes words",
                 "Lila builds visual direction",
-                "Video Producer prepares scene timing and Veo3 package",
+                "Vera Reel prepares scene timing and Veo3 package",
                 "Roxy and Emma package release support",
             ],
         },
         {
             "label": "Learning",
             "mission_type": MissionType.PERFORMANCE_REVIEW.value,
-            "owner": "Growth Analyst",
+            "owner": "Iris Gauge",
             "steps": [
-                "Growth Analyst reads metrics",
+                "Iris Gauge reads metrics",
+                "Sage Ledger links tickets, assets, and lessons",
                 "Roxy interprets packaging",
-                "PM chooses scale, repair, or lesson",
-                "Archivist records learning",
+                "Slay chooses scale, repair, or lesson",
             ],
         },
     ]
@@ -2389,7 +2426,7 @@ def _cross_team_requests() -> list[CrossTeamRequest]:
             request_id="archive-duplicate-check",
             project="slay_hack",
             from_role="Slay",
-            to_role="Archivist",
+            to_role="Sage Ledger",
             question="Check Drive, Notion, and prior output for duplicate topics before production starts.",
         ),
     ]
@@ -2525,6 +2562,19 @@ def create_video_package_mission(ticket_id: str, request: Request, user: str = D
 @app.get("/aurora/crew", response_class=HTMLResponse)
 def aurora_crew(request: Request, _: str = Depends(verify_auth)):
     return templates.TemplateResponse(request, "crew.html", {"crew": CREW})
+
+
+@app.get("/aurora/learning", response_class=HTMLResponse)
+def aurora_learning(request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    return templates.TemplateResponse(
+        request,
+        "learning.html",
+        {
+            "latest_brief": _latest_learning_brief(root),
+            "review_note": _read_review_note(root),
+        },
+    )
 
 
 @app.get("/aurora/crew/{slug}", response_class=HTMLResponse)

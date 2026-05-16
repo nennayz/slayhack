@@ -804,6 +804,46 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border-radius: 999px;
   padding: 0.45rem 0.8rem;
 }
+.learning-meta {
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.75rem;
+}
+.learning-meta span {
+  overflow-wrap: anywhere;
+}
+.learning-meta em {
+  font-style: normal;
+}
+.learning-note {
+  background: rgba(16,35,63,0.04);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  margin: 0;
+  max-height: 620px;
+  overflow: auto;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
+.learning-gates {
+  display: grid;
+  gap: 0.65rem;
+}
+.learning-gates span {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.85rem;
+}
 .island-chip {
   background:
     linear-gradient(135deg, rgba(125,226,209,0.22), rgba(185,131,255,0.18)),

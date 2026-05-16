@@ -12,12 +12,12 @@ from fastapi.testclient import TestClient
 
 # Set env vars before dashboard is first imported in this process
 os.environ["DASHBOARD_USER"] = "admin"
-os.environ["DASHBOARD_PASSWORD"] = "secret"
+os.environ["DASHBOARD_PASSWORD"] = "8888"
 
 import dashboard as _dm  # noqa: E402
 
 
-def _auth(user: str = "admin", pw: str = "secret") -> dict:
+def _auth(user: str = "admin", pw: str = "8888") -> dict:
     token = base64.b64encode(f"{user}:{pw}".encode()).decode()
     return {"Authorization": f"Basic {token}"}
 
@@ -242,13 +242,15 @@ def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
     assert "Planning" in resp.text
     assert "Production" in resp.text
     assert "Learning" in resp.text
-    assert "Video Producer prepares scene timing and Veo3 package" in resp.text
+    assert "Vera Reel prepares scene timing and Veo3 package" in resp.text
+    assert "Iris Gauge reads metrics" in resp.text
+    assert "Sage Ledger links tickets, assets, and lessons" in resp.text
     assert "PM daily slate" in resp.text
     assert "Slay Hack" in resp.text
     assert "Minimum met" in resp.text
     assert "Production tickets" in resp.text
     assert "Long story episode" in resp.text
-    assert "Video Producer owns production" in resp.text
+    assert "Vera Reel owns production" in resp.text
     assert "Slay decides" in resp.text
     assert "primary youtube" in resp.text
     assert "Mission packages" in resp.text
@@ -256,7 +258,7 @@ def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
     assert f"/aurora/workflow/video-packages/{short_video_ticket_id}/create-mission" in resp.text
     assert "Short-form Veo3 package" in resp.text
     assert "Veo3 storyboard package" in resp.text
-    assert "Video Producer owns 3 scenes over 23 seconds for tiktok." in resp.text
+    assert "Vera Reel owns 3 scenes over 23 seconds for tiktok." in resp.text
     assert "0-5s" in resp.text
     assert "Keep pacing clear, character-led, and ready for generation." in resp.text
     assert "Bella confirms the spoken hook and CTA before generation." in resp.text
@@ -702,14 +704,34 @@ def test_aurora_crew_pages_render(client):
     assert crew.status_code == 200
     assert "Crew" in crew.text
     assert "Robin" in crew.text
+    assert "Slay" in crew.text
     assert "Vera Reel" in crew.text
+    assert "Iris Gauge" in crew.text
+    assert "Sage Ledger" in crew.text
     assert "Video Producer" in crew.text
+    assert "/static/crew/vera-reel.png" in crew.text
+    assert "/static/crew/slay.png" in crew.text
+    assert "/static/crew/iris-gauge.png" in crew.text
+    assert "/static/crew/sage-ledger.png" in crew.text
     assert "Mission command" in crew.text
     assert "Captain&#39;s Bridge" in crew.text
     assert detail.status_code == 200
     assert "Chief Officer" in detail.text
     assert "Operational contract" in detail.text
     assert "command coat" in detail.text
+    vera = client.get("/aurora/crew/video-producer", headers=_auth())
+    assert vera.status_code == 200
+    assert "camera harness" in vera.text
+    assert "/static/crew/vera-reel.png" in vera.text
+    slay = client.get("/aurora/crew/slay", headers=_auth())
+    assert slay.status_code == 200
+    assert "American superstar fashion PM" in slay.text
+    iris = client.get("/aurora/crew/iris-gauge", headers=_auth())
+    assert iris.status_code == 200
+    assert "lime-green underlight" in iris.text
+    sage = client.get("/aurora/crew/sage-ledger", headers=_auth())
+    assert sage.status_code == 200
+    assert "silver-lavender rope braid" in sage.text
 
 
 def test_aurora_all_crew_character_sheets_render(client):
@@ -727,6 +749,35 @@ def test_aurora_all_crew_character_sheets_render(client):
 def test_aurora_crew_detail_unknown_member_404(client):
     resp = client.get("/aurora/crew/unknown", headers=_auth())
     assert resp.status_code == 404
+
+
+def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, client):
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-16-character-art-learning-brief.md").write_text(
+        "# Daily Learning Brief\n\nMia needs a targeted review.\n"
+    )
+    review_dir = tmp_path / "review" / "crew_final_style_v7"
+    review_dir.mkdir(parents=True)
+    (review_dir / "review_notes.md").write_text(
+        "# Crew Final Style v7 Review Notes\n\nDo not overwrite static/crew yet.\n"
+    )
+    latest_review_dir = tmp_path / "review" / "crew_final_style_v8"
+    latest_review_dir.mkdir(parents=True)
+    (latest_review_dir / "review_notes.md").write_text(
+        "# Crew Final Style v8 Review Plan\n\nMia keeps the blue signal-scout direction.\n"
+    )
+
+    resp = client.get("/aurora/learning", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Aurora Learning Desk" in resp.text
+    assert "Daily Learning Brief" in resp.text
+    assert "Mia needs a targeted review." in resp.text
+    assert "Crew Final Style v8 Review Plan" in resp.text
+    assert "Mia keeps the blue signal-scout direction." in resp.text
+    assert "Live asset gate" in resp.text
+    assert "Deploy gate" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):
@@ -775,8 +826,16 @@ def test_placeholder_ship_pages_render(client):
     lyra = client.get("/lyra", headers=_auth())
     assert freedom.status_code == 200
     assert "Freedom Five" in freedom.text
+    assert "Nami" in freedom.text
+    assert "/static/crew/nami.png" in freedom.text
+    assert "privacy and memory boundaries" in freedom.text
     assert lyra.status_code == 200
     assert "Song voyage" in lyra.text
+    assert "Genie" in lyra.text
+    assert "/static/crew/genie.png" in lyra.text
+    assert "blonde American musician" in lyra.text
+    assert "electric guitar" in lyra.text
+    assert "music workflow data" in lyra.text
 
 
 def test_readiness_page_renders_private_preflight(tmp_path, client):

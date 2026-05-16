@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero compact-hero mission-hero">
+  <p class="eyebrow">Learning loop</p>
+  <h1>Aurora Learning Desk</h1>
+  <p class="hero-copy">Review what the Fleet learned today, what should change next, and which creative assets still need Captain approval before they become live system assets.</p>
+  <div class="hero-actions">
+    <a class="button" href="/aurora/workflow">Operating workflow</a>
+    <a class="button button-secondary" href="/aurora/crew">Crew registry</a>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Daily brief</span>
+    <strong>{{ "Ready" if latest_brief else "Missing" }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Art review</span>
+    <strong>{{ "Ready" if review_note else "Missing" }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Live asset gate</span>
+    <strong>Closed</strong>
+  </div>
+  <div class="stat-card">
+    <span>Deploy gate</span>
+    <strong>Closed</strong>
+  </div>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Sage Ledger</p>
+      <h2>Latest daily learning brief</h2>
+    </div>
+    {% if latest_brief %}
+    <div class="learning-meta">
+      <span>{{ latest_brief.path }}</span>
+      <em>Updated {{ latest_brief.updated_at }}</em>
+    </div>
+    <pre class="learning-note">{{ latest_brief.body }}</pre>
+    {% else %}
+    <p class="muted">No daily learning briefs found under <code>docs/learning/daily/</code>.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Nora Gate</p>
+      <h2>Current character art review</h2>
+    </div>
+    {% if review_note %}
+    <div class="learning-meta">
+      <span>{{ review_note.path }}</span>
+      <em>Updated {{ review_note.updated_at }}</em>
+    </div>
+    <pre class="learning-note">{{ review_note.body }}</pre>
+    {% else %}
+    <p class="muted">No v7 review note found under <code>review/crew_final_style_v7/</code>.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Captain approval gate</p>
+    <h2>What stays blocked</h2>
+  </div>
+  <div class="learning-gates">
+    <span>Do not overwrite <code>static/crew/</code> until Nayz approves the art direction.</span>
+    <span>Do not deploy review assets until the live promotion step is explicitly approved.</span>
+    <span>Keep Captain Nayz and PM Slay as separate identities in all docs, assets, and dashboard copy.</span>
+  </div>
+</section>
+{% endblock %}

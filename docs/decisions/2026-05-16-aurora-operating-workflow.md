@@ -19,6 +19,8 @@ That linear route is useful for a single content mission, but it is not enough f
 - Videos need storyboard-first planning, especially for 60-180 second work where scene timing depends on tools such as Veo3.
 - Google Drive and Notion need to be part of duplicate checks and asset memory.
 - Published work needs a performance loop that turns engagement into scale, repair, or lesson-learned decisions.
+- Daily profile presence such as Bubble/status updates should stay lightweight and not require a full production run.
+- Real comments after publishing need a safe response lane where Nayz can send screenshots or pasted comment text to Emma.
 - Team members must be able to ask questions, route work sideways, or send work back to specialists.
 
 ## Decision
@@ -31,28 +33,34 @@ The durable workflow is documented in:
 docs/aurora_operating_workflow_v2.md
 ```
 
-Aurora v2 will use four mission types:
+Aurora v2 will use six mission types:
 
 1. `new_project_discovery`
 2. `content_calendar_plan`
 3. `production_batch`
-4. `performance_review`
+4. `daily_bubble_status`
+5. `comment_response`
+6. `performance_review`
+
+Aurora v2 should use modular routing instead of forcing every job through every agent. Robin routes each mission through the smallest useful lane for the content type.
 
 The existing crew remains the core team. New specialist roles should be introduced only when they remove real operational ambiguity or prevent repeated work:
 
-- Market & Monetization Analyst
-- Video Producer
-- Archivist
-- Growth Analyst
+- Mara Vale / Market & Monetization Analyst
+- Vera Reel / Video Producer
+- Sage Ledger / Lesson Librarian / Archivist
+- Iris Gauge / Growth Analyst
 
 Several responsibilities remain as modes under existing roles instead of becoming separate people:
 
 - Calendar planning stays with PM and Robin.
 - Infographic production stays with Lila.
-- Lesson library stays with Archivist.
-- Monetization strategy stays with Market & Monetization Analyst.
+- Lesson library stays with Sage Ledger.
+- Monetization strategy stays with Mara Vale.
+- Daily Bubble/status belongs to Emma with optional Roxy timing support.
+- Post-publish comment replies belong to Emma, with Nora reviewing only sensitive or risky replies.
 
-Video Producer is a first-class role from the start because long-video output is central to the Slay Hack workflow and needs storyboard-first planning before generation.
+Vera Reel / Video Producer is a first-class role from the start because long-video output is central to the Slay Hack workflow and needs storyboard-first planning before generation.
 
 ## Consequences
 

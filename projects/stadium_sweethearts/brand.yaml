@@ -1,0 +1,21 @@
+mission: "AI-generated sports fan-cam entertainment featuring fictional adult game-day sweetheart moments in American stadium environments."
+visual:
+  colors:
+    - "#FF4F9A"
+    - "#071126"
+    - "#FFFFFF"
+    - "#D72638"
+    - "#FDBA4D"
+  style: "cinematic glossy stadium lighting, broadcast fan-cam zoom, crowd bokeh, varsity-inspired typography, generic sports jerseys, pink heart accents, tasteful PG-13 sporty energy"
+platforms:
+  - tiktok
+  - instagram
+  - youtube
+  - facebook
+tone: "playful, confident, short, teasing, sports-aware, tasteful, non-creepy"
+target_audience: "Men in the United States, primarily ages 21-44, interested in sports culture, AI visuals, fan-cam moments, and short-form entertainment."
+script_style: "English only, 3-6 word overlays, short playful captions, clear AI-generated fictional adult framing, no voyeuristic or explicit language"
+nora_max_retries: 2
+allowed_content_types:
+  - video
+  - image

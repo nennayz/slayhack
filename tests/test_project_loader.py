@@ -52,6 +52,22 @@ def test_load_slay_hack_allowed_content_types():
         ContentType.IMAGE, ContentType.INFOGRAPHIC,
     }
 
+
+def test_load_stadium_sweethearts_project():
+    pm = load_project("stadium_sweethearts")
+
+    assert pm.name == "Stadium"
+    assert pm.page_name == "Stadium Sweethearts"
+    assert "male Project Manager" in pm.persona
+    assert "sporty" in pm.persona
+    assert "fictional" in pm.persona
+    assert "21+" in pm.persona
+    assert pm.brand.target_audience.startswith("Men in the United States")
+    assert pm.brand.allowed_content_types == [ContentType.VIDEO, ContentType.IMAGE]
+    assert "#FF4F9A" in pm.brand.visual.colors
+    assert "stadium" in pm.brand.visual.style
+
+
 def test_load_platform_specs_slay_hack():
     specs = load_platform_specs("slay_hack")
     assert "instagram" in specs
