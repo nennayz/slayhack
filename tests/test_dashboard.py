@@ -993,11 +993,14 @@ def test_aurora_crew_pages_render(client):
     assert "/static/crew/slay.png" in crew.text
     assert "/static/crew/iris-gauge.png" in crew.text
     assert "/static/crew/sage-ledger.png" in crew.text
+    assert "Crew Stations" in crew.text
+    assert "Aurora route map" in crew.text
     assert "Mission command" in crew.text
     assert "Captain&#39;s Bridge" in crew.text
     assert detail.status_code == 200
     assert "Chief Officer" in detail.text
-    assert "Operational contract" in detail.text
+    assert "Back to crew deck" in detail.text
+    assert "Station handoff" in detail.text
     assert "command coat" in detail.text
     vera = client.get("/aurora/crew/video-producer", headers=_auth())
     assert vera.status_code == 200
