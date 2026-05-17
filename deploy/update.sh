@@ -12,6 +12,14 @@ DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 
 echo "=== NayzFreedom Update ==="
 
+echo "[preflight] Checking deploy ownership..."
+ownership_probe="$(find "$INSTALL_DIR" -path "$INSTALL_DIR/.venv" -prune -o -path "$INSTALL_DIR/.git" -prune -o ! -user "$SERVICE_USER" -print -quit)"
+if [ -n "$ownership_probe" ]; then
+    echo "ownership_warning=$ownership_probe"
+    echo "Repairing $INSTALL_DIR ownership for $SERVICE_USER before pulling."
+    chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
+fi
+
 echo "[1/3] Pulling latest code..."
 sudo -u "$SERVICE_USER" git -C "$INSTALL_DIR" fetch origin "$DEPLOY_BRANCH"
 current_branch="$(sudo -u "$SERVICE_USER" git -C "$INSTALL_DIR" branch --show-current)"

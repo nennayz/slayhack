@@ -2335,6 +2335,61 @@ def test_job_detail_sync_records_failed_drive_state(tmp_path, client, monkeypatc
     assert "Drive quota nope" in saved["manual_post_kit"]["drive_sync"]["detail"]
 
 
+def test_job_detail_records_manual_post_and_queues_tracking(tmp_path, client, monkeypatch):
+    _write_job(tmp_path, "20260512_060000", brief="manual post kit")
+    monkeypatch.setenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "root-folder")
+
+    resp = client.post(
+        "/jobs/20260512_060000/manual-post",
+        data={
+            "platform": "instagram",
+            "post_url": "https://www.instagram.com/p/manual123/",
+            "posted_at": "2026-05-17T14:00:00+00:00",
+            "note": "Posted by Captain",
+        },
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text())
+    manual_post = saved["manual_post_kit"]["manual_post"]["instagram"]
+    assert manual_post["post_url"] == "https://www.instagram.com/p/manual123/"
+    assert manual_post["status"] == "posted"
+    assert saved["publish_result"]["instagram"]["status"] == "published"
+    assert saved["publish_result"]["instagram"]["manual"] is True
+    assert saved["stage"] == "publish_done"
+    assert saved["status"] == "completed"
+    queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
+    assert [item["track_at"] for item in queue] == ["2026-05-18T14:00:00Z", "2026-05-20T14:00:00Z"]
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Recorded manual post for 20260512_060000" in work_activity
+
+
+def test_job_detail_rejects_manual_post_without_url(tmp_path, client):
+    _write_job(tmp_path, "20260512_060000", brief="manual post kit")
+
+    resp = client.post(
+        "/jobs/20260512_060000/manual-post",
+        data={"platform": "instagram", "post_url": "not-a-url"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 400
+    assert not (tmp_path / "output" / "track_queue.json").exists()
+
+
+def test_job_detail_shows_record_manual_post_form(tmp_path, client):
+    _write_job(tmp_path, "20260512_060000", brief="manual post kit")
+
+    resp = client.get("/jobs/20260512_060000", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Record manual post" in resp.text
+    assert "/jobs/20260512_060000/manual-post" in resp.text
+
+
 def test_manual_kit_adds_video_prompts_for_legacy_video_job(tmp_path, client):
     import zipfile
     from io import BytesIO

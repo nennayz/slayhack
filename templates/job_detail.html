@@ -93,6 +93,32 @@
         {% endif %}
       </div>
       {% endif %}
+      {% if manual_kit.manual_post %}
+      <div class="stage-brief">
+        {% for platform, item in manual_kit.manual_post.items() %}
+        <p>Manual post: {{ platform }} · {{ item.posted_at }}</p>
+        {% if item.post_url %}
+        <a href="{{ item.post_url }}" target="_blank" rel="noreferrer">Open manual post</a>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      <form class="compact-action-form" method="post" action="/jobs/{{ job.id }}/manual-post">
+        <label for="manual_platform_{{ job.id }}">Platform</label>
+        <select id="manual_platform_{{ job.id }}" name="platform">
+          <option value="instagram">Instagram</option>
+          <option value="facebook">Facebook</option>
+          <option value="tiktok">TikTok</option>
+          <option value="youtube">YouTube</option>
+        </select>
+        <label for="manual_url_{{ job.id }}">Post URL</label>
+        <input id="manual_url_{{ job.id }}" name="post_url" type="url" placeholder="https://..." required>
+        <label for="manual_posted_at_{{ job.id }}">Posted at</label>
+        <input id="manual_posted_at_{{ job.id }}" name="posted_at" type="datetime-local">
+        <label for="manual_note_{{ job.id }}">Note</label>
+        <textarea id="manual_note_{{ job.id }}" name="note" rows="2"></textarea>
+        <button type="submit">Record manual post</button>
+      </form>
     </article>
   </div>
 </section>

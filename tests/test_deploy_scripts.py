@@ -85,3 +85,12 @@ def test_ops_sudoers_limits_allowed_commands():
     assert "NOPASSWD: ALL" not in text
     assert "/etc/sudoers.d/nayzfreedom-ops" in setup.read_text()
     assert "/etc/sudoers.d/nayzfreedom-ops" in update.read_text()
+
+
+def test_update_script_repairs_wrong_ownership_before_pull():
+    root = Path(__file__).resolve().parents[1]
+    update = (root / "deploy" / "update.sh").read_text()
+    assert "[preflight] Checking deploy ownership" in update
+    assert "ownership_warning=" in update
+    assert "chown -R \"$SERVICE_USER:$SERVICE_USER\" \"$INSTALL_DIR\"" in update
+    assert update.index("[preflight] Checking deploy ownership") < update.index("[1/3] Pulling latest code")

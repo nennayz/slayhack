@@ -19,7 +19,7 @@ from manual_post_kit import (
     manual_kit_summary,
 )
 from routes.deps import templates, verify_auth, _root
-from track_queue import job_tracking_summary, read_queue
+from track_queue import enqueue_track_snapshots, job_tracking_summary, read_queue
 from routes._helpers import (
     MISSION_FILTER_KEYS,
     _build_voyage_steps,
@@ -79,6 +79,21 @@ def _manual_kit_state_write_issue(root: Path, job) -> str | None:
 
 def _drive_sync_timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_manual_post_time(value: str) -> datetime:
+    cleaned = value.strip()
+    if not cleaned:
+        return datetime.now(timezone.utc)
+    if cleaned.endswith("Z"):
+        cleaned = cleaned[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(cleaned)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="posted_at must be an ISO timestamp") from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def _record_manual_kit_drive_failure(root: Path, job, user: str, detail: str) -> None:
@@ -277,6 +292,70 @@ def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depe
         result="drive_sync synced",
         next_action="Download or open the Drive kit, then post manually.",
         metadata={"job_id": job_id, "drive_file_id": uploaded.get("id")},
+    )
+    return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+
+
+@router.post("/jobs/{job_id}/manual-post")
+def record_manual_post(
+    job_id: str,
+    request: Request,
+    platform: str = Form(...),
+    post_url: str = Form(...),
+    posted_at: str = Form(""),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+
+    cleaned_platform = platform.strip().lower()
+    cleaned_url = post_url.strip()
+    if cleaned_platform not in {"facebook", "instagram", "tiktok", "youtube"}:
+        raise HTTPException(status_code=400, detail="Unsupported manual post platform")
+    if not (cleaned_url.startswith("https://") or cleaned_url.startswith("http://")):
+        raise HTTPException(status_code=400, detail="Manual post URL must start with http:// or https://")
+
+    posted_dt = _parse_manual_post_time(posted_at)
+    posted_iso = posted_dt.isoformat()
+    kit = dict(job.manual_post_kit or {})
+    manual_post = dict(kit.get("manual_post") or {})
+    manual_post[cleaned_platform] = {
+        "status": "posted",
+        "platform": cleaned_platform,
+        "post_url": cleaned_url,
+        "posted_at": posted_iso,
+        "recorded_at": _drive_sync_timestamp(),
+        "recorded_by": user,
+        "note": note.strip(),
+    }
+    kit["manual_post"] = manual_post
+    job.manual_post_kit = kit
+    publish_result = dict(job.publish_result or {})
+    publish_result[cleaned_platform] = {
+        "status": "published",
+        "manual": True,
+        "post_url": cleaned_url,
+        "published_at": posted_iso,
+        "reason": "Captain recorded manual post; no external publish API was called.",
+    }
+    job.publish_result = publish_result
+    job.published_at = posted_dt
+    job.stage = "publish_done"
+    job.status = JobStatus.COMPLETED
+    _save_job_at_root(root, job)
+    enqueue_track_snapshots(job, root=root, replace_existing=True)
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Recorded manual post for {job_id}",
+        actor=user,
+        result=f"manual_post recorded for {cleaned_platform}; tracking queued",
+        next_action="Let the tracking scheduler capture the 24h and 72h snapshots.",
+        metadata={"job_id": job_id, "platform": cleaned_platform, "post_url": cleaned_url},
     )
     return RedirectResponse(f"/jobs/{job_id}", status_code=303)
 
