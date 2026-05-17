@@ -18,15 +18,21 @@
     <strong>Generation</strong>
     <small>Build</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/workflow' else '' }} station-workflow" href="/aurora/workflow">
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/manual-posting' else '' }} station-approval" href="/aurora/manual-posting">
     <span class="station-icon" aria-hidden="true"></span>
     <span class="station-index">04</span>
+    <strong>Manual posting</strong>
+    <small>Proof</small>
+  </a>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/workflow' else '' }} station-workflow" href="/aurora/workflow">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">05</span>
     <strong>Operating workflow</strong>
     <small>Map</small>
   </a>
   <a class="workflow-rail-step {{ 'active' if path == '/aurora/learning' else '' }} station-learning" href="/aurora/learning">
     <span class="station-icon" aria-hidden="true"></span>
-    <span class="station-index">05</span>
+    <span class="station-index">06</span>
     <strong>Learning</strong>
     <small>Store</small>
   </a>

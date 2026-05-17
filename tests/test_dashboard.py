@@ -36,7 +36,9 @@ def _make_pm_dict(page_name: str = "Slayhack") -> dict:
 def _write_job(tmp_path: Path, job_id: str, brief: str = "test brief",
                status: str = "completed", page: str = "Slayhack",
                stage: str = "init", publish_result: dict | None = None,
-               performance: list[dict] | None = None) -> None:
+               performance: list[dict] | None = None,
+               manual_post_kit: dict | None = None,
+               published_at: str | None = None) -> None:
     job = {
         "id": job_id, "project": "nayzfreedom_fleet", "pm": _make_pm_dict(page),
         "brief": brief, "platforms": ["facebook"], "status": status,
@@ -44,6 +46,10 @@ def _write_job(tmp_path: Path, job_id: str, brief: str = "test brief",
     }
     if publish_result is not None:
         job["publish_result"] = publish_result
+    if manual_post_kit is not None:
+        job["manual_post_kit"] = manual_post_kit
+    if published_at is not None:
+        job["published_at"] = published_at
     job_dir = tmp_path / "output" / page / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
     (job_dir / "job.json").write_text(json.dumps(job))
@@ -2408,6 +2414,127 @@ def test_job_detail_shows_record_manual_post_form(tmp_path, client):
     assert resp.status_code == 200
     assert "Record manual post" in resp.text
     assert "/jobs/20260512_060000/manual-post" in resp.text
+
+
+def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_synced",
+        brief="synced kit mission",
+        manual_post_kit={
+            "drive_sync": {
+                "status": "synced",
+                "synced_at": "2026-05-17T13:00:00+00:00",
+                "web_view_link": "https://drive.google.com/file/d/synced/view",
+            }
+        },
+    )
+    _write_job(
+        tmp_path,
+        "20260512_waiting",
+        brief="waiting tracking mission",
+        manual_post_kit={
+            "drive_sync": {"status": "synced"},
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/waiting/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+        },
+        publish_result={
+            "instagram": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://www.instagram.com/p/waiting/",
+            }
+        },
+        published_at="2026-05-17T14:00:00+00:00",
+    )
+    _write_job(
+        tmp_path,
+        "20260512_complete",
+        brief="complete tracking mission",
+        manual_post_kit={
+            "manual_post": {
+                "facebook": {
+                    "status": "posted",
+                    "post_url": "https://facebook.com/manual-post",
+                    "posted_at": "2026-05-17T12:00:00+00:00",
+                }
+            }
+        },
+        publish_result={
+            "facebook": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://facebook.com/manual-post",
+            }
+        },
+        performance=[
+            {"platform": "facebook", "reach": 100, "recorded_at": "2026-05-18T12:00:00+00:00"},
+            {"platform": "facebook", "reach": 180, "recorded_at": "2026-05-20T12:00:00+00:00"},
+        ],
+        published_at="2026-05-17T12:00:00+00:00",
+    )
+    _write_job(
+        tmp_path,
+        "20260512_attention",
+        brief="attention mission",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/attention/",
+                    "posted_at": "2026-05-17T11:00:00+00:00",
+                }
+            }
+        },
+        publish_result={
+            "instagram": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://www.instagram.com/p/attention/",
+            }
+        },
+        published_at="2026-05-17T11:00:00+00:00",
+    )
+    (tmp_path / "output" / "track_queue.json").write_text(json.dumps([
+        {
+            "job_id": "20260512_waiting",
+            "page_name": "Slayhack",
+            "track_at": "2026-05-18T14:00:00Z",
+            "attempt": 0,
+        }
+    ]))
+
+    resp = client.get("/aurora/manual-posting", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Manual Post Command Lane" in resp.text
+    assert "Manual posting status" in resp.text
+    assert "Live publish locked" in resp.text
+    assert "Kit synced, not posted" in resp.text
+    assert "Manual posted, waiting tracking" in resp.text
+    assert "Tracking complete" in resp.text
+    assert "Tracking queue missing" in resp.text
+    assert "synced kit mission" in resp.text
+    assert "waiting tracking mission" in resp.text
+    assert "complete tracking mission" in resp.text
+    assert "attention mission" in resp.text
+    assert "Open Drive kit" in resp.text
+    assert "Open manual post" in resp.text
+
+
+def test_manual_posting_queue_ignores_unsynced_unposted_jobs(tmp_path, client):
+    _write_job(tmp_path, "20260512_plain", brief="plain mission")
+
+    resp = client.get("/aurora/manual-posting", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "No manual kits have been synced or posted yet." in resp.text
+    assert "plain mission" not in resp.text
 
 
 def test_manual_kit_adds_video_prompts_for_legacy_video_job(tmp_path, client):

@@ -29,6 +29,8 @@ from routes._helpers import (
     _generation_row_matches_filter,
     _latest_learning_brief,
     _latest_performance_signals,
+    _manual_posting_lane_groups,
+    _manual_posting_queue_rows,
     _tracking_readiness_rows,
     _mission_filters,
     _project_options,
@@ -200,6 +202,24 @@ def aurora_generation(request: Request, _: str = Depends(verify_auth)):
             "ready_publish_count": sum(1 for item in rows if item["publish_execution"]["status"] == "ready_to_publish"),
             "scheduled_handoff_count": sum(1 for item in rows if item["publish_execution"]["status"] == "scheduled"),
             "failed_count": sum(1 for item in rows if item["status"] == "failed"),
+        },
+    )
+
+
+@router.get("/aurora/manual-posting", response_class=HTMLResponse)
+def aurora_manual_posting(request: Request, _: str = Depends(verify_auth)):
+    rows = _manual_posting_queue_rows(_root(request))
+    lane_groups = _manual_posting_lane_groups(rows)
+    return templates.TemplateResponse(
+        request,
+        "manual_posting_queue.html",
+        {
+            "manual_posting_rows": rows,
+            "manual_posting_lane_groups": lane_groups,
+            "kit_synced_count": sum(1 for row in rows if row["lane"] == "kit_synced"),
+            "waiting_tracking_count": sum(1 for row in rows if row["lane"] == "waiting_tracking"),
+            "tracking_complete_count": sum(1 for row in rows if row["lane"] == "tracking_complete"),
+            "needs_attention_count": sum(1 for row in rows if row["lane"] == "needs_attention"),
         },
     )
 
