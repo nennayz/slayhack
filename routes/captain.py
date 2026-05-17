@@ -13,7 +13,9 @@ from routes._helpers import (
     _confirm_mission_learning,
     _console_history,
     _find_job_at_root,
+    _manual_closeout_undrafted_learning_rows,
     _update_daily_brief_draft_status,
+    _write_manual_closeout_learning_draft,
     _write_work_event,
     active_jobs,
     attention_jobs,
@@ -65,6 +67,29 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             ),
         },
     )
+
+
+@router.post("/learning-runbook/create-draft")
+def learning_runbook_create_draft(
+    request: Request,
+    return_path: str = Form("/"),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    lessons = _manual_closeout_undrafted_learning_rows(root)
+    if not lessons:
+        raise HTTPException(status_code=400, detail="No closed manual posting lessons need a daily draft")
+    draft = _write_manual_closeout_learning_draft(root, lessons, created_by=user)
+    _write_work_event(
+        root,
+        "implementation_step",
+        "Created manual posting daily learning draft from runbook",
+        actor=user,
+        result=str(draft["path"]),
+        next_action="Accept the daily learning draft before applying it to the next mission.",
+        metadata={"source_job_ids": draft["source_job_ids"]},
+    )
+    return RedirectResponse(_runbook_return_path(return_path), status_code=303)
 
 
 @router.post("/learning-runbook/accept-draft")

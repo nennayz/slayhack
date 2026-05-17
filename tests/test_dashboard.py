@@ -455,6 +455,129 @@ def test_learning_runbook_closeout_step_remains_navigation_only(tmp_path, client
     assert "/learning-runbook/closeout" not in resp.text
 
 
+def test_learning_runbook_routes_to_create_daily_draft_for_closed_lessons(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_closed_lesson",
+        brief="closed lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Create daily learning draft" in resp.text
+    assert "1 closed manual lesson needs a daily learning draft." in resp.text
+    assert "/learning-runbook/create-draft" in resp.text
+
+
+def test_learning_runbook_skips_create_draft_when_closed_lesson_is_already_drafted(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_closed_lesson",
+        brief="closed lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {"instagram": {"status": "posted", "post_url": "https://www.instagram.com/p/lesson/"}},
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+            },
+        },
+    )
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: accepted\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260512_closed_lesson\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "No closed manual posting lesson is waiting for draft creation." in resp.text
+    assert "/learning-runbook/create-draft" not in resp.text
+
+
+def test_learning_runbook_create_draft_action_writes_draft_without_publish_side_effects(tmp_path, client):
+    today = date.today().isoformat()
+    _write_job(
+        tmp_path,
+        "20260512_closed_lesson",
+        brief="closed lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+    )
+
+    resp = client.post(
+        "/learning-runbook/create-draft",
+        data={"return_path": "/aurora"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/aurora"
+    draft = (tmp_path / "docs" / "learning" / "daily" / f"{today}-manual-posting-lessons.md").read_text()
+    assert "status: draft" in draft
+    assert "created_by: admin" in draft
+    assert "Source job: 20260512_closed_lesson" in draft
+    assert "Short CTA got more saves." in draft
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_closed_lesson" / "job.json").read_text())
+    assert saved.get("publish_result") is None
+    assert saved.get("publish_execution") is None
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Created manual posting daily learning draft from runbook" in work_activity
+
+
 def test_learning_runbook_accept_action_updates_draft_status(tmp_path, client):
     daily_dir = tmp_path / "docs" / "learning" / "daily"
     daily_dir.mkdir(parents=True)
