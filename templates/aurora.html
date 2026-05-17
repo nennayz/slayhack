@@ -28,6 +28,23 @@
 
 {% include "_learning_runbook.html" %}
 
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">SlayHack PM Knowledge</p>
+    <h2>{{ pm_knowledge_status.state }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ pm_knowledge_status.proof }}</span>
+    <span>{{ pm_knowledge_status.next_action }}</span>
+    <span>Live publish stays locked; Knowledge updates support planning, manual handoff, and learning only.</span>
+  </div>
+  <div class="inline-actions">
+    {% for item in pm_knowledge_links %}
+    <a class="button button-secondary button-small" href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="aurora-command">
   <article>
     <p class="eyebrow">Mission control</p>

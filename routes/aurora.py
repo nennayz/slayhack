@@ -86,6 +86,40 @@ CALENDAR_BRIEF_KEYS = [
     "infographic_2",
 ]
 
+PM_KNOWLEDGE_LINKS = [
+    {
+        "label": "Read first",
+        "url": "https://docs.google.com/document/d/1iO1AS7j02hTh_HIQZJYQ_GA0gG_zw2nkwLERfY2OZwk/edit?usp=drivesdk",
+        "note": "Canonical root, identity rules, read order, and operating guardrails.",
+    },
+    {
+        "label": "Knowledge map",
+        "url": "https://docs.google.com/document/d/1EVJ-AUqnpuZe7X--tHarlU6Gs9H0HyalYNvUdNI23vg/edit?usp=drivesdk",
+        "note": "Question-to-source routing for SlayHack PM answers.",
+    },
+    {
+        "label": "Update runbook",
+        "url": "https://docs.google.com/document/d/18Z_IMg5hsMPTj2n_gVpujFiycO3dAes7jKWh3jB3YSc/edit?usp=drivesdk",
+        "note": "How to refresh Knowledge, archive duplicates, and rerun smoke tests.",
+    },
+    {
+        "label": "Smoke result",
+        "url": "https://docs.google.com/document/d/1o6f35D8xixbfUogWFFsNNLvhREYWxf5nGXot3hjqGKA/edit?usp=drivesdk",
+        "note": "Drive retrieval proof: PASS 7/7.",
+    },
+    {
+        "label": "Direct UI result",
+        "url": "https://docs.google.com/document/d/1q3Xzk0_mnrNIFmw1tMdXYgbp8S8K584DpU7KAuuGCwE/edit?usp=drivesdk",
+        "note": "PM UI evidence status and final manual confirmation prompt.",
+    },
+]
+
+PM_KNOWLEDGE_STATUS = {
+    "state": "Drive Knowledge ready",
+    "proof": "Drive retrieval smoke PASS 7/7",
+    "next_action": "Run the seven-question direct PM UI confirmation before calling the PM fully certified.",
+}
+
 
 def _manual_posted_at(job) -> datetime | None:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
@@ -163,6 +197,8 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
                 active_items=active,
             ),
             "learning_runbook": learning_runbook,
+            "pm_knowledge_links": PM_KNOWLEDGE_LINKS,
+            "pm_knowledge_status": PM_KNOWLEDGE_STATUS,
             "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,
@@ -563,6 +599,8 @@ def aurora_learning(request: Request, _: str = Depends(verify_auth)):
             "review_note": _read_review_note(root),
             "asset_audit_note": _read_asset_audit_note(root),
             "crew_asset_audit": _crew_asset_audit(root),
+            "pm_knowledge_links": PM_KNOWLEDGE_LINKS,
+            "pm_knowledge_status": PM_KNOWLEDGE_STATUS,
         },
     )
 

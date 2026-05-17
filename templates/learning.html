@@ -12,6 +12,32 @@
 
 {% include "_aurora_flow.html" %}
 
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">SlayHack PM Knowledge</p>
+    <h2>{{ pm_knowledge_status.state }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ pm_knowledge_status.proof }}</span>
+    <span>{{ pm_knowledge_status.next_action }}</span>
+    <span>Use native Google Docs entrypoints first; archived markdown duplicates are historical only.</span>
+  </div>
+  <div class="manual-learning-list">
+    {% for item in pm_knowledge_links %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-ready">Knowledge</span>
+        <strong>{{ item.label }}</strong>
+        <p>{{ item.note }}</p>
+      </div>
+      <div class="inline-actions">
+        <a class="button button-secondary button-small" href="{{ item.url }}" target="_blank" rel="noreferrer">Open doc</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Daily brief</span>
