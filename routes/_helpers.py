@@ -49,7 +49,7 @@ from project_loader import (
     resolve_project_slug,
 )
 from work_activity import read_recent_work_activity, work_activity_status, write_work_activity
-from track_queue import read_queue, summarize_track_queue
+from track_queue import parse_track_at, read_queue, summarize_track_queue
 from track_scheduler import recent_track_scheduler_history
 
 
@@ -3446,6 +3446,161 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
         "Scheduled handoff": 9,
     }
     return sorted(rows, key=lambda item: (order.get(str(item["status"]), 99), str(item["page_name"]), str(item["job_id"])))
+
+
+MANUAL_POSTING_LANES = [
+    ("needs_attention", "Needs Captain", "Manual posting or tracking needs review before closeout"),
+    ("kit_synced", "Kit synced", "Drive kit is ready, but no manual post URL is recorded"),
+    ("waiting_tracking", "Waiting tracking", "Manual post is recorded and snapshot checks are still pending"),
+    ("tracking_complete", "Tracking complete", "Manual post has the required 24h and 72h proof"),
+]
+
+
+def _manual_posting_job_posts(job: ContentJob) -> dict[str, dict]:
+    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+    manual_post = kit.get("manual_post") if isinstance(kit, dict) else None
+    if not isinstance(manual_post, dict):
+        return {}
+    return {
+        str(platform): value
+        for platform, value in manual_post.items()
+        if isinstance(value, dict) and value.get("status") == "posted"
+    }
+
+
+def _manual_posting_publish_platforms(job: ContentJob) -> dict[str, dict]:
+    publish_result = job.publish_result if isinstance(job.publish_result, dict) else {}
+    return {
+        str(platform): value
+        for platform, value in publish_result.items()
+        if isinstance(value, dict) and value.get("status") == "published" and value.get("manual") is True
+    }
+
+
+def _manual_posting_first_post(posts: dict[str, dict], publish_platforms: dict[str, dict]) -> dict[str, object]:
+    combined = list(posts.items()) + [
+        (platform, value) for platform, value in publish_platforms.items() if platform not in posts
+    ]
+    if not combined:
+        return {"platforms": [], "post_url": "", "posted_at": ""}
+    platform, value = sorted(
+        combined,
+        key=lambda item: str(item[1].get("posted_at") or item[1].get("published_at") or ""),
+    )[0]
+    return {
+        "platforms": sorted({str(item[0]) for item in combined}),
+        "post_url": str(value.get("post_url") or value.get("url") or ""),
+        "posted_at": str(value.get("posted_at") or value.get("published_at") or ""),
+        "platform": str(platform),
+    }
+
+
+def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str, object] | None:
+    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+    drive_sync = kit.get("drive_sync") if isinstance(kit, dict) else None
+    drive_status = str(drive_sync.get("status", "")) if isinstance(drive_sync, dict) else ""
+    posts = _manual_posting_job_posts(job)
+    publish_platforms = _manual_posting_publish_platforms(job)
+    has_manual_post = bool(posts or publish_platforms)
+    if not has_manual_post and drive_status not in {"synced", "failed"}:
+        return None
+
+    job_queue = [entry for entry in queue_entries if entry.get("job_id") == job.id]
+    queue_summary = summarize_track_queue(job_queue, limit=4)
+    counts = queue_summary["counts"]
+    snapshots = len(job.performance)
+    first_post = _manual_posting_first_post(posts, publish_platforms)
+    next_entry = min(
+        job_queue,
+        key=lambda entry: parse_track_at(entry.get("track_at")) or datetime.max.replace(tzinfo=timezone.utc),
+        default=None,
+    )
+
+    if drive_status == "failed":
+        lane = "needs_attention"
+        state = "failed"
+        status = "Drive sync failed"
+        next_action = "Repair Drive credentials or job ownership, then sync the manual kit again."
+    elif drive_status == "synced" and not has_manual_post:
+        lane = "kit_synced"
+        state = "missing"
+        status = "Kit synced, not posted"
+        next_action = "Captain posts from the Drive kit, then records the platform URL."
+    elif has_manual_post and int(counts["overdue"]) > 0:
+        lane = "needs_attention"
+        state = "failed"
+        status = "Tracking overdue"
+        next_action = "Run or inspect the tracking scheduler before closing this manual post."
+    elif has_manual_post and (int(counts["due_now"]) > 0 or int(counts["invalid"]) > 0):
+        lane = "needs_attention"
+        state = "missing"
+        status = "Tracking needs attention"
+        next_action = "Check the due or invalid tracking queue entry before closing this job."
+    elif has_manual_post and job_queue:
+        lane = "waiting_tracking"
+        state = "missing"
+        status = "Manual posted, waiting tracking"
+        next_due = str(next_entry.get("track_at")) if next_entry else "next snapshot"
+        next_action = f"Wait for queued tracking snapshot at {next_due}."
+    elif has_manual_post and snapshots >= 2:
+        lane = "tracking_complete"
+        state = "ready"
+        status = "Tracking complete"
+        next_action = "Review the performance proof and capture the learning note."
+    elif has_manual_post and snapshots == 1:
+        lane = "needs_attention"
+        state = "missing"
+        status = "72h tracking missing"
+        next_action = "One snapshot is recorded, but the 72h proof is not queued or present."
+    else:
+        lane = "needs_attention"
+        state = "missing"
+        status = "Tracking queue missing"
+        next_action = "Manual post is recorded, but no snapshot checks are queued."
+
+    return {
+        "job_id": job.id,
+        "brief": job.brief,
+        "page_name": job.pm.page_name,
+        "stage": job.stage,
+        "lane": lane,
+        "state": state,
+        "status": status,
+        "next_action": next_action,
+        "detail_url": f"/jobs/{job.id}",
+        "drive_status": drive_status or "not synced",
+        "drive_link": str(drive_sync.get("web_view_link") or "") if isinstance(drive_sync, dict) else "",
+        "drive_synced_at": str(drive_sync.get("synced_at") or "") if isinstance(drive_sync, dict) else "",
+        "platforms": first_post.get("platforms", []),
+        "post_url": first_post.get("post_url", ""),
+        "posted_at": first_post.get("posted_at", ""),
+        "snapshot_count": snapshots,
+        "queue_summary": queue_summary,
+        "queued_count": int(counts["total"]),
+    }
+
+
+def _manual_posting_queue_rows(root: Path) -> list[dict[str, object]]:
+    queue_entries = read_queue(root)
+    rows = [
+        row
+        for job in list_all_jobs(root)
+        if (row := _manual_posting_row(job, queue_entries)) is not None
+    ]
+    order = {key: index for index, (key, _, _) in enumerate(MANUAL_POSTING_LANES)}
+    return sorted(rows, key=lambda item: (order.get(str(item["lane"]), 99), str(item["page_name"]), str(item["job_id"])))
+
+
+def _manual_posting_lane_groups(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        {
+            "key": key,
+            "label": label,
+            "detail": detail,
+            "rows": [row for row in rows if row["lane"] == key],
+        }
+        for key, label, detail in MANUAL_POSTING_LANES
+    ]
 
 
 def _qa_status(slate: CalendarSlate | None) -> list[dict[str, str]]:

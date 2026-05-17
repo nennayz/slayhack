@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-harbor">
+  <div>
+    <p class="eyebrow">Manual posting queue</p>
+    <h1>Manual Post Command Lane</h1>
+    <p class="hero-copy">Captain handoffs from Drive kit sync through manual URL ledger and tracking proof. Live publish locked.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/approval-queue">Approval queue</a>
+    <a class="button button-secondary" href="/aurora/generation">Generation queue</a>
+    <a class="button" href="/aurora/daily-slate">Daily slate</a>
+  </div>
+</section>
+
+{% include "_aurora_flow.html" %}
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Kit synced</span>
+    <strong>{{ kit_synced_count }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Waiting tracking</span>
+    <strong>{{ waiting_tracking_count }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Tracking complete</span>
+    <strong>{{ tracking_complete_count }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Needs Captain</span>
+    <strong>{{ needs_attention_count }}</strong>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Safe handoff board</p>
+    <h2>Manual posting status</h2>
+  </div>
+  <div class="approval-lane-board manual-posting-board">
+    {% for group in manual_posting_lane_groups %}
+    <article class="approval-lane">
+      <div class="approval-lane-heading">
+        <div>
+          <p class="eyebrow">{{ group.label }}</p>
+          <h3>{{ group.detail }}</h3>
+        </div>
+        <strong>{{ group.rows | length }}</strong>
+      </div>
+      <div class="approval-queue-list">
+        {% for item in group.rows %}
+        <div class="approval-queue-row manual-posting-row">
+          <div class="approval-row-main">
+            <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
+            <span class="risk-chip">Live publish locked</span>
+            <strong>{{ item.page_name }}</strong>
+            <p>{{ item.brief }}</p>
+            <div class="manual-posting-meta">
+              <span>Drive: {{ item.drive_status }}</span>
+              <span>Queued: {{ item.queued_count }}</span>
+              <span>Snapshots: {{ item.snapshot_count }}</span>
+              {% if item.platforms %}
+              <span>Platforms: {{ item.platforms | join(", ") }}</span>
+              {% endif %}
+            </div>
+            {% if item.posted_at %}
+            <small>Posted at {{ item.posted_at }}</small>
+            {% elif item.drive_synced_at %}
+            <small>Synced at {{ item.drive_synced_at }}</small>
+            {% endif %}
+            <div class="approval-next-action">
+              <span>Next action</span>
+              <strong>{{ item.next_action }}</strong>
+              <small>Manual posting ledger only; no external publisher API is called here.</small>
+            </div>
+            {% if item.queue_summary.rows %}
+            <div class="manual-tracking-list">
+              {% for snapshot in item.queue_summary.rows %}
+              <small>{{ snapshot.status }} · {{ snapshot.track_at }} · attempt {{ snapshot.attempt }}</small>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+          <div class="approval-row-actions">
+            <a class="button" href="{{ item.detail_url }}">Open mission</a>
+            {% if item.drive_link %}
+            <a class="button button-secondary button-small" href="{{ item.drive_link }}" target="_blank" rel="noreferrer">Open Drive kit</a>
+            {% endif %}
+            {% if item.post_url %}
+            <a class="button button-secondary button-small" href="{{ item.post_url }}" target="_blank" rel="noreferrer">Open manual post</a>
+            {% endif %}
+          </div>
+        </div>
+        {% else %}
+        <p class="muted">No missions in this lane.</p>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% if not manual_posting_rows %}
+  <p class="muted">No manual kits have been synced or posted yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

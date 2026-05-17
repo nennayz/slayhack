@@ -122,6 +122,7 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
         PageCheck("aurora", "/aurora", ("The Aurora", "Approval queue", "Generation queue", "Captain Action Console", "Command history")),
         PageCheck("daily_slate", "/aurora/daily-slate", ("PM Command Slate", "Project filters", "All pages", "Ticket drawer", "Video package drawer", "PM action plan", "Approval queue")),
         PageCheck("approval_queue", "/aurora/approval-queue", ("Ready but Not Published", "Command lanes", "Approval route", "Next action")),
+        PageCheck("manual_posting", "/aurora/manual-posting", ("Manual Post Command Lane", "Manual posting status", "Live publish locked", "Needs Captain")),
         PageCheck(
             "crew",
             "/aurora/crew",
