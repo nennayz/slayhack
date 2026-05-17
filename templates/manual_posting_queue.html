@@ -22,6 +22,13 @@
   <small>The job moved into the tracking lane without calling a live publish API.</small>
 </section>
 {% endif %}
+{% if tracking_result %}
+<section class="ops-action-result manual-posting-result">
+  <span class="badge badge-ops-ready">Tracking action result</span>
+  <strong>{{ tracking_result }}</strong>
+  <small>Manual tracking actions stay inside the queue and never call a live publisher.</small>
+</section>
+{% endif %}
 
 <section class="stat-grid wide">
   <div class="stat-card">
@@ -112,6 +119,65 @@
 </section>
 {% endif %}
 
+{% if selected_lane == "waiting_tracking" %}
+<section class="manual-tracking-assist panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Tracking Proof Assist</p>
+      <h2>Waiting on 24h / 72h proof</h2>
+    </div>
+    <p>Review queued snapshots, due state, and scheduler action before closeout.</p>
+  </div>
+  <div class="manual-tracking-assist-grid">
+    {% for group in manual_posting_lane_groups %}
+      {% for item in group.rows %}
+      <article class="manual-tracking-assist-card">
+        <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
+        <strong>{{ item.brief }}</strong>
+        <small>Queued {{ item.queue_summary.counts.total }} · due now {{ item.queue_summary.counts.due_now }} · overdue {{ item.queue_summary.counts.overdue }}</small>
+        <div class="manual-tracking-steps">
+          {% for step in item.tracking_steps %}
+          <span class="badge badge-ops-{{ step.state }}">{{ step.label }} · {{ step.status }}</span>
+          <small>{{ step.detail }}</small>
+          {% endfor %}
+        </div>
+      </article>
+      {% else %}
+      <p class="muted">No manual posts are waiting on tracking proof.</p>
+      {% endfor %}
+    {% endfor %}
+  </div>
+  <form class="inline-form" method="post" action="/aurora/manual-posting/run-tracking">
+    <button type="submit">Run tracking queue now</button>
+  </form>
+</section>
+{% endif %}
+
+{% if selected_lane == "tracking_complete" %}
+<section class="manual-closeout-assist panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Closeout CTA</p>
+      <h2>Ready for closeout</h2>
+    </div>
+    <p>When 24h and 72h proof are complete, capture the learning note from this lane.</p>
+  </div>
+  <div class="manual-tracking-assist-grid">
+    {% for group in manual_posting_lane_groups %}
+      {% for item in group.rows %}
+      <article class="manual-tracking-assist-card">
+        <span class="badge badge-ops-{{ 'missing' if item.can_closeout else 'ready' }}">{{ item.learning_completion.status }}</span>
+        <strong>{{ item.brief }}</strong>
+        <small>{{ item.learning_completion.detail }}</small>
+      </article>
+      {% else %}
+      <p class="muted">No manual posts are ready for closeout yet.</p>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="panel spacious">
   <div class="section-heading">
     <div>
@@ -186,7 +252,7 @@
             <a class="button button-secondary button-small" href="{{ item.post_url }}" target="_blank" rel="noreferrer">Open manual post</a>
             {% endif %}
             {% if item.status in ["Tracking overdue", "Tracking needs attention"] %}
-            <form class="inline-form" method="post" action="/ops/actions/track_scheduler">
+            <form class="inline-form" method="post" action="/aurora/manual-posting/run-tracking">
               <button type="submit">Run tracking queue now</button>
             </form>
             {% endif %}

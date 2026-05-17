@@ -4,6 +4,7 @@ from __future__ import annotations
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.requests import Request
@@ -52,6 +53,7 @@ from routes._helpers import (
     _read_review_note,
     _crew_asset_audit,
     _readiness_checks,
+    _run_ops_action,
     _weekly_calendar,
     _write_work_event,
     _update_daily_brief_draft_status,
@@ -332,6 +334,7 @@ def aurora_manual_posting(request: Request, _: str = Depends(verify_auth)):
             "tracking_complete_count": sum(1 for row in rows if row["lane"] == "tracking_complete"),
             "needs_attention_count": sum(1 for row in rows if row["lane"] == "needs_attention"),
             "manual_result": request.query_params.get("manual_result", ""),
+            "tracking_result": request.query_params.get("tracking_result", ""),
             "focus_job": request.query_params.get("focus", ""),
         },
     )
@@ -363,7 +366,29 @@ def aurora_manual_posting_requeue_tracking(
         next_action="Let the tracking scheduler capture the 24h and 72h snapshots.",
         metadata={"job_id": job_id},
     )
-    return RedirectResponse("/aurora/manual-posting?lane=waiting_tracking", status_code=303)
+    message = quote(f"Requeued 24h and 72h tracking for {job_id}", safe="")
+    return RedirectResponse(f"/aurora/manual-posting?lane=waiting_tracking&tracking_result={message}", status_code=303)
+
+
+@router.post("/aurora/manual-posting/run-tracking")
+def aurora_manual_posting_run_tracking(
+    request: Request,
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    result = _run_ops_action("track_scheduler")
+    _write_work_event(
+        root,
+        "implementation_step",
+        "Manual posting tracking scheduler requested",
+        actor=user,
+        result=str(result.get("detail") or result.get("state") or ""),
+        metadata={"state": result.get("state", ""), "name": result.get("name", "track_scheduler")},
+    )
+    state = str(result.get("state") or "")
+    detail = str(result.get("detail") or result.get("name") or "Tracking scheduler requested.")
+    message = quote(f"Tracking scheduler {state}: {detail}", safe="")
+    return RedirectResponse(f"/aurora/manual-posting?lane=waiting_tracking&tracking_result={message}", status_code=303)
 
 
 @router.post("/aurora/manual-posting/{job_id}/closeout")

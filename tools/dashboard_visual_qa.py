@@ -124,6 +124,7 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
         PageCheck("approval_queue", "/aurora/approval-queue", ("Ready but Not Published", "Command lanes", "Approval route", "Next action")),
         PageCheck("manual_posting", "/aurora/manual-posting", ("Manual Post Command Lane", "Manual Posting Queue Overview", "Manual posting status", "Learning completion", "Live publish locked", "Needs Captain")),
         PageCheck("manual_posting_kits", "/aurora/manual-posting?lane=kit_synced", ("Manual Kit Posting Checklist", "Open Drive kit", "Post manually", "Record post URL", "Tracking queued")),
+        PageCheck("manual_posting_tracking", "/aurora/manual-posting?lane=waiting_tracking", ("Tracking Proof Assist", "Waiting on 24h / 72h proof", "Run tracking queue now")),
         PageCheck(
             "crew",
             "/aurora/crew",
@@ -191,6 +192,7 @@ def _css_checks(root: Path) -> dict[str, Any]:
         "approval_next_action_mobile": r"\.approval-next-action",
         "manual_posting_overview_mobile": r"\.manual-posting-overview-grid",
         "manual_posting_checklist_mobile": r"\.manual-posting-checklist-grid",
+        "manual_tracking_assist_mobile": r"\.manual-tracking-assist-grid",
         "manual_learning_state_mobile": r"\.manual-learning-state",
         "captain_attention_mobile": r"\.captain-attention-grid",
         "captain_action_mobile": r"\.captain-action-grid",

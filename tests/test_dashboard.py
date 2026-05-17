@@ -3728,6 +3728,21 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     assert "focus-row" in kit_lane.text
     assert 'name="return_path" type="hidden" value="/aurora/manual-posting?lane=waiting_tracking"' in kit_lane.text
 
+    waiting_lane = client.get("/aurora/manual-posting?lane=waiting_tracking", headers=_auth())
+    assert waiting_lane.status_code == 200
+    assert "Tracking Proof Assist" in waiting_lane.text
+    assert "Waiting on 24h / 72h proof" in waiting_lane.text
+    assert "Queued 1" in waiting_lane.text
+    assert "24h snapshot" in waiting_lane.text
+    assert "2026-05-18T14:00:00Z" in waiting_lane.text
+    assert "Run tracking queue now" in waiting_lane.text
+
+    complete_lane = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
+    assert complete_lane.status_code == 200
+    assert "Closeout CTA" in complete_lane.text
+    assert "Ready for closeout" in complete_lane.text
+    assert "Capture the learning note after reviewing the 24h and 72h proof." in complete_lane.text
+
     default_resp = client.get("/aurora/manual-posting", headers=_auth())
     assert default_resp.status_code == 200
     assert "attention mission" in default_resp.text
@@ -3778,13 +3793,39 @@ def test_manual_posting_queue_requeues_tracking_from_posted_time(tmp_path, clien
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/aurora/manual-posting?lane=waiting_tracking"
+    assert resp.headers["location"].startswith("/aurora/manual-posting?lane=waiting_tracking&tracking_result=")
+    assert "Requeued%2024h%20and%2072h%20tracking%20for%2020260512_attention" in resp.headers["location"]
     saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_attention" / "job.json").read_text())
     assert saved["published_at"] == "2026-05-17T11:00:00Z"
     queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
     assert [item["track_at"] for item in queue] == ["2026-05-18T11:00:00Z", "2026-05-20T11:00:00Z"]
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Requeued manual tracking for 20260512_attention" in work_activity
+
+
+def test_manual_posting_queue_runs_tracking_scheduler_with_feedback(tmp_path, client, monkeypatch):
+    monkeypatch.setattr(
+        "routes.aurora._run_ops_action",
+        lambda action: {"name": "Run tracking queue now", "state": "Ready", "detail": f"{action} started"},
+    )
+
+    resp = client.post(
+        "/aurora/manual-posting/run-tracking",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == (
+        "/aurora/manual-posting?lane=waiting_tracking&tracking_result="
+        "Tracking%20scheduler%20Ready%3A%20track_scheduler%20started"
+    )
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Manual posting tracking scheduler requested" in work_activity
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Tracking action result" in page.text
+    assert "Tracking scheduler Ready: track_scheduler started" in page.text
 
 
 def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):

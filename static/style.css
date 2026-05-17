@@ -1891,6 +1891,34 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border-color: rgba(176,138,58,0.62);
   box-shadow: inset 0 3px 0 var(--gold);
 }
+.manual-tracking-assist,
+.manual-closeout-assist {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.manual-tracking-assist-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.manual-tracking-assist-card {
+  background: rgba(255,255,255,0.76);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.9rem;
+}
+.manual-tracking-steps {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.manual-tracking-steps small {
+  margin-top: 0;
+}
 .manual-posting-meta,
 .manual-tracking-list {
   display: flex;
@@ -2675,6 +2703,8 @@ a:hover { color: var(--navy-soft); }
   .manual-kit-layout,
   .manual-posting-overview-grid,
   .manual-posting-checklist-grid,
+  .manual-tracking-assist-grid,
+  .manual-tracking-steps,
   .manual-proof-grid,
   .artifact-grid,
   .captain-history-filters,
