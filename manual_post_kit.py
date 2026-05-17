@@ -74,7 +74,7 @@ def manual_kit_summary(job: ContentJob, root: Path) -> dict[str, object]:
         "drive_sync": drive_sync if isinstance(drive_sync, dict) else None,
         "caption_ready": _caption_text(job) != "",
         "hashtags_ready": bool(_hashtags(job)),
-        "prompt_pack_ready": bool(job.visual_prompt or job.video_package),
+        "prompt_pack_ready": bool(job.visual_prompt or _has_video_prompt_pack(job)),
         "asset_ready": bool(_existing_media_paths(root, job)),
         "timezone": captain_timezone(),
     }
@@ -121,7 +121,7 @@ def _generated_files(root: Path, job: ContentJob) -> dict[str, str]:
         files.update(content_file)
     if job.visual_prompt:
         files["visual_prompt.txt"] = job.visual_prompt.strip() + "\n"
-    if job.video_package:
+    if _has_video_prompt_pack(job):
         files["storyboard.md"] = _storyboard_markdown(job)
         files["video_prompts/google_video_8s.md"] = _google_video_prompts(job)
         files["video_prompts/kling_detailed.md"] = _kling_prompts(job)
@@ -201,6 +201,7 @@ def _bella_output_file(job: ContentJob) -> dict[str, str] | None:
 
 def _storyboard_markdown(job: ContentJob) -> str:
     package = job.video_package or {}
+    scenes = _video_scenes(job)
     lines = [
         f"# Storyboard - {package.get('title', job.brief)}",
         "",
@@ -208,7 +209,9 @@ def _storyboard_markdown(job: ContentJob) -> str:
         f"- Total duration: {package.get('total_duration_seconds', 'unknown')} seconds",
         "",
     ]
-    for scene in package.get("scenes") or []:
+    if not package.get("total_duration_seconds") and scenes:
+        lines[3] = f"- Total duration: {sum(_scene_duration(scene) for scene in scenes)} seconds"
+    for scene in scenes:
         lines.extend(
             [
                 f"## Scene {scene.get('number')}: {scene.get('purpose')}",
@@ -249,9 +252,8 @@ def _seedance_prompts(job: ContentJob) -> str:
 
 
 def _provider_prompt_doc(job: ContentJob, title: str, instruction: str) -> str:
-    package = job.video_package or {}
     lines = [f"# {title}", "", instruction, ""]
-    for scene in package.get("scenes") or []:
+    for scene in _video_scenes(job):
         lines.extend(
             [
                 f"## Scene {scene.get('number')} - {scene.get('purpose')}",
@@ -264,6 +266,58 @@ def _provider_prompt_doc(job: ContentJob, title: str, instruction: str) -> str:
             ]
         )
     return "\n".join(lines)
+
+
+def _has_video_prompt_pack(job: ContentJob) -> bool:
+    if job.video_package:
+        return True
+    return job.content_type == ContentType.VIDEO and bool(job.bella_output or job.visual_prompt)
+
+
+def _video_scenes(job: ContentJob) -> list[dict[str, object]]:
+    package = job.video_package if isinstance(job.video_package, dict) else {}
+    scenes = package.get("scenes")
+    if isinstance(scenes, list) and scenes:
+        return [dict(scene) for scene in scenes]
+    if job.content_type != ContentType.VIDEO:
+        return []
+    output = job.bella_output.model_dump() if job.bella_output else {}
+    visual = job.visual_prompt or job.brief
+    beats = [
+        ("hook", output.get("hook") or job.brief),
+        ("body", output.get("body") or visual),
+        ("cta", output.get("cta") or "Invite the viewer to save, share, or comment."),
+    ]
+    scenes = []
+    cursor = 0
+    for index, (purpose, text) in enumerate(beats, start=1):
+        end = cursor + 8
+        prompt = (
+            f"{job.brief}: {purpose}. "
+            f"Script beat: {text}. "
+            f"Visual direction: {visual}. "
+            "Keep this as one clean 8-second pre-production scene."
+        )
+        scenes.append(
+            {
+                "number": index,
+                "start_second": cursor,
+                "end_second": end,
+                "purpose": purpose,
+                "visual_direction": visual,
+                "prompt": prompt,
+                "tool_hint": "manual_video_prompt",
+            }
+        )
+        cursor = end
+    return scenes
+
+
+def _scene_duration(scene: dict[str, object]) -> int:
+    try:
+        return int(scene.get("end_second", 0)) - int(scene.get("start_second", 0))
+    except (TypeError, ValueError):
+        return int(scene.get("duration_seconds", 8) or 8)
 
 
 def _caption_text(job: ContentJob) -> str:

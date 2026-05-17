@@ -2277,6 +2277,31 @@ def test_job_detail_syncs_manual_kit_to_drive(tmp_path, client, monkeypatch, moc
     assert saved["manual_post_kit"]["drive_sync"]["web_view_link"] == "https://drive.google.com/file/d/file-123/view"
 
 
+def test_manual_kit_adds_video_prompts_for_legacy_video_job(tmp_path, client):
+    import zipfile
+    from io import BytesIO
+    from models.content_job import ContentJob, ContentType, Script
+
+    _write_job(tmp_path, "20260512_060001", brief="legacy video mission")
+    job_dir = tmp_path / "output" / "Slayhack" / "20260512_060001"
+    job = ContentJob.model_validate_json((job_dir / "job.json").read_text())
+    job.content_type = ContentType.VIDEO
+    job.bella_output = Script(hook="legacy hook", body="legacy body", cta="legacy cta", duration_seconds=24)
+    job.visual_prompt = "legacy visual prompt"
+    (job_dir / "job.json").write_text(job.model_dump_json(indent=2))
+
+    resp = client.get("/jobs/20260512_060001/download", headers=_auth())
+
+    assert resp.status_code == 200
+    with zipfile.ZipFile(BytesIO(resp.content)) as archive:
+        base = "SlayHack/04_Video_PreProduction/20260512_060001_legacy-video-mission"
+        assert f"{base}/storyboard.md" in archive.namelist()
+        assert f"{base}/video_prompts/google_video_8s.md" in archive.namelist()
+        google_prompt = archive.read(f"{base}/video_prompts/google_video_8s.md").decode()
+        assert "legacy hook" in google_prompt
+        assert "legacy visual prompt" in google_prompt
+
+
 def test_job_detail_shows_tracking_queue_status(tmp_path, client):
     _write_job(tmp_path, "20260512_060000", brief="tracking mission")
     (tmp_path / "output" / "track_queue.json").write_text(json.dumps([
