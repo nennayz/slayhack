@@ -147,6 +147,21 @@ def test_orchestrator_marks_publish_failures_failed(mocker, tmp_path, monkeypatc
     assert result.status == JobStatus.FAILED
 
 
+def test_orchestrator_safe_prep_end_turn_without_handoff_awaits_approval(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+
+    mocker.patch("orchestrator.anthropic.Anthropic").return_value.messages.create.return_value = _make_end_turn_response()
+    orch = Orchestrator(make_config(), safe_prep=True)
+    job = make_job(dry_run=False)
+    job.stage = "zoe_done"
+
+    result = orch.run(job, unattended=True)
+
+    assert result.status == JobStatus.AWAITING_APPROVAL
+    assert result.stage == "zoe_done"
+
+
 def test_orchestrator_safe_prep_intercepts_publish(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
