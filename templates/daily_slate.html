@@ -16,6 +16,18 @@
 
 {% include "_aurora_flow.html" %}
 
+<section class="panel slate-filter-panel">
+  <div class="section-heading">
+    <p class="eyebrow">Project filters</p>
+    <h2>{{ selected_project_label }}</h2>
+  </div>
+  <div class="slate-filter-tabs">
+    {% for item in project_filters %}
+    <a class="{{ 'active' if item.active else '' }}" href="/aurora/daily-slate{{ '' if item.project == 'all' else '?project=' ~ item.project }}">{{ item.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Pages</span>
@@ -93,39 +105,51 @@
       <span><strong>{{ slate.counts.articles }}</strong> articles</span>
       <span><strong>{{ slate.counts.infographics }}</strong> cards</span>
     </div>
-    <div class="slate-ticket-list">
-      {% for ticket in slate.tickets %}
-      <div class="slate-ticket">
-        <span>{{ ticket.ticket_type }}</span>
-        <strong>{{ ticket.title }}</strong>
-        <small>{{ ticket.owner }} owns - {{ ticket.decision_owner }} decides - {{ ticket.platform_primary }}</small>
-        {% if ticket.has_mission %}
-        <a class="mission-chip" href="{{ ticket.mission.mission_url }}">Mission exists - {{ ticket.mission.job_id }} - {{ ticket.mission.mission_stage }}</a>
-        {% else %}
-        <small class="mission-chip muted">No mission yet</small>
-        {% endif %}
-      </div>
-      {% endfor %}
-    </div>
-    {% if slate.video_packages %}
-    <div class="slate-video-packages">
-      <h3>Video packages</h3>
-      {% for package in slate.video_packages %}
-      <div class="slate-package-link slate-package-action">
-        <strong>{{ package.title }}</strong>
-        <small>{{ package.owner }} - {{ package.scene_count }} scenes - {{ package.total_duration_seconds }}s</small>
-        <div class="slate-actions">
-          {% if package.has_mission %}
-          <a class="button button-secondary button-small" href="{{ package.mission.mission_url }}">Open mission</a>
+    <details class="slate-drawer">
+      <summary>
+        <span>Ticket drawer</span>
+        <strong>{{ slate.tickets | length }} planned tickets</strong>
+      </summary>
+      <div class="slate-ticket-list">
+        {% for ticket in slate.tickets %}
+        <div class="slate-ticket">
+          <span>{{ ticket.ticket_type }}</span>
+          <strong>{{ ticket.title }}</strong>
+          <small>{{ ticket.owner }} owns - {{ ticket.decision_owner }} decides - {{ ticket.platform_primary }}</small>
+          {% if ticket.has_mission %}
+          <a class="mission-chip" href="{{ ticket.mission.mission_url }}">Mission exists - {{ ticket.mission.job_id }} - {{ ticket.mission.mission_stage }}</a>
           {% else %}
-          <form class="inline-form" method="post" action="{{ package.daily_create_mission_url }}">
-            <button type="submit">Create mission</button>
-          </form>
+          <small class="mission-chip muted">No mission yet</small>
           {% endif %}
         </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
+    </details>
+    {% if slate.video_packages %}
+    <details class="slate-drawer slate-package-drawer">
+      <summary>
+        <span>Video package drawer</span>
+        <strong>{{ slate.video_packages | length }} packages</strong>
+      </summary>
+      <div class="slate-video-packages">
+        <h3>Video packages</h3>
+        {% for package in slate.video_packages %}
+        <div class="slate-package-link slate-package-action">
+          <strong>{{ package.title }}</strong>
+          <small>{{ package.owner }} - {{ package.scene_count }} scenes - {{ package.total_duration_seconds }}s</small>
+          <div class="slate-actions">
+            {% if package.has_mission %}
+            <a class="button button-secondary button-small" href="{{ package.mission.mission_url }}">Open mission</a>
+            {% else %}
+            <form class="inline-form" method="post" action="{{ package.daily_create_mission_url }}">
+              <button type="submit">Create mission</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
     {% endif %}
   </article>
   {% else %}

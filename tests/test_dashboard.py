@@ -318,8 +318,12 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Stadium Sweethearts" in resp.text
     assert "PM Slay" in resp.text
     assert "PM Stadium" in resp.text
+    assert "Project filters" in resp.text
+    assert "All pages" in resp.text
     assert "Quick hack" in resp.text
     assert "Touchdown Reaction" in resp.text
+    assert "Ticket drawer" in resp.text
+    assert "Video package drawer" in resp.text
     assert "Next best ticket" in resp.text
     assert "PM action plan" in resp.text
     assert "Create next video mission" in resp.text
@@ -336,6 +340,18 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Keep PM decisions separate from central crew execution." in resp.text
     assert "Use this view for" in resp.text
     assert "Stadium checks fan-cam plays" in resp.text
+
+    stadium_only = client.get("/aurora/daily-slate?project=stadium_sweethearts", headers=_auth())
+    assert stadium_only.status_code == 200
+    assert "Stadium Sweethearts" in stadium_only.text
+    assert "Touchdown Reaction" in stadium_only.text
+    assert "PM Slay" not in stadium_only.text
+    assert "Quick hack" not in stadium_only.text
+
+    invalid_filter = client.get("/aurora/daily-slate?project=missing", headers=_auth())
+    assert invalid_filter.status_code == 200
+    assert "Slay Hack" in invalid_filter.text
+    assert "Stadium Sweethearts" in invalid_filter.text
 
 
 def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):

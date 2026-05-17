@@ -3014,18 +3014,40 @@ def aurora_workflow(request: Request, _: str = Depends(verify_auth)):
 @app.get("/aurora/daily-slate", response_class=HTMLResponse)
 def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
-    slate_cards = _daily_slate_cards(root)
+    all_slate_cards = _daily_slate_cards(root)
+    selected_project = request.query_params.get("project", "all")
+    project_slugs = {str(card["project"]) for card in all_slate_cards}
+    if selected_project not in project_slugs:
+        selected_project = "all"
+    slate_cards = [
+        card for card in all_slate_cards if selected_project == "all" or card["project"] == selected_project
+    ]
+    project_filters = [{"label": "All pages", "project": "all", "active": selected_project == "all"}] + [
+        {
+            "label": str(card["page_name"]),
+            "project": str(card["project"]),
+            "active": selected_project == card["project"],
+        }
+        for card in all_slate_cards
+    ]
+    selected_project_label = next(
+        (item["label"] for item in project_filters if item["active"]),
+        "All pages",
+    )
     approval_queue = _approval_queue_rows(root)
     return templates.TemplateResponse(
         request,
         "daily_slate.html",
         {
             "slate_cards": slate_cards,
+            "project_filters": project_filters,
+            "selected_project": selected_project,
+            "selected_project_label": selected_project_label,
             "latest_brief": _latest_learning_brief(root),
             "approval_queue": approval_queue[:8],
             "approval_lane_groups": _approval_lane_groups(approval_queue),
-            "total_tickets": sum(int(card["ticket_count"]) for card in slate_cards),
-            "ready_pages": sum(1 for card in slate_cards if card["minimum_met"]),
+            "total_tickets": sum(int(card["ticket_count"]) for card in all_slate_cards),
+            "ready_pages": sum(1 for card in all_slate_cards if card["minimum_met"]),
             "approval_count": len(approval_queue),
         },
     )
