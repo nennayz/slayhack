@@ -6,6 +6,13 @@
     </div>
     <p>{{ learning_runbook.summary }}</p>
   </div>
+  {% if runbook_result %}
+  <div class="ops-action-result learning-runbook-result">
+    <span class="badge badge-ops-ready">Runbook action result</span>
+    <strong>{{ runbook_result }}</strong>
+    <small>The runbook state below has been recalculated from mission files and work activity.</small>
+  </div>
+  {% endif %}
   <div class="learning-runbook-steps">
     {% for step in learning_runbook.steps %}
     <article class="learning-runbook-step {{ step.status }}">
