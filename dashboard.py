@@ -154,6 +154,7 @@ from routes._helpers import (  # noqa: F401
     _accepted_learning_for_job,
     _learning_blocks_generation,
     _confirm_mission_learning,
+    _captain_learning_runbook,
     _manual_closeout_learning_brief_intake,
     _manual_closeout_learning_rows,
     _manual_posting_lane_filters,
