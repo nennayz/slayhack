@@ -87,6 +87,30 @@ def test_scheduler_skips_blank_brief(tmp_path, monkeypatch):
     assert mock_run.call_count == 6
 
 
+def test_scheduler_uses_active_project_slugs_and_skips_alias_duplicates(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    import yaml
+    for slug in ("nayzfreedom_fleet", "slay_hack", "stadium_sweethearts"):
+        project_dir = tmp_path / "projects" / slug
+        project_dir.mkdir(parents=True)
+        (project_dir / "pm_profile.yaml").write_text(
+            f'name: "PM"\npage_name: "{slug}"\npersona: "p"\n'
+        )
+        (project_dir / "brand.yaml").write_text(
+            'mission: "m"\nvisual:\n  colors: []\n  style: ""\n'
+            'platforms: ["instagram"]\ntone: ""\ntarget_audience: ""\nscript_style: ""\n'
+        )
+        (project_dir / "weekly_calendar.yaml").write_text(yaml.dump(MONDAY_CALENDAR))
+    monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()) as mock_run:
+        exit_code = sched_module.run_scheduler(dry_run=False, root=tmp_path)
+    assert exit_code == 0
+    projects = [c.args[0][c.args[0].index("--project") + 1] for c in mock_run.call_args_list]
+    assert "nayzfreedom_fleet" not in projects
+    assert projects.count("slay_hack") == 7
+    assert projects.count("stadium_sweethearts") == 7
+
+
 def test_scheduler_continues_after_failure(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
