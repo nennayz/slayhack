@@ -430,7 +430,93 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert ready_queue.status_code == 200
     assert "Ready to publish" in ready_queue.text
     assert "Captain approval required before schedule handoff" in ready_queue.text
+    assert "Captain review" in ready_queue.text
     assert f'action="/jobs/{job_id}/schedule-publish"' not in ready_queue.text
+
+
+def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_path, client):
+    _write_stadium_project(tmp_path)
+    ticket_id = _project_ticket_id(tmp_path, "stadium_sweethearts", "short-video-1")
+    created = client.post(
+        f"/aurora/daily-slate/stadium_sweethearts/video-packages/{ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    job_id = created.headers["location"].split("/")[-1]
+    client.post(f"/jobs/{job_id}/ready-for-generation", headers=_auth(), follow_redirects=False)
+    client.post(f"/jobs/{job_id}/run-generation-dry-run", headers=_auth(), follow_redirects=False)
+    client.post(
+        f"/jobs/{job_id}/record-generation-result",
+        headers=_auth(),
+        data={
+            "video_path": f"output/Stadium Sweethearts/{job_id}/final-video.mp4",
+            "provider": "manual_upload",
+            "provider_request_id": "approval-queue",
+        },
+        follow_redirects=False,
+    )
+    client.post(
+        f"/jobs/{job_id}/record-publish-package",
+        headers=_auth(),
+        data={
+            "caption": "Fictional adult fan-cam replay.",
+            "hashtags": "#StadiumSweethearts, #AIFanCam",
+            "faq": "Q: Is this real?\nA: No, fictional AI-generated adults only.",
+            "publish_notes": "Do not schedule without Captain approval.",
+        },
+        follow_redirects=False,
+    )
+    client.post(f"/jobs/{job_id}/create-publish-job", headers=_auth(), follow_redirects=False)
+
+    approval = client.get(f"/jobs/{job_id}/captain-approval", headers=_auth())
+    detail = client.get(f"/jobs/{job_id}", headers=_auth())
+
+    assert approval.status_code == 200
+    assert "Captain approval" in approval.text
+    assert "Fictional adult fan-cam replay." in approval.text
+    assert "Dashboard schedule handoff only" in approval.text
+    assert "Approve schedule handoff" in approval.text
+    assert detail.status_code == 200
+    assert "Captain approval" in detail.text
+    assert f'action="/jobs/{job_id}/schedule-publish"' not in detail.text
+
+    hold = client.post(
+        f"/jobs/{job_id}/captain-review",
+        headers=_auth(),
+        data={"decision": "hold", "note": "Wait for final thumbnail."},
+        follow_redirects=False,
+    )
+    assert hold.status_code == 303
+    job_path = next((tmp_path / "output" / "Stadium Sweethearts").glob("*/job.json"))
+    data = json.loads(job_path.read_text())
+    assert data["stage"] == "captain_hold"
+    assert data["publish_execution"]["status"] == "captain_hold"
+    assert data["publish_execution"]["captain_review"]["note"] == "Wait for final thumbnail."
+
+    edits = client.post(
+        f"/jobs/{job_id}/captain-review",
+        headers=_auth(),
+        data={"decision": "needs_edits", "note": "Tighten disclosure copy."},
+        follow_redirects=False,
+    )
+    assert edits.status_code == 303
+    data = json.loads(job_path.read_text())
+    assert data["stage"] == "publish_needs_edits"
+    assert data["publish_execution"]["status"] == "needs_edits"
+
+    approved = client.post(
+        f"/jobs/{job_id}/captain-review",
+        headers=_auth(),
+        data={"decision": "approve_schedule_handoff", "note": "Approved for dashboard handoff only."},
+        follow_redirects=False,
+    )
+    assert approved.status_code == 303
+    data = json.loads(job_path.read_text())
+    assert data["stage"] == "publish_scheduled"
+    assert data["publish_execution"]["status"] == "scheduled"
+    assert data["publish_result"]["tiktok"]["dry_run"] is True
+    assert data["publish_result"]["tiktok"]["reason"] == "Dashboard schedule handoff only; no external platform API was called."
+    assert data["publish_execution"]["captain_review"]["decision"] == "approve_schedule_handoff"
 
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):
@@ -757,7 +843,8 @@ def test_create_publish_job_and_schedule_publish_from_package(tmp_path, client):
 
     assert detail.status_code == 200
     assert "Ready to publish" in detail.text
-    assert "Schedule publish" in detail.text
+    assert "Captain approval" in detail.text
+    assert f'action="/jobs/{job_id}/schedule-publish"' not in detail.text
     assert ready_filter.status_code == 200
     assert "Video package mission: Quick hack" in ready_filter.text
 
