@@ -33,8 +33,8 @@
     <strong>{{ ready_publish_count }}</strong>
   </div>
   <div class="stat-card">
-    <span>Scheduled</span>
-    <strong>{{ scheduled_publish_count }}</strong>
+    <span>Handoffs</span>
+    <strong>{{ scheduled_handoff_count }}</strong>
   </div>
   <div class="stat-card">
     <span>Failed</span>
@@ -91,7 +91,7 @@
       <a class="button button-secondary generation-action" href="/jobs/{{ item.job.id }}">Open publish packaging</a>
       {% endif %}
       {% if item.publish_execution.can_create and item.publish_execution.status != "scheduled" %}
-      <a class="button button-secondary generation-action" href="/jobs/{{ item.job.id }}">{{ "Schedule publish" if item.publish_execution.can_schedule else "Create publish job" }}</a>
+      <a class="button button-secondary generation-action" href="/jobs/{{ item.job.id }}">{{ "Captain approval" if item.publish_execution.can_schedule else "Create publish job" }}</a>
       {% endif %}
     </div>
     {% endfor %}

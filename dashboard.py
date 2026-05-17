@@ -129,7 +129,9 @@ def _publish_status_items(job) -> list[dict[str, str]]:
         if not isinstance(value, dict):
             continue
         status = value.get("status", "unknown")
-        if platform == "facebook" and status == "scheduled":
+        if status == "scheduled" and value.get("dry_run") is True:
+            label = f"{platform.title()} handoff"
+        elif platform == "facebook" and status == "scheduled":
             label = "Facebook scheduled"
         elif platform == "instagram" and status == "published":
             label = "Instagram published"
@@ -160,6 +162,17 @@ def _publish_history_items(job) -> list[dict[str, str]]:
 templates.env.globals["publish_history_items"] = _publish_history_items
 
 
+def _publish_result_reason(job) -> str:
+    result = job.publish_result or {}
+    if not isinstance(result, dict):
+        return "No dashboard handoff result is recorded yet."
+    for platform in ("instagram", "facebook", "tiktok", "youtube"):
+        value = result.get(platform)
+        if isinstance(value, dict) and value.get("reason"):
+            return str(value["reason"])
+    return "Dashboard handoff status is recorded without a reason."
+
+
 def _filter_jobs(jobs, selected: str):
     if selected == "running":
         return [job for job in jobs if getattr(job.status, "value", str(job.status)) == "running"]
@@ -188,7 +201,7 @@ def _mission_filters(jobs, selected: str) -> list[dict[str, object]]:
         ("running", "Running"),
         ("failed", "Failed"),
         ("ready_to_publish", "Ready to publish"),
-        ("scheduled", "Scheduled"),
+        ("scheduled", "Handoffs"),
         ("queued", "Queued"),
         ("published", "Published"),
         ("publish_failed", "Publish failed"),
@@ -1792,7 +1805,7 @@ def _publish_execution_label(job: ContentJob) -> str:
         "ready_to_publish": "Ready to publish",
         "captain_hold": "Captain hold",
         "needs_edits": "Needs edits",
-        "scheduled": "Scheduled publish",
+        "scheduled": "Scheduled handoff",
         "published": "Published",
         "failed": "Publish failed",
     }
@@ -1861,7 +1874,7 @@ GENERATION_FILTERS = (
     ("ready_packaging", "Ready packaging"),
     ("package_complete", "Package complete"),
     ("ready_to_publish", "Ready to publish"),
-    ("scheduled", "Scheduled publish"),
+    ("scheduled", "Scheduled handoff"),
     ("publish_failed", "Publish failed"),
 )
 
@@ -2134,7 +2147,7 @@ def _schedule_publish_execution(root: Path, job: ContentJob) -> ContentJob:
         {
             "status": "scheduled",
             "scheduled_at": scheduled_at,
-            "next_action": "Publish package is scheduled. Use platform publisher controls for live posting.",
+            "next_action": "Dashboard handoff is recorded. Live publishing remains locked until explicit approval.",
         }
     )
     job.publish_execution = execution
@@ -2574,8 +2587,8 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
             row = {
                 "lane": "Scheduled",
                 "state": "ready",
-                "status": "Scheduled publish",
-                "next_action": "Waiting for platform publisher controls; no external API call was made by this handoff.",
+                "status": "Scheduled handoff",
+                "next_action": "Dashboard handoff recorded only; live publishing remains locked.",
                 "action_label": "Open mission",
                 "action_url": f"/jobs/{job.id}",
                 "action_method": "get",
@@ -2609,7 +2622,7 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
         "Ready to publish": 6,
         "Captain hold": 7,
         "Needs edits": 8,
-        "Scheduled publish": 9,
+        "Scheduled handoff": 9,
     }
     return sorted(rows, key=lambda item: (order.get(str(item["status"]), 99), str(item["page_name"]), str(item["job_id"])))
 
@@ -2829,7 +2842,7 @@ def aurora_generation(request: Request, _: str = Depends(verify_auth)):
             "completed_count": sum(1 for item in rows if item["status"] == "completed"),
             "waiting_real_count": sum(1 for item in rows if item["waiting_for_real_video"]),
             "ready_publish_count": sum(1 for item in rows if item["publish_execution"]["status"] == "ready_to_publish"),
-            "scheduled_publish_count": sum(1 for item in rows if item["publish_execution"]["status"] == "scheduled"),
+            "scheduled_handoff_count": sum(1 for item in rows if item["publish_execution"]["status"] == "scheduled"),
             "failed_count": sum(1 for item in rows if item["status"] == "failed"),
         },
     )
@@ -3178,6 +3191,7 @@ def captain_approval(job_id: str, request: Request, _: str = Depends(verify_auth
             "publish_package": getattr(job, "publish_package", None),
             "publish_execution": getattr(job, "publish_execution", None),
             "publish_execution_summary": _publish_execution_summary(job),
+            "publish_result_reason": _publish_result_reason(job),
             "faq_content": faq_content,
         },
     )
@@ -3324,7 +3338,7 @@ def create_publish_job(job_id: str, request: Request, user: str = Depends(verify
         f"Created publish job for {job_id}",
         actor=user,
         result="ready_to_publish",
-        next_action="Schedule publish after platform readiness check.",
+        next_action="Captain review required before dashboard handoff. Live publishing remains locked.",
         metadata={"job_id": job_id},
     )
     return RedirectResponse(f"/jobs/{job_id}", status_code=303)
@@ -3355,7 +3369,7 @@ def captain_review(
         f"Captain review decision for {job_id}",
         actor=user,
         result=result,
-        next_action="Use platform publisher controls for live posting." if decision == "approve_schedule_handoff" else "Review approval queue for next action.",
+        next_action="Live publishing remains locked until explicit approval." if decision == "approve_schedule_handoff" else "Review approval queue for next action.",
         metadata={"job_id": job_id, "decision": decision},
     )
     return RedirectResponse(f"/jobs/{job_id}/captain-approval", status_code=303)
@@ -3376,10 +3390,10 @@ def schedule_publish(job_id: str, request: Request, user: str = Depends(verify_a
     _write_work_event(
         root,
         "production_smoke",
-        f"Scheduled publish handoff for {job_id}",
+        f"Scheduled dashboard handoff for {job_id}",
         actor=user,
         result="scheduled publish handoff",
-        next_action="Use platform publisher controls for live posting.",
+        next_action="Live publishing remains locked until explicit approval.",
         metadata={"job_id": job_id},
     )
     return RedirectResponse(f"/jobs/{job_id}", status_code=303)
