@@ -258,6 +258,7 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "Daily Slate" in resp.text
     assert "Approvals" in resp.text
     assert "Generation" in resp.text
+    assert "station-icon" in resp.text
 
 
 def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
@@ -270,6 +271,8 @@ def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
 
     assert resp.status_code == 200
     assert "Operating workflow" in resp.text
+    assert "fleet-header-chart" in resp.text
+    assert "station-workflow" in resp.text
     assert "New project discovery" in resp.text
     assert "Content calendar plan" in resp.text
     assert "Operating lanes" in resp.text
@@ -609,6 +612,7 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     detail = client.get(f"/jobs/{job_id}", headers=_auth())
 
     assert approval.status_code == 200
+    assert "fleet-header-harbor" in approval.text
     assert "Captain approval" in approval.text
     assert "Fictional adult fan-cam replay." in approval.text
     assert "Dashboard schedule handoff only" in approval.text
@@ -661,6 +665,7 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     approved_page = client.get(f"/jobs/{job_id}/captain-approval", headers=_auth())
 
     assert approved_page.status_code == 200
+    assert "fleet-header-harbor" in approved_page.text
     assert "Scheduled handoff" in approved_page.text
     assert "Live publish lock" in approved_page.text
     assert "Live publishing remains locked" in approved_page.text
@@ -673,6 +678,7 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     live_gate = client.get(f"/jobs/{job_id}/live-publish-approval", headers=_auth())
 
     assert live_gate.status_code == 200
+    assert "fleet-header-harbor" in live_gate.text
     assert "Live publish approval" in live_gate.text
     assert "Real posting remains blocked" in live_gate.text
     assert "No real platform publisher API is called from this page." in live_gate.text
@@ -764,6 +770,8 @@ def test_generation_queue_shows_ready_video_mission(tmp_path, client):
 
     assert resp.status_code == 200
     assert "Generation queue" in resp.text
+    assert "fleet-header-shipyard" in resp.text
+    assert "station-generation" in resp.text
     assert "Ready" in resp.text
     assert "Run generation dry-run" in resp.text
     assert f"/jobs/{job_id}/run-generation-dry-run" in resp.text
@@ -1127,6 +1135,7 @@ def test_aurora_crew_pages_render(client):
     detail = client.get("/aurora/crew/robin", headers=_auth())
     assert crew.status_code == 200
     assert "Crew" in crew.text
+    assert "fleet-hero-crew" in crew.text
     assert "Captain Nayz" in crew.text
     assert "Robin" in crew.text
     assert "Slay" in crew.text
@@ -1230,6 +1239,7 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
 
     assert resp.status_code == 200
     assert "Aurora Learning Desk" in resp.text
+    assert "fleet-hero-learning" in resp.text
     assert "Daily Learning Brief" in resp.text
     assert "Mia needs a targeted review." in resp.text
     assert "Crew Final Style v8 Approved Production Notes" in resp.text
@@ -1330,6 +1340,7 @@ def test_readiness_page_renders_private_preflight(tmp_path, client):
 
     assert resp.status_code == 200
     assert "Readiness" in resp.text
+    assert "fleet-hero-readiness" in resp.text
     assert "Dashboard auth" in resp.text
     assert "Project config" in resp.text
     assert "Deploy files" in resp.text
@@ -1925,6 +1936,7 @@ def test_jobs_page_shows_publish_indicators(tmp_path, client):
     )
     resp = client.get("/aurora/missions", headers=_auth())
     assert resp.status_code == 200
+    assert "fleet-header-voyage-board" in resp.text
     assert "Facebook scheduled" in resp.text
     assert "Instagram pending queue" in resp.text
 
@@ -2021,10 +2033,13 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "nayzfreedom_fleet" not in resp.text
     assert "Voyage log" in resp.text
     assert "fleet-hero-log" in resp.text
+    assert "Captain's Log" in resp.text
     assert "Mission command" in resp.text
+    assert "Ship position" in resp.text
     assert "Review the publish result and record performance when results arrive." in resp.text
     assert "Return to island" in resp.text
     assert "Mission cargo" in resp.text
+    assert "Cargo checklist" in resp.text
     assert "Output readiness" in resp.text
     assert "Bella output is available." in resp.text
     assert "Visual direction is available." in resp.text
@@ -2302,6 +2317,7 @@ def test_job_detail_workflow_marks_current_crew_stage(tmp_path, client):
 def test_metrics_no_data(client):
     resp = client.get("/metrics", headers=_auth())
     assert resp.status_code == 200
+    assert "fleet-header-logbook" in resp.text
     assert "No performance data" in resp.text
 
 

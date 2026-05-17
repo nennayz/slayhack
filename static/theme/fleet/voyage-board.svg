@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Voyage board with mission cards">
+  <defs>
+    <linearGradient id="board" x1="0" x2="1">
+      <stop offset="0" stop-color="#091f35"/>
+      <stop offset="0.64" stop-color="#193f54"/>
+      <stop offset="1" stop-color="#5b351f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#board)"/>
+  <g transform="translate(120 70)" fill="none" stroke="#f6ce83" stroke-width="5" opacity="0.74">
+    <rect x="0" y="0" width="900" height="260" rx="18"/>
+    <path d="M0 70 h900M0 140 h900M0 210 h900"/>
+    <path d="M220 0 v260M520 0 v260M720 0 v260"/>
+  </g>
+  <g fill="#8fe3d3" opacity="0.72">
+    <circle cx="174" cy="104" r="8"/>
+    <circle cx="174" cy="174" r="8"/>
+    <circle cx="174" cy="244" r="8"/>
+    <circle cx="174" cy="314" r="8"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.34">
+    <path d="M392 104 h184M392 174 h236M392 244 h148M392 314 h210"/>
+    <path d="M676 104 h112M676 174 h80M676 244 h134M676 314 h96"/>
+  </g>
+</svg>

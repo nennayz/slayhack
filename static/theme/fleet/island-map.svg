@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Island map with fleet route flags">
+  <defs>
+    <linearGradient id="water" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#072038"/>
+      <stop offset="0.55" stop-color="#15516b"/>
+      <stop offset="1" stop-color="#334936"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#water)"/>
+  <g fill="#f0c779" opacity="0.5">
+    <path d="M182 246 C220 178 310 180 344 242 C304 290 228 302 182 246z"/>
+    <path d="M706 144 C760 74 878 106 898 190 C838 228 744 224 706 144z"/>
+    <path d="M476 296 C536 240 648 264 672 344 C594 382 512 366 476 296z"/>
+  </g>
+  <g fill="none" stroke="#8fe3d3" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 16" opacity="0.78">
+    <path d="M230 232 C376 134 554 170 742 150"/>
+    <path d="M760 184 C668 242 610 288 536 318"/>
+  </g>
+  <g stroke="#f8d591" stroke-width="5" fill="none" opacity="0.86">
+    <path d="M304 190 v-82 l74 24 l-74 24"/>
+    <path d="M816 94 v-78 l72 24 l-72 24"/>
+    <path d="M594 282 v-74 l68 22 l-68 22"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="2" opacity="0.22">
+    <path d="M0 340 C220 302 340 390 540 342 S918 300 1200 344"/>
+    <path d="M0 380 C220 342 340 430 540 382 S918 340 1200 384"/>
+  </g>
+</svg>

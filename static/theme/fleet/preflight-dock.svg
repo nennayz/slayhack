@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Preflight dock with readiness beacons">
+  <defs>
+    <linearGradient id="dock" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071a2d"/>
+      <stop offset="0.56" stop-color="#12394f"/>
+      <stop offset="1" stop-color="#263d3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#dock)"/>
+  <g stroke="#f8d591" stroke-width="5" fill="none" opacity="0.76">
+    <path d="M88 312 H1016 L1112 236 H184z"/>
+    <path d="M196 236 V106 h92 v130M450 236 V72 h92 v164M704 236 V118 h92 v118"/>
+    <path d="M112 360 H1100"/>
+  </g>
+  <g fill="#8fe3d3" opacity="0.72">
+    <circle cx="242" cy="92" r="14"/>
+    <circle cx="496" cy="58" r="14"/>
+    <circle cx="750" cy="104" r="14"/>
+  </g>
+  <g stroke="#8fe3d3" stroke-width="4" fill="none" opacity="0.48">
+    <circle cx="242" cy="92" r="42"/>
+    <circle cx="496" cy="58" r="42"/>
+    <circle cx="750" cy="104" r="42"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="3" opacity="0.28">
+    <path d="M0 330 C200 292 330 362 520 330 S890 292 1200 336"/>
+    <path d="M0 380 C200 342 330 412 520 380 S890 342 1200 386"/>
+  </g>
+</svg>

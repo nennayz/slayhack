@@ -1,27 +1,32 @@
 {% set path = request.url.path %}
 <section class="workflow-rail" aria-label="Aurora workflow navigation">
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/daily-slate' else '' }}" href="/aurora/daily-slate">
-    <span>01</span>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/daily-slate' else '' }} station-plan" href="/aurora/daily-slate">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">01</span>
     <strong>Daily Slate</strong>
     <small>Plan</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/approval-queue' else '' }}" href="/aurora/approval-queue">
-    <span>02</span>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/approval-queue' else '' }} station-approval" href="/aurora/approval-queue">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">02</span>
     <strong>Approvals</strong>
     <small>Gate</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/generation' else '' }}" href="/aurora/generation">
-    <span>03</span>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/generation' else '' }} station-generation" href="/aurora/generation">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">03</span>
     <strong>Generation</strong>
     <small>Build</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/workflow' else '' }}" href="/aurora/workflow">
-    <span>04</span>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/workflow' else '' }} station-workflow" href="/aurora/workflow">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">04</span>
     <strong>Operating workflow</strong>
     <small>Map</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/learning' else '' }}" href="/aurora/learning">
-    <span>05</span>
+  <a class="workflow-rail-step {{ 'active' if path == '/aurora/learning' else '' }} station-learning" href="/aurora/learning">
+    <span class="station-icon" aria-hidden="true"></span>
+    <span class="station-index">05</span>
     <strong>Learning</strong>
     <small>Store</small>
   </a>

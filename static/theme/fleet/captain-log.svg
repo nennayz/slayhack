@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Captain logbook and inked voyage notes">
+  <defs>
+    <linearGradient id="log" x1="0" x2="1">
+      <stop offset="0" stop-color="#09233a"/>
+      <stop offset="0.52" stop-color="#3d2a1c"/>
+      <stop offset="1" stop-color="#7b562a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#log)"/>
+  <g transform="translate(150 70)">
+    <path d="M0 24 C164 -22 318 36 460 24 C600 12 720 -18 890 20 V292 C728 250 600 286 464 286 C312 286 166 246 0 286z" fill="#f4dfb5" opacity="0.2"/>
+    <path d="M445 28 v258" stroke="#f4dfb5" stroke-width="4" opacity="0.45"/>
+    <g stroke="#f4dfb5" stroke-width="4" opacity="0.58">
+      <path d="M62 84 h292M62 126 h244M62 168 h318M62 210 h230"/>
+      <path d="M520 82 h270M520 124 h230M520 166 h300M520 208 h206"/>
+    </g>
+    <g fill="none" stroke="#8fe3d3" stroke-width="5" stroke-linecap="round" opacity="0.68">
+      <path d="M118 246 C240 178 346 272 442 210"/>
+      <path d="M572 242 C650 186 760 188 818 126"/>
+    </g>
+  </g>
+  <g transform="translate(914 104)" fill="none" stroke="#f8d591" stroke-width="5" opacity="0.72">
+    <path d="M0 184 L100 24"/>
+    <path d="M100 24 l24 54 l-46 -30"/>
+    <path d="M0 184 l42 -12 l-28 -26z" fill="#f8d591" fill-opacity="0.25"/>
+  </g>
+</svg>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero compact-hero mission-hero fleet-hero-log">
-  <p class="eyebrow">Voyage log</p>
+  <p class="eyebrow">Captain's Log · Voyage log</p>
   <h1>Mission {{ job.id }}</h1>
   <p class="hero-copy">{{ job.brief }}</p>
   <div class="progress-bar" aria-label="Voyage progress">
@@ -28,7 +28,7 @@
 
 <section class="mission-command">
   <article>
-    <p class="eyebrow">Mission command</p>
+    <p class="eyebrow">Captain's Log · Mission command</p>
     <h2>{{ mission_command.state }}</h2>
     <p>{{ mission_command.action }}</p>
     <div class="inline-actions">
@@ -39,7 +39,7 @@
     </div>
   </article>
   <article>
-    <span>Current stage</span>
+    <span>Ship position · Current stage</span>
     <strong>{{ mission_command.stage_label }}</strong>
     <small>{{ mission_command.owner }} · {{ mission_command.station }}</small>
   </article>
@@ -133,7 +133,7 @@
 
 <section class="panel workflow-section">
   <div class="section-heading">
-    <p class="eyebrow">Mission cargo</p>
+    <p class="eyebrow">Cargo checklist · Mission cargo</p>
     <h2>Output readiness</h2>
   </div>
   <div class="output-grid">
