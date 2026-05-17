@@ -318,6 +318,9 @@ def record_manual_post(
         raise HTTPException(status_code=400, detail="Unsupported manual post platform")
     if not (cleaned_url.startswith("https://") or cleaned_url.startswith("http://")):
         raise HTTPException(status_code=400, detail="Manual post URL must start with http:// or https://")
+    write_issue = _manual_kit_state_write_issue(root, job)
+    if write_issue:
+        raise HTTPException(status_code=409, detail=f"Manual post ledger blocked before tracking queue update: {write_issue}")
 
     posted_dt = _parse_manual_post_time(posted_at)
     posted_iso = posted_dt.isoformat()

@@ -2380,6 +2380,26 @@ def test_job_detail_rejects_manual_post_without_url(tmp_path, client):
     assert not (tmp_path / "output" / "track_queue.json").exists()
 
 
+def test_job_detail_blocks_manual_post_when_job_state_unwritable(tmp_path, client, monkeypatch):
+    _write_job(tmp_path, "20260512_060000", brief="manual post kit")
+    monkeypatch.setattr("routes.jobs._manual_kit_state_write_issue", lambda root, job: "job.json not writable")
+
+    resp = client.post(
+        "/jobs/20260512_060000/manual-post",
+        data={
+            "platform": "instagram",
+            "post_url": "https://www.instagram.com/p/manual123/",
+            "posted_at": "2026-05-17T14:00:00+00:00",
+        },
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 409
+    assert "blocked before tracking queue update" in resp.text
+    assert not (tmp_path / "output" / "track_queue.json").exists()
+
+
 def test_job_detail_shows_record_manual_post_form(tmp_path, client):
     _write_job(tmp_path, "20260512_060000", brief="manual post kit")
 
