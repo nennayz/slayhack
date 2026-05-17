@@ -7,14 +7,10 @@
     <h1>The Aurora</h1>
     <p class="hero-copy">The ship of enterprise, media brands, and luminous forward motion. Robin keeps the crew aligned while each island pursues its own mission.</p>
     <div class="hero-actions">
-      <a class="button" href="/aurora/new-mission">Launch new mission</a>
-      <a class="button button-secondary" href="/aurora/daily-slate">Daily slate</a>
+      <a class="button" href="/aurora/daily-slate">Daily slate</a>
       <a class="button button-secondary" href="/aurora/approval-queue">Approval queue</a>
-      <a class="button button-secondary" href="/aurora/workflow">Operating workflow</a>
       <a class="button button-secondary" href="/aurora/generation">Generation queue</a>
-      <a class="button button-secondary" href="/aurora/learning">Learning loop</a>
-      <a class="button button-secondary" href="/aurora/missions">View all missions</a>
-      <a class="button button-secondary" href="/aurora/crew">Meet the crew</a>
+      <a class="button button-secondary" href="/aurora/new-mission">Launch mission</a>
     </div>
   </div>
   <div class="aurora-crew-strip" aria-label="Aurora crew preview">
@@ -23,6 +19,8 @@
     {% endfor %}
   </div>
 </section>
+
+{% include "_aurora_flow.html" %}
 
 <section class="aurora-command">
   <article>

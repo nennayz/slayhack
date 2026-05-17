@@ -3,24 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Slayhack</title>
+  <title>NayzFreedom Fleet</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/htmx.min.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="/">Slayhack</a>
+  <a class="brand" href="/">
+    <span class="brand-name">NayzFreedom Fleet</span>
+    <span class="brand-kicker">Aurora / SlayHack</span>
+  </a>
   <nav>
-    <a href="/">Captain's Deck</a>
-    <a href="/aurora">The Aurora</a>
-    <a href="/aurora/daily-slate">Daily Slate</a>
-    <a href="/aurora/approval-queue">Approvals</a>
-    <a href="/aurora/generation">Generation</a>
-    <a href="/aurora/learning">Learning</a>
-    <a href="/freedom">The Freedom</a>
-    <a href="/lyra">The Lyra</a>
-    <a href="/readiness">Readiness</a>
-    <a href="/ops">Ops</a>
+    <a class="{{ 'active' if request.url.path == '/' else '' }}" href="/">Deck</a>
+    <a class="{{ 'active' if request.url.path == '/aurora' else '' }}" href="/aurora">Aurora</a>
+    <a class="{{ 'active' if request.url.path == '/aurora/daily-slate' else '' }}" href="/aurora/daily-slate">Slate</a>
+    <a class="{{ 'active' if request.url.path == '/aurora/approval-queue' else '' }}" href="/aurora/approval-queue">Approvals</a>
+    <a class="{{ 'active' if request.url.path == '/aurora/generation' else '' }}" href="/aurora/generation">Generation</a>
+    <a class="{{ 'active' if request.url.path == '/aurora/learning' else '' }}" href="/aurora/learning">Learning</a>
+    <a class="{{ 'active' if request.url.path == '/freedom' else '' }}" href="/freedom">Freedom</a>
+    <a class="{{ 'active' if request.url.path == '/lyra' else '' }}" href="/lyra">Lyra</a>
+    <a class="{{ 'active' if request.url.path == '/readiness' else '' }}" href="/readiness">Readiness</a>
+    <a class="{{ 'active' if request.url.path == '/ops' else '' }}" href="/ops">Ops</a>
   </nav>
 </header>
 <main>
