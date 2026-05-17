@@ -2325,6 +2325,66 @@ def _apply_accepted_learning_to_next_mission(
     }
 
 
+def _accepted_learning_for_job(job: ContentJob) -> dict[str, object]:
+    for source in (getattr(job, "production_ticket", None), getattr(job, "video_package", None)):
+        if isinstance(source, dict) and isinstance(source.get("accepted_learning"), dict):
+            learning = dict(source["accepted_learning"])
+            lessons = learning.get("lessons") if isinstance(learning.get("lessons"), list) else []
+            source_artifacts = (
+                learning.get("source_artifacts") if isinstance(learning.get("source_artifacts"), list) else []
+            )
+            source_job_ids = learning.get("source_job_ids") if isinstance(learning.get("source_job_ids"), list) else []
+            confirmed = bool(learning.get("learning_confirmed_at"))
+            return {
+                "present": True,
+                "status": "Learning ready for execution" if confirmed else "Needs planning confirmation",
+                "state": "ready" if confirmed else "missing",
+                "source_artifacts": [str(item) for item in source_artifacts],
+                "source_job_ids": [str(item) for item in source_job_ids],
+                "lessons": lessons,
+                "confirmed": confirmed,
+                "learning_confirmed_at": str(learning.get("learning_confirmed_at") or ""),
+                "learning_confirmed_by": str(learning.get("learning_confirmed_by") or ""),
+                "next_action": (
+                    "Learning has been confirmed for this mission's execution plan."
+                    if confirmed
+                    else "Confirm the accepted learning was used in the plan before generation starts."
+                ),
+            }
+    return {"present": False, "confirmed": True, "lessons": [], "source_artifacts": [], "source_job_ids": []}
+
+
+def _learning_blocks_generation(job: ContentJob) -> bool:
+    learning = _accepted_learning_for_job(job)
+    return bool(learning.get("present")) and not bool(learning.get("confirmed"))
+
+
+def _confirm_mission_learning(root: Path, job: ContentJob, *, actor: str) -> dict[str, object]:
+    if not _accepted_learning_for_job(job).get("present"):
+        raise ValueError("No accepted learning is attached to this mission")
+    confirmed_at = datetime.now(timezone.utc).isoformat()
+    updated = False
+    for field_name in ("production_ticket", "video_package"):
+        source = getattr(job, field_name, None)
+        if isinstance(source, dict) and isinstance(source.get("accepted_learning"), dict):
+            source["accepted_learning"]["status"] = "confirmed"
+            source["accepted_learning"]["learning_confirmed_by"] = actor
+            source["accepted_learning"]["learning_confirmed_at"] = confirmed_at
+            source["accepted_learning"]["next_action"] = (
+                "Learning confirmed; crew can use this plan in safe generation execution."
+            )
+            setattr(job, field_name, source)
+            updated = True
+    if not updated:
+        raise ValueError("No accepted learning is attached to this mission")
+    _save_job_at_root(root, job)
+    return {
+        "job_id": job.id,
+        "learning_confirmed_by": actor,
+        "learning_confirmed_at": confirmed_at,
+    }
+
+
 def _build_voyage_steps(job) -> list[dict]:
     order = [step.stage for step in WORKFLOW_STEPS]
     current_index = order.index(job.stage) if job.stage in order else 0
@@ -2400,8 +2460,18 @@ def _mission_outputs(job, faq_content: str | None) -> list[dict[str, str]]:
     growth_ready = job.growth_strategy is not None
     community_ready = bool(faq_content)
     publish_ready = job.publish_result is not None
+    learning_gate = _accepted_learning_for_job(job)
 
     outputs = [
+        {
+            "label": "Applied learning",
+            "state": "Ready" if learning_gate.get("confirmed") else "Waiting" if learning_gate.get("present") else "Not needed",
+            "detail": str(
+                learning_gate.get("next_action")
+                if learning_gate.get("present")
+                else "No accepted learning artifact is attached to this mission."
+            ),
+        },
         {
             "label": "Content",
             "state": "Ready" if content_ready else "Waiting",
@@ -2419,8 +2489,8 @@ def _mission_outputs(job, faq_content: str | None) -> list[dict[str, str]]:
         },
         {
             "label": "Nora QA",
-            "state": "Ready" if generation_status in {"ready_for_generation", "dry_run_completed", "completed"} else "Waiting" if video_package_ready else "Not needed",
-            "detail": "Nora approved the package for generation." if generation_status in {"ready_for_generation", "dry_run_completed", "completed"} else "Waiting for Nora to mark ready for generation." if video_package_ready else "No video generation gate is needed yet.",
+            "state": "Waiting" if _learning_blocks_generation(job) else "Ready" if generation_status in {"ready_for_generation", "dry_run_completed", "completed"} else "Waiting" if video_package_ready else "Not needed",
+            "detail": "Needs planning confirmation before Nora marks generation ready." if _learning_blocks_generation(job) else "Nora approved the package for generation." if generation_status in {"ready_for_generation", "dry_run_completed", "completed"} else "Waiting for Nora to mark ready for generation." if video_package_ready else "No video generation gate is needed yet.",
         },
         {
             "label": "Generation",
@@ -2975,20 +3045,25 @@ def _generation_queue(root: Path) -> list[dict[str, object]]:
             continue
         status = str(request.get("status", ""))
         result = getattr(job, "generation_result", None)
+        learning_blocked = _learning_blocks_generation(job)
         rows.append(
             {
                 "job": job,
                 "status": status,
-                "status_label": _generation_status_label(status),
-                "state": _generation_state(status),
+                "status_label": "Needs planning confirmation" if learning_blocked else _generation_status_label(status),
+                "state": "missing" if learning_blocked else _generation_state(status),
                 "tool_hint": request.get("tool_hint", "generation"),
                 "scene_count": request.get("scene_count", 0),
                 "asset_count": request.get("asset_count", 0),
                 "attempt": request.get("attempt", 0),
-                "next_action": request.get("next_action", "Review generation package."),
+                "next_action": (
+                    "Confirm accepted learning on the mission before generation starts."
+                    if learning_blocked
+                    else request.get("next_action", "Review generation package.")
+                ),
                 "result": result if isinstance(result, dict) else None,
-                "can_run": status in {"ready_for_generation", "failed", "dry_run_completed"},
-                "can_record": status in {"ready_for_generation", "dry_run_completed", "failed"},
+                "can_run": not learning_blocked and status in {"ready_for_generation", "failed", "dry_run_completed"},
+                "can_record": not learning_blocked and status in {"ready_for_generation", "dry_run_completed", "failed"},
                 "waiting_for_real_video": _waiting_for_real_video(job),
                 "can_package": _real_generation_completed(job),
                 "packaging_label": _publish_packaging_label(job),
