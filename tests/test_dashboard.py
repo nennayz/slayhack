@@ -1003,14 +1003,18 @@ def test_aurora_crew_pages_render(client):
     detail = client.get("/aurora/crew/robin", headers=_auth())
     assert crew.status_code == 200
     assert "Crew" in crew.text
+    assert "Captain Nayz" in crew.text
     assert "Robin" in crew.text
     assert "Slay" in crew.text
+    assert "Stadium" in crew.text
     assert "Vera Reel" in crew.text
     assert "Iris Gauge" in crew.text
     assert "Sage Ledger" in crew.text
     assert "Video Producer" in crew.text
+    assert "/static/crew/captain-nayz.png" in crew.text
     assert "/static/crew/vera-reel.png" in crew.text
     assert "/static/crew/slay.png" in crew.text
+    assert "/static/crew/stadium.png" in crew.text
     assert "/static/crew/iris-gauge.png" in crew.text
     assert "/static/crew/sage-ledger.png" in crew.text
     assert "Crew Stations" in crew.text
@@ -1029,6 +1033,12 @@ def test_aurora_crew_pages_render(client):
     slay = client.get("/aurora/crew/slay", headers=_auth())
     assert slay.status_code == 200
     assert "American superstar fashion PM" in slay.text
+    captain = client.get("/aurora/crew/captain-nayz", headers=_auth())
+    assert captain.status_code == 200
+    assert "black-gold fleet authority portrait" in captain.text
+    stadium = client.get("/aurora/crew/stadium", headers=_auth())
+    assert stadium.status_code == 200
+    assert "sports-lifestyle PM" in stadium.text
     iris = client.get("/aurora/crew/iris-gauge", headers=_auth())
     assert iris.status_code == 200
     assert "lime-green underlight" in iris.text
