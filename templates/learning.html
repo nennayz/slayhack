@@ -40,7 +40,19 @@
     <p class="eyebrow">Manual Posting Lessons</p>
     <h2>Daily Learning Brief intake</h2>
   </div>
+  {% if created_draft %}
+  <div class="ops-action-result">
+    <span class="badge badge-ops-ready">Draft created</span>
+    <strong>{{ created_draft }}</strong>
+    <small>Review this file before treating it as the final daily learning brief.</small>
+  </div>
+  {% endif %}
   {% if manual_lessons %}
+  <div class="inline-actions learning-draft-actions">
+    <form class="inline-form" method="post" action="/aurora/learning/daily-brief-draft">
+      <button type="submit">Create daily brief draft</button>
+    </form>
+  </div>
   <div class="manual-learning-list">
     {% for item in manual_lessons %}
     <article class="manual-learning-row">
@@ -72,6 +84,7 @@
   {% else %}
   <p class="muted">No closed manual posting lessons are ready for the daily brief yet.</p>
   {% endif %}
+  <p class="muted">Draft preview</p>
   <pre class="learning-note slate-learning-note">{{ manual_learning_intake }}</pre>
 </section>
 

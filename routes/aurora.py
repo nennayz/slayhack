@@ -34,6 +34,7 @@ from routes._helpers import (
     _latest_performance_signals,
     _manual_closeout_learning_brief_intake,
     _manual_closeout_learning_rows,
+    _write_manual_closeout_learning_draft,
     _manual_posting_lane_filters,
     _manual_posting_lane_groups,
     _manual_posting_queue_rows,
@@ -472,6 +473,7 @@ def aurora_crew(request: Request, _: str = Depends(verify_auth)):
 def aurora_learning(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
     manual_lessons = _manual_closeout_learning_rows(root)
+    created_draft = request.query_params.get("created_draft", "")
     return templates.TemplateResponse(
         request,
         "learning.html",
@@ -479,11 +481,31 @@ def aurora_learning(request: Request, _: str = Depends(verify_auth)):
             "latest_brief": _latest_learning_brief(root),
             "manual_lessons": manual_lessons,
             "manual_learning_intake": _manual_closeout_learning_brief_intake(manual_lessons),
+            "created_draft": created_draft,
             "review_note": _read_review_note(root),
             "asset_audit_note": _read_asset_audit_note(root),
             "crew_asset_audit": _crew_asset_audit(root),
         },
     )
+
+
+@router.post("/aurora/learning/daily-brief-draft")
+def aurora_learning_daily_brief_draft(request: Request, user: str = Depends(verify_auth)):
+    root = _root(request)
+    manual_lessons = _manual_closeout_learning_rows(root)
+    if not manual_lessons:
+        raise HTTPException(status_code=400, detail="No closed manual posting lessons are ready for a draft")
+    draft = _write_manual_closeout_learning_draft(root, manual_lessons)
+    _write_work_event(
+        root,
+        "implementation_step",
+        "Created manual posting daily learning draft",
+        actor=user,
+        result=str(draft["path"]),
+        next_action="Review the draft before treating it as the final daily learning brief.",
+        metadata={"source_job_ids": draft["source_job_ids"]},
+    )
+    return RedirectResponse(f"/aurora/learning?created_draft={draft['path']}", status_code=303)
 
 
 @router.get("/aurora/crew/{slug}", response_class=HTMLResponse)
