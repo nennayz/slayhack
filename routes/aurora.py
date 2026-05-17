@@ -89,7 +89,13 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "performance": performance,
             "crew": CREW[:4],
             "captain_action_console": _captain_action_console(root, jobs),
-            "captain_action_history": _console_history(root),
+            "captain_action_history": _console_history(
+                root,
+                station=request.query_params.get("history_station", "all"),
+                actor=request.query_params.get("history_actor", "all"),
+                mission=request.query_params.get("history_mission", ""),
+                needs_captain=request.query_params.get("needs_captain") == "1",
+            ),
         },
     )
 

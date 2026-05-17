@@ -496,6 +496,52 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   margin-top: 0.9rem;
   padding: 0.9rem;
 }
+.captain-history-filters {
+  align-items: end;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(120px, 0.9fr) minmax(120px, 0.9fr) minmax(170px, 1.4fr) auto auto auto;
+  margin: 0 0 0.8rem;
+}
+.captain-history-filters label {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.76rem;
+  font-weight: 800;
+  gap: 0.25rem;
+  text-transform: uppercase;
+}
+.captain-history-filters select,
+.captain-history-filters input[type="search"] {
+  background: rgba(255,255,255,0.82);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  min-height: 38px;
+  padding: 0.45rem 0.6rem;
+  text-transform: none;
+  width: 100%;
+}
+.captain-history-filters button,
+.captain-history-filters .button {
+  min-height: 38px;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+.captain-history-check {
+  align-items: center;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex !important;
+  gap: 0.45rem !important;
+  min-height: 38px;
+  padding: 0.45rem 0.6rem;
+}
+.captain-history-check input {
+  margin: 0;
+}
 .captain-history-list {
   display: grid;
   gap: 0.55rem;
@@ -513,9 +559,25 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   color: var(--muted);
   font-size: 0.76rem;
 }
-.captain-history-row span {
+.captain-history-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.captain-history-meta span,
+.captain-history-meta em {
+  background: rgba(16,35,63,0.05);
+  border-radius: 999px;
+  color: var(--muted);
   font-weight: 800;
+  font-style: normal;
+  padding: 0.18rem 0.45rem;
   text-transform: uppercase;
+}
+.captain-history-meta em {
+  background: rgba(208,160,84,0.16);
+  color: var(--navy);
 }
 .captain-history-row strong {
   color: var(--ink);
@@ -2302,6 +2364,7 @@ a:hover { color: var(--navy-soft); }
   .video-package-grid,
   .video-package-detail,
   .artifact-grid,
+  .captain-history-filters,
   .captain-action-heading,
   .approval-queue-row,
   .slate-counts,
@@ -2357,6 +2420,10 @@ a:hover { color: var(--navy-soft); }
   .pm-action-buttons .button,
   .pm-action-buttons form,
   .pm-action-buttons button {
+    width: 100%;
+  }
+  .captain-history-filters .button,
+  .captain-history-filters button {
     width: 100%;
   }
   form {
