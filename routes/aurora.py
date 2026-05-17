@@ -32,6 +32,8 @@ from routes._helpers import (
     _find_job_at_root,
     _latest_learning_brief,
     _latest_performance_signals,
+    _manual_closeout_learning_brief_intake,
+    _manual_closeout_learning_rows,
     _manual_posting_lane_filters,
     _manual_posting_lane_groups,
     _manual_posting_queue_rows,
@@ -469,11 +471,14 @@ def aurora_crew(request: Request, _: str = Depends(verify_auth)):
 @router.get("/aurora/learning", response_class=HTMLResponse)
 def aurora_learning(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
+    manual_lessons = _manual_closeout_learning_rows(root)
     return templates.TemplateResponse(
         request,
         "learning.html",
         {
             "latest_brief": _latest_learning_brief(root),
+            "manual_lessons": manual_lessons,
+            "manual_learning_intake": _manual_closeout_learning_brief_intake(manual_lessons),
             "review_note": _read_review_note(root),
             "asset_audit_note": _read_asset_audit_note(root),
             "crew_asset_audit": _crew_asset_audit(root),

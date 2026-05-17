@@ -235,6 +235,67 @@ def test_captains_deck_surfaces_attention_and_active_missions(tmp_path, client):
     assert "Running" in resp.text
 
 
+def test_captains_deck_surfaces_manual_closeout_attention(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_closeout",
+        brief="manual closeout ready",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/closeout/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            }
+        },
+        performance=[
+            {"platform": "instagram", "reach": 100, "recorded_at": "2026-05-18T14:00:00+00:00"},
+            {"platform": "instagram", "reach": 180, "recorded_at": "2026-05-20T14:00:00+00:00"},
+        ],
+    )
+    _write_job(
+        tmp_path,
+        "20260512_closed",
+        brief="manual closeout closed",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/closed/",
+                    "posted_at": "2026-05-17T13:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "learning_note": "Already captured.",
+                "proof_summary": {
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+        performance=[
+            {"platform": "instagram", "reach": 90, "recorded_at": "2026-05-18T13:00:00+00:00"},
+            {"platform": "instagram", "reach": 130, "recorded_at": "2026-05-20T13:00:00+00:00"},
+        ],
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Needs Captain" in resp.text
+    assert "Close manual posting lessons before launching more manual handoffs." in resp.text
+    assert "1 manual post ready for closeout." in resp.text
+    attention_section = resp.text.split("<h2>Needs attention</h2>", 1)[1].split("</article>", 1)[0]
+    assert "manual closeout ready" in attention_section
+    assert "manual closeout closed" not in attention_section
+
+
 def test_dashboard_status_badges_use_human_labels(tmp_path, client):
     _write_job(
         tmp_path,
@@ -1381,7 +1442,59 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Crew Static Production Asset Audit" in resp.text
     assert "Deploy status" in resp.text
     assert "Live" in resp.text
+    assert "Manual Posting Lessons" in resp.text
+    assert "Daily Learning Brief intake" in resp.text
+    assert "No closed manual posting lessons are ready for the daily brief yet." in resp.text
     assert "current manual crew portrait set is approved production canon and has a production asset audit" in resp.text
+
+
+def test_aurora_learning_page_surfaces_manual_closeout_lessons(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_lesson",
+        brief="manual lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "drive_synced": True,
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+        performance=[
+            {"platform": "instagram", "reach": 100, "recorded_at": "2026-05-18T14:00:00+00:00"},
+            {"platform": "instagram", "reach": 180, "recorded_at": "2026-05-20T14:00:00+00:00"},
+        ],
+    )
+
+    resp = client.get("/aurora/learning", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Manual Posting Lessons" in resp.text
+    assert "Daily Learning Brief intake" in resp.text
+    assert "manual lesson mission" in resp.text
+    assert "Short CTA got more saves." in resp.text
+    assert "Post URL" in resp.text
+    assert "24h proof" in resp.text
+    assert "72h proof" in resp.text
+    assert "## Manual Posting Lessons" in resp.text
+    assert "Slayhack / instagram: manual lesson mission" in resp.text
+    assert "Proof: post URL=True, 24h=True, 72h=True" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):

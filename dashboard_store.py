@@ -40,6 +40,7 @@ def summarize_jobs(jobs: list[ContentJob]) -> dict[str, int]:
 
 def command_brief(jobs: list[ContentJob]) -> dict[str, str]:
     summary = summarize_jobs(jobs)
+    manual_closeout_count = sum(1 for job in jobs if _needs_manual_closeout(job))
     if summary["failed"]:
         return {
             "state": "Needs Captain",
@@ -51,6 +52,12 @@ def command_brief(jobs: list[ContentJob]) -> dict[str, str]:
             "state": "Needs Captain",
             "action": "Approve or redirect waiting missions.",
             "detail": f"{summary['awaiting_approval']} mission{'s' if summary['awaiting_approval'] != 1 else ''} awaiting approval.",
+        }
+    if manual_closeout_count:
+        return {
+            "state": "Needs Captain",
+            "action": "Close manual posting lessons before launching more manual handoffs.",
+            "detail": f"{manual_closeout_count} manual post{'s' if manual_closeout_count != 1 else ''} ready for closeout.",
         }
     if summary["running"]:
         return {
@@ -115,15 +122,33 @@ def fleet_status(jobs: list[ContentJob]) -> list[dict[str, str]]:
     ]
 
 
+def _needs_manual_closeout(job: ContentJob) -> bool:
+    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
+    closeout = kit.get("closeout") if isinstance(kit.get("closeout"), dict) else {}
+    has_manual_post = any(
+        isinstance(value, dict) and value.get("status") == "posted" and str(value.get("post_url") or "").strip()
+        for value in manual_post.values()
+    )
+    return has_manual_post and len(job.performance) >= 2 and closeout.get("status") != "closed"
+
+
 def attention_jobs(jobs: list[ContentJob], limit: int = 5) -> list[ContentJob]:
     priority = {"failed": 0, "awaiting_approval": 1}
     items = [
         job for job in jobs
-        if getattr(job.status, "value", str(job.status)) in priority
+        if getattr(job.status, "value", str(job.status)) in priority or _needs_manual_closeout(job)
     ]
+
+    def _priority(job: ContentJob) -> int:
+        status_value = getattr(job.status, "value", str(job.status))
+        if status_value in priority:
+            return priority[status_value]
+        return 2
+
     return sorted(
         items,
-        key=lambda job: (priority[getattr(job.status, "value", str(job.status))], job.id),
+        key=lambda job: (_priority(job), job.id),
         reverse=False,
     )[:limit]
 
