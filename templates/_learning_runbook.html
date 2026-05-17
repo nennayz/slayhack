@@ -13,14 +13,37 @@
       <strong>{{ step.label }}</strong>
       <small>{{ step.detail }}</small>
       {% if step.status == "needs_action" %}
-      <a class="button button-small" href="{{ step.action_url }}">{{ step.action_label }}</a>
+        {% if step.action_method == "post" %}
+        <form class="inline-form compact-action-form" method="post" action="{{ step.action_url }}">
+          {% for name, value in step.action_payload.items() %}
+          <input type="hidden" name="{{ name }}" value="{{ value }}">
+          {% endfor %}
+          <input type="hidden" name="return_path" value="{{ request.url.path }}">
+          <button type="submit">{{ step.action_label }}</button>
+        </form>
+        {% if step.secondary_url %}
+        <a class="button button-secondary button-small" href="{{ step.secondary_url }}">{{ step.secondary_label }}</a>
+        {% endif %}
+        {% else %}
+        <a class="button button-small" href="{{ step.action_url }}">{{ step.action_label }}</a>
+        {% endif %}
       {% endif %}
     </article>
     {% endfor %}
   </div>
   {% if learning_runbook.next_step %}
   <div class="inline-actions">
+    {% if learning_runbook.next_step.action_method == "post" %}
+    <form class="inline-form compact-action-form" method="post" action="{{ learning_runbook.next_step.action_url }}">
+      {% for name, value in learning_runbook.next_step.action_payload.items() %}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+      {% endfor %}
+      <input type="hidden" name="return_path" value="{{ request.url.path }}">
+      <button type="submit">{{ learning_runbook.next_step.action_label }}</button>
+    </form>
+    {% else %}
     <a class="button" href="{{ learning_runbook.next_step.action_url }}">{{ learning_runbook.next_step.action_label }}</a>
+    {% endif %}
   </div>
   {% endif %}
 </section>
