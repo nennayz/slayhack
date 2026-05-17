@@ -123,6 +123,25 @@ def test_main_safe_prep_flag_passed_to_orchestrator(mocker, tmp_path, monkeypatc
     assert mock_orchestrator.call_args.kwargs["safe_prep"] is True
 
 
+def test_main_marks_job_failed_when_orchestrator_raises(mocker, tmp_path, monkeypatch):
+    import pytest
+    import main as main_module
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(main_module, "_LOCK_FILE", tmp_path / "pipeline.lock")
+    mocker.patch.object(main_module.Config, "from_env", return_value=mocker.MagicMock())
+    mocker.patch("main.load_project", return_value=make_job().pm)
+    mocker.patch.object(main_module.Orchestrator, "run", side_effect=RuntimeError("quota exhausted"))
+    mock_save = mocker.patch("main.save_job")
+    sys.argv = ["main.py", "--project", "nayzfreedom_fleet", "--brief", "test brief", "--unattended"]
+
+    with pytest.raises(RuntimeError, match="quota exhausted"):
+        main_module.main()
+
+    saved_job = mock_save.call_args_list[-1].args[0]
+    assert saved_job.status == __import__('models.content_job', fromlist=['JobStatus']).JobStatus.FAILED
+    assert not (tmp_path / "pipeline.lock").exists()
+
+
 
 def test_pause_uses_telegram_when_env_set(monkeypatch):
     import checkpoint as cp

@@ -184,7 +184,13 @@ def main() -> None:
     lock_acquired = _acquire_lock()
     orchestrator = Orchestrator(config, safe_prep=args.safe_prep)
     try:
-        result = orchestrator.run(job, unattended=args.unattended)
+        try:
+            result = orchestrator.run(job, unattended=args.unattended)
+        except Exception as exc:
+            job.status = JobStatus.FAILED
+            save_job(job)
+            log_action("orchestrator_failed", {"job_id": job.id, "error": str(exc)[:500]})
+            raise
     finally:
         if lock_acquired:
             _LOCK_FILE.unlink(missing_ok=True)
