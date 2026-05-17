@@ -1930,11 +1930,13 @@ def _latest_learning_brief(root: Path) -> dict | None:
     if not briefs:
         return None
     path = briefs[0]
+    text = path.read_text(encoding="utf-8")
+    _, body = _split_front_matter(text)
     return {
         "title": path.stem.replace("-", " ").title(),
         "path": str(path.relative_to(root)),
         "updated_at": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-        "body": path.read_text(encoding="utf-8"),
+        "body": body,
     }
 
 
@@ -2143,6 +2145,7 @@ def _daily_brief_draft_registry(root: Path) -> dict[str, object]:
                     "created_at": str(front_matter.get("created_at") or ""),
                     "updated_at": str(front_matter.get("updated_at") or ""),
                     "body_preview": body[:220],
+                    "body": body,
                 }
             )
     groups = [
@@ -2163,6 +2166,48 @@ def _daily_brief_draft_registry(root: Path) -> dict[str, object]:
         },
     ]
     return {"rows": rows, "groups": groups}
+
+
+def _learning_category(note: str) -> str:
+    lowered = note.lower()
+    if any(token in lowered for token in ("cta", "comment", "save", "share")):
+        return "CTA"
+    if any(token in lowered for token in ("time", "timing", "hour", "morning", "night", "posted")):
+        return "Timing"
+    if any(token in lowered for token in ("instagram", "facebook", "tiktok", "youtube", "reel")):
+        return "Platform"
+    if any(token in lowered for token in ("snapshot", "24h", "72h", "reach", "like", "metric")):
+        return "Tracking note"
+    return "Content angle"
+
+
+def _accepted_learning_intake(root: Path, limit: int = 4) -> dict[str, object]:
+    registry = _daily_brief_draft_registry(root)
+    accepted = [row for row in registry["rows"] if row.get("status") == "accepted"]
+    lessons = []
+    for artifact in accepted[:limit]:
+        body = str(artifact.get("body") or "")
+        source_job_ids = [str(item) for item in artifact.get("source_job_ids", [])]
+        for line in body.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("- Lesson:"):
+                continue
+            note = stripped.removeprefix("- Lesson:").strip()
+            if not note:
+                continue
+            lessons.append(
+                {
+                    "category": _learning_category(note),
+                    "note": note,
+                    "artifact_path": artifact["path"],
+                    "source_job_ids": source_job_ids,
+                }
+            )
+    return {
+        "artifacts": accepted[:limit],
+        "lessons": lessons,
+        "source_job_ids": sorted({job_id for row in accepted[:limit] for job_id in row.get("source_job_ids", [])}),
+    }
 
 
 def _update_daily_brief_draft_status(
@@ -2205,6 +2250,78 @@ def _update_daily_brief_draft_status(
         "path": str(path.relative_to(root)),
         "status": status,
         "source_job_ids": front_matter.get("source_job_ids", []),
+    }
+
+
+def _apply_accepted_learning_to_next_mission(
+    root: Path,
+    project_slug: str,
+    *,
+    actor: str,
+) -> dict[str, object]:
+    intake = _accepted_learning_intake(root)
+    if not intake["artifacts"]:
+        raise ValueError("No accepted learning artifacts are ready to apply")
+    resolved = resolve_project_slug(project_slug, root=root)
+    cards = [card for card in _daily_slate_cards(root) if card["project"] == resolved]
+    if not cards or not cards[0].get("next_ticket"):
+        raise ValueError(f"No Daily Slate ticket is ready for project {resolved!r}")
+    ticket = cards[0]["next_ticket"]
+    mission = ticket.get("mission") if isinstance(ticket.get("mission"), dict) else None
+    if mission:
+        job = _find_job_at_root(root, str(mission["job_id"]))
+        created = False
+    else:
+        job = _create_slate_ticket_mission(root, resolved, str(ticket["ticket_id"]))
+        created = True
+
+    applied_at = datetime.now(timezone.utc).isoformat()
+    learning_payload = {
+        "status": "applied",
+        "applied_by": actor,
+        "applied_at": applied_at,
+        "source_artifacts": [row["path"] for row in intake["artifacts"]],
+        "source_job_ids": intake["source_job_ids"],
+        "lessons": intake["lessons"],
+        "next_action": "Use these accepted manual posting lessons while shaping this mission. Live publish stays locked.",
+    }
+    if isinstance(job.production_ticket, dict):
+        job.production_ticket["accepted_learning"] = learning_payload
+    elif isinstance(job.video_package, dict):
+        job.video_package["accepted_learning"] = learning_payload
+    else:
+        job.production_ticket = {"accepted_learning": learning_payload}
+    _save_job_at_root(root, job)
+
+    applied_sources = []
+    for source_job_id in intake["source_job_ids"]:
+        try:
+            source_job = _find_job_at_root(root, source_job_id)
+        except FileNotFoundError:
+            continue
+        kit = dict(source_job.manual_post_kit or {})
+        closeout = dict(kit.get("closeout") or {})
+        if closeout.get("status") != "closed":
+            continue
+        closeout["learning_applied"] = {
+            "status": "applied",
+            "applied_to_job_id": job.id,
+            "applied_to_project": resolved,
+            "applied_at": applied_at,
+            "applied_by": actor,
+        }
+        kit["closeout"] = closeout
+        source_job.manual_post_kit = kit
+        _save_job_at_root(root, source_job)
+        applied_sources.append(source_job_id)
+
+    return {
+        "job_id": job.id,
+        "project": resolved,
+        "ticket_id": ticket["ticket_id"],
+        "created": created,
+        "source_job_ids": intake["source_job_ids"],
+        "applied_source_job_ids": applied_sources,
     }
 
 
@@ -3836,8 +3953,12 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
     if closeout_status == "closed":
         lane = "tracking_complete"
         state = "ready"
-        status = "Manual post closed"
-        next_action = "No action required; proof and learning note are captured."
+        if isinstance(closeout.get("learning_applied"), dict):
+            status = "Learning applied"
+            next_action = "Manual proof is closed and the accepted lesson is applied to a Daily Slate mission."
+        else:
+            status = "Needs Captain learning review"
+            next_action = "Promote the daily brief lesson, then apply it to the next Daily Slate mission."
     elif drive_status == "failed":
         lane = "needs_attention"
         state = "failed"
@@ -3906,6 +4027,7 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
             "closed_by": str(closeout.get("closed_by") or ""),
             "learning_note": str(closeout.get("learning_note") or ""),
             "proof_summary": closeout.get("proof_summary") if isinstance(closeout.get("proof_summary"), dict) else {},
+            "learning_applied": closeout.get("learning_applied") if isinstance(closeout.get("learning_applied"), dict) else {},
         },
         "can_closeout": has_manual_post and snapshots >= 2 and closeout_status != "closed",
         "can_requeue_tracking": has_manual_post and not job_queue and snapshots < 2,

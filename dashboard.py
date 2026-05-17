@@ -149,6 +149,8 @@ from routes._helpers import (  # noqa: F401
     _path_readiness,
     _live_publish_gate_summary,
     _daily_brief_draft_registry,
+    _accepted_learning_intake,
+    _apply_accepted_learning_to_next_mission,
     _manual_closeout_learning_brief_intake,
     _manual_closeout_learning_rows,
     _manual_posting_lane_filters,

@@ -17,6 +17,8 @@ from routes._helpers import (
     MISSION_FILTER_KEYS,
     _approval_lane_filters,
     _approval_lane_groups,
+    _accepted_learning_intake,
+    _apply_accepted_learning_to_next_mission,
     _approval_queue_rows,
     _aurora_workflow_snapshot,
     _calendar_slate,
@@ -201,6 +203,7 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
             "latest_brief": _latest_learning_brief(root),
             "performance_signals": performance_signals,
             "tracking_readiness": tracking_readiness,
+            "accepted_learning_intake": _accepted_learning_intake(root),
             "approval_queue": approval_queue[:8],
             "approval_lane_groups": _approval_lane_groups(approval_queue),
             "total_tickets": sum(int(card["ticket_count"]) for card in all_slate_cards),
@@ -208,6 +211,35 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
             "approval_count": len(approval_queue),
         },
     )
+
+
+@router.post("/aurora/daily-slate/apply-learning")
+def aurora_daily_slate_apply_learning(
+    request: Request,
+    project_slug: str = Form(...),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        result = _apply_accepted_learning_to_next_mission(root, project_slug, actor=user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Applied accepted learning to daily slate mission {result['job_id']}",
+        actor=user,
+        result=f"{result['project']}:{result['ticket_id']}",
+        next_action="Open the mission and use the accepted learning note during planning; live publish remains locked.",
+        metadata={
+            "job_id": result["job_id"],
+            "project": result["project"],
+            "ticket_id": result["ticket_id"],
+            "source_job_ids": result["source_job_ids"],
+            "created": result["created"],
+        },
+    )
+    return RedirectResponse(f"/jobs/{result['job_id']}", status_code=303)
 
 
 @router.get("/aurora/approval-queue", response_class=HTMLResponse)

@@ -1908,6 +1908,20 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border-radius: 12px;
   padding: 0.75rem;
 }
+.learning-planning-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
+  gap: 1rem;
+  align-items: start;
+}
+.learning-planning-main,
+.learning-planning-actions {
+  min-width: 0;
+}
+.learning-planning-actions {
+  display: grid;
+  gap: 0.75rem;
+}
 .daily-brief-review-board {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2442,6 +2456,7 @@ a:hover { color: var(--navy-soft); }
   .next-action-panel,
   .approval-lane-board,
   .daily-brief-review-board,
+  .learning-planning-grid,
   .approval-lane-summary,
   .workflow-rail,
   .command-brief,
