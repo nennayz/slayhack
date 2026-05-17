@@ -581,6 +581,109 @@ def test_learning_runbook_confirm_action_writes_confirmation_only(tmp_path, clie
     assert "Confirmed accepted learning from runbook" in work_activity
 
 
+def test_learning_runbook_proof_shows_latest_runbook_action(tmp_path, client):
+    from work_activity import write_work_activity
+
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Accepted daily learning draft from runbook",
+        actor="admin",
+        result="docs/learning/daily/2026-05-17-manual-posting-lessons.md",
+        next_action="Apply accepted learning to the next Daily Slate mission.",
+        metadata={"source_job_ids": ["20260516_manual"]},
+    )
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Applied accepted learning from runbook to mission 20260512_plan",
+        actor="slay",
+        result="slay_hack:monday-short-video-1",
+        next_action="Confirm applied learning on the mission before generation.",
+        metadata={
+            "job_id": "20260512_plan",
+            "project": "slay_hack",
+            "ticket_id": "monday-short-video-1",
+            "source_job_ids": ["20260516_manual"],
+        },
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook Proof" in resp.text
+    assert "Loop clear after Applied lesson" in resp.text
+    assert "Last action" in resp.text
+    assert "Applied lesson" in resp.text
+    assert "slay" in resp.text
+    assert "slay_hack:monday-short-video-1" in resp.text
+    assert "20260512_plan" in resp.text
+    assert "20260516_manual" in resp.text
+    assert "Confirm applied learning on the mission before generation." in resp.text
+
+
+def test_learning_runbook_proof_ignores_unrelated_worklog_events(tmp_path, client):
+    from work_activity import write_work_activity
+
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Accepted daily learning draft from runbook",
+        actor="admin",
+        result="docs/learning/daily/2026-05-17-manual-posting-lessons.md",
+        metadata={"source_job_ids": ["20260516_manual"]},
+    )
+    write_work_activity(
+        tmp_path,
+        "test_result",
+        "Remote visual QA passed",
+        actor="codex",
+        result="dashboard ok",
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook Proof" in resp.text
+    assert "Loop clear after Accepted draft" in resp.text
+    assert "Last action" in resp.text
+    assert "Accepted draft" in resp.text
+    assert "Remote visual QA passed" not in resp.text
+
+
+def test_learning_runbook_proof_shows_clear_loop_summary(tmp_path, client):
+    from work_activity import write_work_activity
+
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Confirmed accepted learning from runbook for 20260512_learning",
+        actor="admin",
+        result="learning_confirmed",
+        next_action="Crew can use the confirmed learning in safe generation execution.",
+        metadata={"job_id": "20260512_learning"},
+    )
+
+    resp = client.get("/aurora", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook Proof" in resp.text
+    assert "Loop clear after Confirmed mission" in resp.text
+    assert "Learning loop clear" in resp.text
+    assert "Next missing step" in resp.text
+    assert "20260512_learning" in resp.text
+
+
+def test_learning_runbook_proof_handles_missing_worklog(tmp_path, client):
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook Proof" in resp.text
+    assert "No runbook proof recorded yet." in resp.text
+    assert "Current loop state" in resp.text
+    assert "Next missing step" in resp.text
+
+
 def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
     from work_activity import write_work_activity
 

@@ -117,6 +117,7 @@ def read_recent_work_activity(root: Path, limit: int = 8) -> list[dict[str, Any]
             "result": _sanitize_text(item.get("result", ""), max_length=1000),
             "next_action": _sanitize_text(item.get("next_action", ""), max_length=500),
             "files": item.get("files", []) if isinstance(item.get("files", []), list) else [],
+            "metadata": _sanitize_json(item.get("metadata", {})) if isinstance(item.get("metadata", {}), dict) else {},
         })
     return list(reversed(rows))
 

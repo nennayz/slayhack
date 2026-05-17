@@ -46,4 +46,43 @@
     {% endif %}
   </div>
   {% endif %}
+  <article class="learning-runbook-proof">
+    <div>
+      <p class="eyebrow">Learning Runbook Proof</p>
+      <h3>{{ learning_runbook.proof.summary }}</h3>
+    </div>
+    {% if learning_runbook.proof.present %}
+    <div class="learning-proof-grid">
+      <span>Last action</span>
+      <strong>{{ learning_runbook.proof.action_label }}</strong>
+      <span>Actor / time</span>
+      <strong>{{ learning_runbook.proof.actor }}{% if learning_runbook.proof.timestamp %} - {{ learning_runbook.proof.timestamp }}{% endif %}</strong>
+      <span>Source</span>
+      <strong>
+        {% if learning_runbook.proof.source_artifact %}{{ learning_runbook.proof.source_artifact }}{% else %}No source artifact recorded{% endif %}
+        {% if learning_runbook.proof.source_job_ids %}
+        <small>{{ learning_runbook.proof.source_job_ids | join(", ") }}</small>
+        {% endif %}
+      </strong>
+      <span>Target mission</span>
+      <strong>{% if learning_runbook.proof.target_mission %}{{ learning_runbook.proof.target_mission }}{% else %}None recorded{% endif %}</strong>
+      <span>Current loop state</span>
+      <strong>{{ learning_runbook.proof.loop_state }}</strong>
+      <span>Next missing step</span>
+      <strong>{{ learning_runbook.proof.next_missing }}</strong>
+      {% if learning_runbook.proof.next_action %}
+      <span>Next action</span>
+      <strong>{{ learning_runbook.proof.next_action }}</strong>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="muted">{{ learning_runbook.proof.summary }}</p>
+    <div class="learning-proof-grid compact">
+      <span>Current loop state</span>
+      <strong>{{ learning_runbook.proof.loop_state }}</strong>
+      <span>Next missing step</span>
+      <strong>{{ learning_runbook.proof.next_missing }}</strong>
+    </div>
+    {% endif %}
+  </article>
 </section>
