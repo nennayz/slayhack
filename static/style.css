@@ -846,6 +846,95 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   color: var(--muted);
   line-height: 1.45;
 }
+.workflow-block-list {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 1.25rem;
+}
+.workflow-block {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 26px rgba(16,35,63,0.07);
+  margin: 0;
+  overflow: hidden;
+}
+.workflow-block summary {
+  align-items: center;
+  display: grid;
+  gap: 0.35rem 1rem;
+  grid-template-columns: minmax(150px, 0.32fr) minmax(0, 0.9fr) minmax(220px, 0.55fr) auto;
+  list-style: none;
+  padding: 0.95rem 1rem;
+}
+.workflow-block summary::-webkit-details-marker {
+  display: none;
+}
+.workflow-block summary::after {
+  color: var(--gold);
+  content: "+";
+  font-size: 1.1rem;
+  font-weight: 800;
+  grid-column: 4;
+  grid-row: 1;
+  justify-self: end;
+}
+.workflow-block[open] summary::after {
+  content: "-";
+}
+.workflow-block[open] summary {
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0;
+}
+.workflow-block summary span {
+  color: var(--navy-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.workflow-block summary strong {
+  color: var(--ink);
+  line-height: 1.3;
+}
+.workflow-block summary small,
+.stage-brief,
+.artifact-card p,
+.artifact-card li {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.workflow-block-body {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+.stage-brief {
+  background: rgba(16,35,63,0.04);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+.stage-brief p {
+  margin: 0 0 0.3rem;
+}
+.artifact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.artifact-card {
+  background: rgba(16,35,63,0.035);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.9rem;
+}
+.artifact-card h3 {
+  color: var(--ink);
+  font-size: 1rem;
+  margin: 0 0 0.6rem;
+}
+.artifact-card pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
 
 .page-header { margin-bottom: 1rem; }
 .ops-header {
@@ -1660,13 +1749,26 @@ a:hover { color: var(--navy-soft); }
   }
   .workflow-card-grid,
   .workflow-lane-grid,
+  .workflow-block summary,
   .video-package-grid,
   .video-package-detail,
+  .artifact-grid,
   .approval-queue-row,
   .slate-counts,
   .workflow-stats,
   .handoff-columns {
     grid-template-columns: 1fr;
+  }
+  .workflow-block summary::after {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .workflow-block summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .workflow-block summary strong,
+  .workflow-block summary small {
+    grid-column: 1 / -1;
   }
   .character-hero {
     grid-template-columns: 1fr;
