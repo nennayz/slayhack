@@ -1357,6 +1357,8 @@ def test_daily_slate_applies_accepted_learning_to_next_mission(tmp_path, client)
     page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
     assert page.status_code == 200
     assert "Learning applied" in page.text
+    assert "Confirm before generation" in page.text
+    assert "Open Learning Runbook" in page.text
 
 
 def test_job_detail_confirm_learning_unlocks_generation_ready(tmp_path, client):
@@ -3739,7 +3741,9 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
 
     complete_lane = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
     assert complete_lane.status_code == 200
-    assert "Closeout CTA" in complete_lane.text
+    assert "Closeout-to-Learning Assist" in complete_lane.text
+    assert "Tracking complete to learning loop" in complete_lane.text
+    assert "Learning bridge" in complete_lane.text
     assert "Ready for closeout" in complete_lane.text
     assert "Capture the learning note after reviewing the 24h and 72h proof." in complete_lane.text
 
@@ -3865,7 +3869,8 @@ def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/aurora/manual-posting?lane=tracking_complete"
+    assert resp.headers["location"].startswith("/aurora/manual-posting?lane=tracking_complete&closeout_result=")
+    assert "Closeout%20saved%20for%2020260512_complete" in resp.headers["location"]
     saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_complete" / "job.json").read_text())
     closeout = saved["manual_post_kit"]["closeout"]
     assert closeout["status"] == "closed"
@@ -3874,10 +3879,16 @@ def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):
     assert closeout["proof_summary"]["snapshot_24h_present"] is True
     assert closeout["proof_summary"]["snapshot_72h_present"] is True
 
-    page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
+    page = client.get(resp.headers["location"], headers=_auth())
     assert page.status_code == 200
+    assert "Closeout saved" in page.text
+    assert "create the daily learning draft next" in page.text
+    assert "Closeout-to-Learning Assist" in page.text
+    assert "Learning bridge" in page.text
     assert "Needs Captain learning review" in page.text
     assert "Closeout captured" in page.text
+    assert "Create daily learning draft" in page.text
+    assert "Open Learning Runbook" in page.text
     assert "Create the daily learning draft from this closed manual lesson." in page.text
     assert "Hook worked; keep the shorter CTA." in page.text
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
