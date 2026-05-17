@@ -189,6 +189,7 @@ def test_captains_deck_empty(client):
     assert "NayzFreedom Fleet" in resp.text
     assert "Aurora / SlayHack" in resp.text
     assert "Captain's Deck" in resp.text
+    assert "fleet-hero-command" in resp.text
     assert "Ready for first mission" in resp.text
     assert "Nami comes after privacy and memory boundaries are clear" in resp.text
     assert "Genie comes after the Fleet shell is stable" in resp.text
@@ -246,6 +247,7 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     resp = client.get("/aurora", headers=_auth())
     assert resp.status_code == 200
     assert "The Aurora" in resp.text
+    assert "fleet-hero-command" in resp.text
     assert "Mission control" in resp.text
     assert "Open priority mission" in resp.text
     assert "needs aurora" in resp.text
@@ -358,6 +360,7 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Scale this angle" in resp.text
     assert "Tracking proof" in resp.text
     assert "Snapshot readiness" in resp.text
+    assert "fleet-header-map" in resp.text
     assert "learning ready" in resp.text
     assert "workflow-rail-step active" in resp.text
     assert "Keep PM decisions separate from central crew execution." in resp.text
@@ -498,6 +501,7 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
 
     assert ready.status_code == 303
     assert queue.status_code == 200
+    assert "fleet-header-harbor" in queue.text
     assert "Generation" in queue.text
     assert "Ready" in queue.text
     assert "safe dry-run" in queue.text
@@ -1416,6 +1420,7 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
 
     assert resp.status_code == 200
     assert "Ops" in resp.text
+    assert "fleet-header-engine" in resp.text
     assert "Services and timers" in resp.text
     assert "nayzfreedom-dashboard.service" in resp.text
     assert "backup-ok" in resp.text
@@ -2015,6 +2020,7 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "Slayhack" in resp.text
     assert "nayzfreedom_fleet" not in resp.text
     assert "Voyage log" in resp.text
+    assert "fleet-hero-log" in resp.text
     assert "Mission command" in resp.text
     assert "Review the publish result and record performance when results arrive." in resp.text
     assert "Return to island" in resp.text

@@ -151,6 +151,22 @@ def test_dashboard_visual_qa_local_report_passes(tmp_path, monkeypatch):
     assert crew["forbidden_text"] == []
 
 
+def test_fleet_theme_assets_and_css_exist():
+    root = Path(__file__).resolve().parents[1]
+    asset_dir = root / "static" / "theme" / "fleet"
+    expected = {
+        "command-bridge.svg",
+        "route-map.svg",
+        "harbor-gate.svg",
+        "engine-room.svg",
+        "voyage-log.svg",
+    }
+    assert expected <= {path.name for path in asset_dir.glob("*.svg")}
+    css = (root / "static" / "style.css").read_text()
+    for name in expected:
+        assert f"/static/theme/fleet/{name}" in css
+
+
 def test_dashboard_visual_qa_reports_missing_required_text(tmp_path, monkeypatch):
     _write_project(tmp_path)
     monkeypatch.setattr(
