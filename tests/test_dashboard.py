@@ -1007,6 +1007,7 @@ def test_create_publish_job_and_schedule_publish_from_package(tmp_path, client):
     queue = client.get("/aurora/generation", headers=_auth())
     queue_scheduled = client.get("/aurora/generation?filter=scheduled", headers=_auth())
     queue_ready = client.get("/aurora/generation?filter=ready_to_publish", headers=_auth())
+    approval_queue = client.get("/aurora/approval-queue?lane=handoff", headers=_auth())
 
     assert scheduled_detail.status_code == 200
     assert "Scheduled handoff" in scheduled_detail.text
@@ -1020,6 +1021,15 @@ def test_create_publish_job_and_schedule_publish_from_package(tmp_path, client):
     assert "Video package mission: Quick hack" in queue_scheduled.text
     assert queue_ready.status_code == 200
     assert "Video package mission: Quick hack" not in queue_ready.text
+    assert approval_queue.status_code == 200
+    assert "All lanes" in approval_queue.text
+    assert "Handoff" in approval_queue.text
+    assert "Scheduled dashboard handoff, still not live publishing" in approval_queue.text
+    assert "QA gate before generation" not in approval_queue.text
+    assert "Inspect the locked live publish gate before any separate platform action." in approval_queue.text
+    assert "Open live publish gate" in approval_queue.text
+    assert f'href="/jobs/{job_id}/live-publish-approval"' in approval_queue.text
+    assert approval_queue.text.count(">Open mission</a>") == 1
 
 
 def test_create_publish_job_requires_publish_package(tmp_path, client):
