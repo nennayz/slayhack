@@ -50,6 +50,14 @@ def test_write_and_read_roundtrip(tmp_path, monkeypatch):
     assert read_queue() == entries
 
 
+def test_write_and_read_support_explicit_root(tmp_path):
+    from track_queue import write_queue, read_queue
+    entries = [{"job_id": "rooted", "page_name": "TestPage",
+                "track_at": "2026-05-18T14:00:00Z", "attempt": 0}]
+    write_queue(entries, root=tmp_path)
+    assert read_queue(root=tmp_path) == entries
+
+
 def test_write_queue_is_atomic_no_tmp_file_left(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
@@ -112,3 +120,24 @@ def test_enqueue_appends_to_existing_queue(tmp_path, monkeypatch):
     enqueue_track_snapshots(job1)
     enqueue_track_snapshots(job2)
     assert len(read_queue()) == 4
+
+
+def test_summarize_track_queue_counts_due_overdue_and_retrying():
+    from track_queue import summarize_track_queue
+    now = datetime(2026, 5, 18, 14, 0, 0, tzinfo=timezone.utc)
+    result = summarize_track_queue([
+        {"job_id": "future", "page_name": "Test", "track_at": "2026-05-18T16:00:00Z", "attempt": 0},
+        {"job_id": "due", "page_name": "Test", "track_at": "2026-05-18T13:30:00Z", "attempt": 1},
+        {"job_id": "old", "page_name": "Test", "track_at": "2026-05-18T10:00:00Z", "attempt": 2},
+        {"job_id": "bad", "page_name": "Test", "track_at": "not-a-date", "attempt": 0},
+    ], now=now)
+
+    assert result["counts"] == {
+        "total": 4,
+        "due_now": 2,
+        "overdue": 1,
+        "future": 1,
+        "retrying": 2,
+        "invalid": 1,
+    }
+    assert [row["job_id"] for row in result["rows"][:3]] == ["old", "bad", "due"]

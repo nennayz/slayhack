@@ -148,6 +148,33 @@
   {% if snapshot_status %}
   <p class="snapshot-status">Performance snapshots: {{ snapshot_status }}</p>
   {% endif %}
+  {% if tracking_summary %}
+  <div class="ops-action-result tracking-status-block">
+    <span class="badge badge-ops-{{ tracking_summary.state | lower }}">{{ tracking_summary.status }}</span>
+    <strong>{{ tracking_summary.detail }}</strong>
+    <small>
+      queued {{ tracking_summary.queue.counts.total }}
+      · due {{ tracking_summary.queue.counts.due_now }}
+      · overdue {{ tracking_summary.queue.counts.overdue }}
+      · retrying {{ tracking_summary.queue.counts.retrying }}
+    </small>
+    {% if tracking_summary.latest %}
+    <small>
+      Latest {{ tracking_summary.latest.platform }}
+      {% if tracking_summary.latest.reach is not none %} · reach {{ tracking_summary.latest.reach }}{% endif %}
+      {% if tracking_summary.latest.likes is not none %} · likes {{ tracking_summary.latest.likes }}{% endif %}
+      {% if tracking_summary.latest.saves is not none %} · saves {{ tracking_summary.latest.saves }}{% endif %}
+      {% if tracking_summary.latest.shares is not none %} · shares {{ tracking_summary.latest.shares }}{% endif %}
+      {% if tracking_summary.latest.recorded_at %} · {{ tracking_summary.latest.recorded_at }}{% endif %}
+    </small>
+    {% endif %}
+    {% for item in tracking_summary.queue.rows %}
+    <small>
+      {{ item.status }} · {{ item.track_at }} · {{ item.distance }} · attempt {{ item.attempt }}
+    </small>
+    {% endfor %}
+  </div>
+  {% endif %}
 </section>
 
 <section class="workflow-block-list" aria-label="Mission workflow blocks">

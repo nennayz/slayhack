@@ -9,7 +9,7 @@ from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from routes.deps import templates, verify_auth, _root
-from track_queue import read_queue
+from track_queue import job_tracking_summary, read_queue
 from routes._helpers import (
     MISSION_FILTER_KEYS,
     _build_voyage_steps,
@@ -90,8 +90,8 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
     generation_result = getattr(job, "generation_result", None)
     publish_package = getattr(job, "publish_package", None)
     publish_execution = getattr(job, "publish_execution", None)
-    queue = read_queue()
-    job_queue_entries = [e for e in queue if e["job_id"] == job.id]
+    queue = read_queue(root)
+    job_queue_entries = [e for e in queue if e.get("job_id") == job.id]
     snapshot_count = len(job.performance)
     if job_queue_entries:
         next_snapshot = min(job_queue_entries, key=lambda e: e["track_at"])
@@ -102,6 +102,7 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
         snapshot_status = "24h tracked ✓ — 72h pending"
     else:
         snapshot_status = "No performance data yet"
+    tracking_summary = job_tracking_summary(job, queue)
     return templates.TemplateResponse(
         request,
         "job_detail.html",
@@ -121,6 +122,7 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
             "can_record_publish_package": _real_generation_completed(job),
             "publish_execution_summary": _publish_execution_summary(job),
             "snapshot_status": snapshot_status,
+            "tracking_summary": tracking_summary,
         },
     )
 

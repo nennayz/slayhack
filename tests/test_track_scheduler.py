@@ -54,6 +54,11 @@ def test_overdue_entry_fires_subprocess_with_correct_args(tmp_path, monkeypatch,
     assert "--track" in cmd
     assert "job123" in cmd
     assert read_queue() == []
+    from track_scheduler import recent_track_scheduler_history
+    history = recent_track_scheduler_history(tmp_path)
+    assert history[0]["state"] == "Ready"
+    assert history[0]["processed"] == 1
+    assert history[0]["succeeded"] == 1
 
 
 def test_failed_track_increments_attempt_and_stays_in_queue(tmp_path, monkeypatch, mocker):
@@ -99,6 +104,10 @@ def test_third_failure_alerts_and_removes_entry(tmp_path, monkeypatch, mocker):
     mock_alert.assert_called_once()
     assert "abc" in mock_alert.call_args[0][0]
     assert read_queue() == []
+    from track_scheduler import recent_track_scheduler_history
+    history = recent_track_scheduler_history(tmp_path)
+    assert history[0]["state"] == "Failed"
+    assert history[0]["failed"] == 1
 
 
 def test_timeout_counts_as_failure(tmp_path, monkeypatch, mocker):
@@ -138,3 +147,15 @@ def test_corrupt_queue_resets_and_continues(tmp_path, monkeypatch, mocker):
     result = run_track_scheduler(root=tmp_path)
     assert result == 0
     mock_run.assert_not_called()
+
+
+def test_empty_queue_records_history(tmp_path, monkeypatch, mocker):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+    mocker.patch("track_scheduler.subprocess.run")
+    from track_scheduler import run_track_scheduler, recent_track_scheduler_history
+    run_track_scheduler(root=tmp_path)
+    history = recent_track_scheduler_history(tmp_path)
+    assert history[0]["state"] == "Ready"
+    assert history[0]["processed"] == 0
+    assert history[0]["remaining"] == 0

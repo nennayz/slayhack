@@ -136,6 +136,53 @@
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
+      <p class="eyebrow">Performance</p>
+      <h2>Tracking queue</h2>
+    </div>
+    <div class="ops-action-result">
+      <span class="badge badge-ops-ready">Queued {{ track_summary.counts.total }}</span>
+      <span class="badge badge-ops-missing">Due {{ track_summary.counts.due_now }}</span>
+      <span class="badge badge-ops-failed">Overdue {{ track_summary.counts.overdue }}</span>
+      <span class="badge badge-ops-missing">Retrying {{ track_summary.counts.retrying }}</span>
+      <span class="badge badge-ops-failed">Invalid {{ track_summary.counts.invalid }}</span>
+    </div>
+    <div class="ops-list spacious">
+      {% for item in track_summary.rows %}
+      <a class="ops-row" href="/jobs/{{ item.job_id }}">
+        <span class="badge badge-ops-{{ item.state | lower }}">{{ item.status }}</span>
+        <strong>{{ item.job_id }}</strong>
+        <small>{{ item.page_name }} · {{ item.track_at }} · {{ item.distance }} · attempt {{ item.attempt }}</small>
+      </a>
+      {% else %}
+      <p class="muted">No performance snapshot checks are queued.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Performance</p>
+      <h2>Scheduler history</h2>
+    </div>
+    <div class="ops-list">
+      {% for item in track_scheduler_history %}
+      <div class="ops-row">
+        <span class="badge badge-ops-{{ item.state | lower }}">{{ "dry run" if item.dry_run else item.state }}</span>
+        <strong>{{ item.timestamp }}</strong>
+        <small>
+          processed {{ item.processed }} · succeeded {{ item.succeeded }} · retrying {{ item.retrying }} · failed {{ item.failed }} · remaining {{ item.remaining }}
+        </small>
+      </div>
+      {% else %}
+      <p class="muted">No tracking scheduler runs recorded yet.</p>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
       <p class="eyebrow">Publish</p>
       <h2>Failure triage</h2>
     </div>

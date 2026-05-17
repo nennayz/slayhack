@@ -58,6 +58,18 @@ def test_ops_report_systemd_units_exist():
     assert "nayzfreedom-ops-report.timer" in (root / "deploy" / "healthcheck.sh").read_text()
 
 
+def test_track_scheduler_systemd_units_are_health_checked():
+    root = Path(__file__).resolve().parents[1]
+    service = root / "deploy" / "nayzfreedom-track-scheduler.service"
+    timer = root / "deploy" / "nayzfreedom-track-scheduler.timer"
+    assert service.exists()
+    assert timer.exists()
+    assert "track_scheduler.py" in service.read_text()
+    healthcheck = (root / "deploy" / "healthcheck.sh").read_text()
+    assert "nayzfreedom-track-scheduler.timer" in healthcheck
+    assert "nayzfreedom-track-scheduler.service" in healthcheck
+
+
 def test_ops_sudoers_limits_allowed_commands():
     root = Path(__file__).resolve().parents[1]
     sudoers = root / "deploy" / "nayzfreedom-ops.sudoers"
@@ -68,6 +80,7 @@ def test_ops_sudoers_limits_allowed_commands():
     assert "nayzfreedom-instagram-queue.service" in text
     assert "nayzfreedom-production-summary.service" in text
     assert "nayzfreedom-ops-report.service" in text
+    assert "nayzfreedom-track-scheduler.service" in text
     assert "nayzfreedom-dashboard.service" in text
     assert "NOPASSWD: ALL" not in text
     assert "/etc/sudoers.d/nayzfreedom-ops" in setup.read_text()
