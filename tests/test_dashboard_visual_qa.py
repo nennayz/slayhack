@@ -146,6 +146,7 @@ def test_dashboard_visual_qa_local_report_passes(tmp_path, monkeypatch):
     assert report["css"]["checks"]["slate_filter_mobile"] is True
     assert report["css"]["checks"]["slate_drawer_mobile"] is True
     assert report["css"]["checks"]["approval_next_action_mobile"] is True
+    assert report["css"]["checks"]["captain_action_mobile"] is True
     assert report["css"]["checks"]["no_negative_tracking"] is True
     crew = next(page for page in report["pages"] if page["name"] == "crew")
     assert crew["forbidden_text"] == []

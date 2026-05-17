@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from routes.deps import templates, verify_auth, _root
 from routes._helpers import (
+    _captain_action_console,
     active_jobs,
     attention_jobs,
     command_brief,
@@ -21,8 +22,9 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 def captains_deck(request: Request, _: str = Depends(verify_auth)):
-    jobs = list_all_jobs(_root(request))
-    performance = load_performance_all(_root(request))
+    root = _root(request)
+    jobs = list_all_jobs(root)
+    performance = load_performance_all(root)
     summary = summarize_jobs(jobs)
     signals = attention_jobs(jobs)
     active = active_jobs(jobs)
@@ -39,5 +41,6 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             "command_brief": brief,
             "fleet_status": ships,
             "performance": performance,
+            "captain_action_console": _captain_action_console(root, jobs),
         },
     )

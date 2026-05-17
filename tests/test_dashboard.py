@@ -196,6 +196,11 @@ def test_captains_deck_empty(client):
     assert "Needs Captain" not in resp.text
     assert "Launch the first Aurora mission when the brief is ready." in resp.text
     assert "Next best action" in resp.text
+    assert "Captain Action Console" in resp.text
+    assert "Route Map" in resp.text
+    assert "Shipyard" in resp.text
+    assert "Harbor Gate" in resp.text
+    assert "Captain Log" in resp.text
     assert "No missions yet" in resp.text
 
 
@@ -259,6 +264,44 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "Approvals" in resp.text
     assert "Generation" in resp.text
     assert "station-icon" in resp.text
+    assert "Captain Action Console" in resp.text
+    assert "Command bridge actions" in resp.text
+
+
+def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    short_video_ticket_id = _slay_hack_ticket_id(tmp_path, "short-video-1")
+    created = client.post(
+        f"/aurora/workflow/video-packages/{short_video_ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    job_id = created.headers["location"].split("/")[-1]
+    client.post(f"/jobs/{job_id}/ready-for-generation", headers=_auth(), follow_redirects=False)
+    _write_job(
+        tmp_path,
+        "20260512_published",
+        brief="published tracking candidate",
+        status="completed",
+        stage="publish_done",
+        publish_result={"instagram": {"status": "published"}},
+    )
+    deck = client.get("/", headers=_auth())
+    aurora = client.get("/aurora", headers=_auth())
+
+    assert deck.status_code == 200
+    assert aurora.status_code == 200
+    assert "Captain Action Console" in deck.text
+    assert "Slay Hack next course" in deck.text
+    assert "safe mission create" in deck.text
+    assert "/aurora/daily-slate?project=slay_hack" in deck.text
+    assert f'action="/jobs/{job_id}/run-generation-dry-run"' in deck.text
+    assert "Run generation dry-run" in deck.text
+    assert "Check performance now" in deck.text
+    assert 'action="/jobs/20260512_published/track-now"' in deck.text
+    assert "live publish locked" in deck.text
+    assert "Captain Action Console" in aurora.text
+    assert "safe mission create" in aurora.text
 
 
 def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):

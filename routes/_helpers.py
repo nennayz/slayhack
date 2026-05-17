@@ -586,6 +586,189 @@ def _tracking_readiness_rows(root: Path, jobs, limit: int = 10) -> list[dict[str
     return sorted(rows, key=lambda item: (order.get(str(item["status"]), 9), str(item["job_id"])), reverse=False)[:limit]
 
 
+def _safe_console_action(row: dict[str, object]) -> dict[str, object]:
+    method = str(row.get("action_method", "get"))
+    if method in {"post", "get"}:
+        return {
+            "label": str(row.get("action_label", "Open")),
+            "url": str(row.get("action_url", row.get("detail_url", "#"))),
+            "method": method,
+            "enabled": True,
+        }
+    return {
+        "label": "Open mission",
+        "url": str(row.get("detail_url", "#")),
+        "method": "get",
+        "enabled": True,
+    }
+
+
+def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
+    slate_cards = _daily_slate_cards(root)
+    approval_rows = _approval_queue_rows(root)
+    tracking_rows = _tracking_readiness_rows(root, jobs, limit=6)
+    actions: list[dict[str, object]] = []
+
+    next_ticket = next(
+        (
+            (card, card.get("next_ticket"))
+            for card in slate_cards
+            if isinstance(card.get("next_ticket"), dict) and not card["next_ticket"].get("has_mission")
+        ),
+        None,
+    )
+    if next_ticket:
+        card, ticket = next_ticket
+        actions.append(
+            {
+                "station": "Route Map",
+                "station_key": "route-map",
+                "state": "missing",
+                "risk_label": "safe mission create",
+                "title": f"{card['page_name']} next course",
+                "detail": (
+                    f"{ticket.get('title')} - {ticket.get('owner')} owns - "
+                    f"{ticket.get('decision_owner')} decides"
+                ),
+                "action": {
+                    "label": str(ticket.get("create_label", "Create mission")).title(),
+                    "url": str(ticket.get("create_mission_url")),
+                    "method": "post",
+                    "enabled": True,
+                },
+                "secondary_label": "Open slate",
+                "secondary_url": f"/aurora/daily-slate?project={card['project']}",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "station": "Route Map",
+                "station_key": "route-map",
+                "state": "ready",
+                "risk_label": "read only",
+                "title": "Daily Slate",
+                "detail": "No unlaunched slate tickets are waiting at the top of the route map.",
+                "action": {"label": "Open Daily Slate", "url": "/aurora/daily-slate", "method": "get", "enabled": True},
+                "secondary_label": "",
+                "secondary_url": "",
+            }
+        )
+
+    shipyard_row = next(
+        (
+            row
+            for row in approval_rows
+            if row.get("lane_key") in {"nora", "generation"}
+            and row.get("action_method") in {"post", "get", "generation_result"}
+        ),
+        None,
+    )
+    if shipyard_row:
+        actions.append(
+            {
+                "station": "Shipyard",
+                "station_key": "shipyard",
+                "state": str(shipyard_row.get("state", "missing")),
+                "risk_label": str(shipyard_row.get("risk_label", "review gate")),
+                "title": str(shipyard_row.get("status")),
+                "detail": f"{shipyard_row.get('page_name')} - {shipyard_row.get('next_action')}",
+                "action": _safe_console_action(shipyard_row),
+                "secondary_label": "Open mission",
+                "secondary_url": str(shipyard_row.get("detail_url", "")),
+            }
+        )
+    else:
+        actions.append(
+            {
+                "station": "Shipyard",
+                "station_key": "shipyard",
+                "state": "ready",
+                "risk_label": "read only",
+                "title": "Generation clear",
+                "detail": "No generation package is waiting for Nora, dry-run, or manual video intake.",
+                "action": {"label": "Open Shipyard", "url": "/aurora/generation", "method": "get", "enabled": True},
+                "secondary_label": "",
+                "secondary_url": "",
+            }
+        )
+
+    harbor_row = next(
+        (
+            row
+            for row in approval_rows
+            if row.get("lane_key") in {"packaging", "captain", "handoff", "revision"}
+        ),
+        None,
+    )
+    if harbor_row:
+        actions.append(
+            {
+                "station": "Harbor Gate",
+                "station_key": "harbor-gate",
+                "state": str(harbor_row.get("state", "missing")),
+                "risk_label": str(harbor_row.get("risk_label", "locked live publish")),
+                "title": str(harbor_row.get("status")),
+                "detail": f"{harbor_row.get('page_name')} - {harbor_row.get('next_action')}",
+                "action": _safe_console_action(harbor_row),
+                "secondary_label": "Open mission",
+                "secondary_url": str(harbor_row.get("detail_url", "")),
+            }
+        )
+    else:
+        actions.append(
+            {
+                "station": "Harbor Gate",
+                "station_key": "harbor-gate",
+                "state": "ready",
+                "risk_label": "live publish locked",
+                "title": "No package at gate",
+                "detail": "No Roxy/Emma package, Captain approval, or handoff is waiting right now.",
+                "action": {"label": "Open Approval Queue", "url": "/aurora/approval-queue", "method": "get", "enabled": True},
+                "secondary_label": "",
+                "secondary_url": "",
+            }
+        )
+
+    tracking_row = next(iter(tracking_rows), None)
+    if tracking_row:
+        is_ready_now = tracking_row.get("status") == "ready now"
+        actions.append(
+            {
+                "station": "Captain Log",
+                "station_key": "captain-log",
+                "state": str(tracking_row.get("state", "missing")).lower(),
+                "risk_label": str(tracking_row.get("status", "tracking")),
+                "title": f"{tracking_row.get('page_name')} tracking",
+                "detail": str(tracking_row.get("detail")),
+                "action": {
+                    "label": "Check performance now" if is_ready_now else "Open tracking proof",
+                    "url": f"/jobs/{tracking_row.get('job_id')}/track-now" if is_ready_now else f"/jobs/{tracking_row.get('job_id')}",
+                    "method": "post" if is_ready_now else "get",
+                    "enabled": True,
+                },
+                "secondary_label": "Open Ops",
+                "secondary_url": "/ops",
+            }
+        )
+    else:
+        actions.append(
+            {
+                "station": "Captain Log",
+                "station_key": "captain-log",
+                "state": "ready",
+                "risk_label": "read only",
+                "title": "Learning clear",
+                "detail": "No published mission is waiting for tracking proof right now.",
+                "action": {"label": "Open Learning", "url": "/aurora/learning", "method": "get", "enabled": True},
+                "secondary_label": "",
+                "secondary_url": "",
+            }
+        )
+
+    return actions
+
+
 def _sanitize_ops_report_summary(report: object) -> str:
     lines = []
     for line in _sanitize_ops_detail(report).splitlines():
