@@ -6,6 +6,7 @@ import sys
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
@@ -97,6 +98,16 @@ def _parse_manual_post_time(value: str) -> datetime:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def _manual_post_redirect_path(job_id: str, return_path: str, result: str) -> str:
+    cleaned = return_path.strip()
+    if cleaned.startswith("/aurora/manual-posting") and "://" not in cleaned and not cleaned.startswith("//"):
+        parts = urlsplit(cleaned)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        query["manual_result"] = result
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    return f"/jobs/{job_id}"
 
 
 def _record_manual_kit_drive_failure(root: Path, job, user: str, detail: str) -> None:
@@ -331,6 +342,7 @@ def record_manual_post(
     post_url: str = Form(...),
     posted_at: str = Form(""),
     note: str = Form(""),
+    return_path: str = Form(""),
     user: str = Depends(verify_auth),
 ):
     root = _root(request)
@@ -387,7 +399,8 @@ def record_manual_post(
         next_action="Let the tracking scheduler capture the 24h and 72h snapshots.",
         metadata={"job_id": job_id, "platform": cleaned_platform, "post_url": cleaned_url},
     )
-    return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+    result = f"Recorded manual post for {job_id}; queued 24h and 72h tracking."
+    return RedirectResponse(_manual_post_redirect_path(job_id, return_path, result), status_code=303)
 
 
 @router.get("/jobs/{job_id}/captain-approval", response_class=HTMLResponse)
