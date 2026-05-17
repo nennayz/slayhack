@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**NayzFreedom / Slayhack** is a Python-based multi-agent AI pipeline that automates social media content production — from trend research through scripting, visual creation, QA, and publishing. The system supports multiple brand pages, each managed by a dedicated Project Manager with a unique persona.
+**NayzFreedom Fleet / SlayHack** is a Python-based multi-agent AI pipeline that automates social media content production — from trend research through scripting, visual creation, QA, and publishing. The system supports multiple brand pages, each managed by a dedicated Project Manager with a unique persona.
 
 Primary platforms: Facebook, Instagram (Reels). Secondary: TikTok, YouTube (later phases).
 
@@ -12,8 +12,8 @@ Current identity rules:
 
 - Captain / owner identity: **Nayz**
 - Current Aurora project PM identity: **Slay**
-- Current Aurora project display name: **Slayhack**
-- Product and top-level operating system: **Slayhack**
+- Product and top-level operating system: **NayzFreedom Fleet**
+- Current Aurora project display name: **SlayHack**
 - Canonical project slug: `nayzfreedom_fleet`
 - Legacy slug: `slay_hack`, compatibility alias only
 - Do not rename PM `Slay` to `Nayz`; these are different roles.
@@ -165,7 +165,7 @@ Primary routes:
 
 - `/` — Captain's Deck with command brief, fleet ship status, active missions, and attention signals
 - `/aurora` — The Aurora mission-control hub
-- `/aurora/islands/nayzfreedom_fleet` — current Slayhack project island, PM Slay, brand profile, island command state
+- `/aurora/islands/nayzfreedom_fleet` — current SlayHack project island, PM Slay, brand profile, island command state
 - `/aurora/missions` — all missions
 - `/jobs/{job_id}` — mission detail / voyage log with mission command, current stage, progress, output readiness, timeline, and artifacts
 - `/aurora/crew` and `/aurora/crew/{slug}` — Aurora crew registry and character sheets

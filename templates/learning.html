@@ -21,12 +21,48 @@
   </div>
   <div class="stat-card">
     <span>Crew art</span>
-    <strong>Approved</strong>
+    <strong>{{ crew_asset_audit.status }}</strong>
   </div>
   <div class="stat-card">
     <span>Deploy status</span>
     <strong>Live</strong>
   </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Production canon</p>
+    <h2>Current crew asset provenance</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ crew_asset_audit.summary }}</span>
+    <span><code>static/crew/</code> is the dashboard production source; <code>review/</code> is evidence and future review staging.</span>
+    <span>Do not replace a portrait without a new review folder, crop check, and explicit Captain approval.</span>
+  </div>
+  {% if crew_asset_audit.rows %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Dimensions</th>
+          <th>Status</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in crew_asset_audit.rows %}
+        <tr>
+          <td><code>{{ item.path }}</code></td>
+          <td>{{ item.dimensions }}</td>
+          <td>{{ item.status }}</td>
+          <td>{{ item.source }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 </section>
 
 <section class="content-grid">
@@ -63,13 +99,27 @@
   </article>
 </section>
 
+{% if asset_audit_note %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Asset audit</p>
+    <h2>{{ asset_audit_note.title }}</h2>
+  </div>
+  <div class="learning-meta">
+    <span>{{ asset_audit_note.path }}</span>
+    <em>Updated {{ asset_audit_note.updated_at }}</em>
+  </div>
+  <pre class="learning-note">{{ asset_audit_note.body }}</pre>
+</section>
+{% endif %}
+
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Production boundary</p>
     <h2>What stays protected</h2>
   </div>
   <div class="learning-gates">
-    <span>The current manual crew portrait set is approved production canon.</span>
+    <span>The current manual crew portrait set is approved production canon and has a production asset audit.</span>
     <span>Future portrait replacements still need a new review folder and explicit approval.</span>
     <span>Keep Captain Nayz and PM Slay as separate identities in all docs, assets, and dashboard copy.</span>
   </div>

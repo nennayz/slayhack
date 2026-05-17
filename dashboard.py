@@ -6,6 +6,7 @@ import json
 import os
 import secrets
 import shutil
+import struct
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -1309,6 +1310,87 @@ def _read_review_note(root: Path) -> dict | None:
     }
 
 
+def _read_asset_audit_note(root: Path) -> dict | None:
+    review_root = root / "review"
+    if not review_root.exists():
+        return None
+    notes = sorted(
+        review_root.glob("crew_static_production_*/asset_audit.md"),
+        key=lambda path: (path.stat().st_mtime, str(path)),
+        reverse=True,
+    )
+    if not notes:
+        return None
+    path = notes[0]
+    return {
+        "title": path.parent.name.replace("_", " ").title(),
+        "path": str(path.relative_to(root)),
+        "updated_at": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
+        "body": path.read_text(encoding="utf-8"),
+    }
+
+
+def _png_dimensions(path: Path) -> tuple[int, int] | None:
+    try:
+        with path.open("rb") as handle:
+            header = handle.read(24)
+    except OSError:
+        return None
+    if len(header) < 24 or not header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+    return struct.unpack(">II", header[16:24])
+
+
+def _sha256(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
+def _crew_asset_audit(root: Path) -> dict[str, object]:
+    static_root = root / "static" / "crew"
+    review_root = root / "review" / "crew_final_style_v7"
+    rows = []
+    matched_review = 0
+    concept_files = {"nami.png", "genie.png"}
+    if not static_root.exists():
+        return {
+            "status": "Missing",
+            "total": 0,
+            "matched_review": 0,
+            "rows": rows,
+            "summary": "No production crew asset folder found.",
+        }
+    for path in sorted(static_root.glob("*.png")):
+        dimensions = _png_dimensions(path)
+        review_path = review_root / path.name
+        static_hash = _sha256(path)
+        review_hash = _sha256(review_path) if review_path.exists() else None
+        matches_review = bool(static_hash and review_hash and static_hash == review_hash)
+        matched_review += 1 if matches_review else 0
+        status = "Approved concept portrait" if path.name in concept_files else "Approved production portrait"
+        rows.append(
+            {
+                "file": path.name,
+                "path": str(path.relative_to(root)),
+                "dimensions": f"{dimensions[0]} x {dimensions[1]}" if dimensions else "unknown",
+                "status": status,
+                "source": "Matches v7 review" if matches_review else "Manual/static production asset",
+            }
+        )
+    return {
+        "status": "Production canon" if rows else "Missing",
+        "total": len(rows),
+        "matched_review": matched_review,
+        "rows": rows,
+        "summary": (
+            f"{len(rows)} PNG production assets; {matched_review} match the v7 review folder by hash. "
+            "Future replacements need a new review folder and explicit approval."
+        ),
+    }
+
+
 def _latest_learning_brief(root: Path) -> dict | None:
     daily_dir = root / "docs" / "learning" / "daily"
     if not daily_dir.exists():
@@ -1868,6 +1950,51 @@ def _publish_execution_summary(job: ContentJob) -> dict[str, object]:
     }
 
 
+def _path_readiness(root: Path, value: object) -> dict[str, object]:
+    raw = str(value or "").strip()
+    if not raw:
+        return {"path": "", "exists": False, "label": "Missing", "state": "missing"}
+    path = Path(raw)
+    resolved = path if path.is_absolute() else root / path
+    exists = resolved.exists()
+    return {
+        "path": raw,
+        "exists": exists,
+        "label": "Verified on disk" if exists else "Recorded path; file check needed",
+        "state": "ready" if exists else "missing",
+    }
+
+
+def _live_publish_gate_summary(root: Path, job: ContentJob) -> dict[str, object]:
+    execution = dict(job.publish_execution or {})
+    package = dict(job.publish_package or {})
+    publish_result = job.publish_result or {}
+    platforms = []
+    for platform in execution.get("platforms") or job.platforms:
+        result = publish_result.get(str(platform), {}) if isinstance(publish_result, dict) else {}
+        result = result if isinstance(result, dict) else {}
+        platforms.append(
+            {
+                "name": str(platform),
+                "handoff_status": str(result.get("status", "missing")),
+                "dry_run": result.get("dry_run") is True,
+                "reason": str(result.get("reason", "No dashboard handoff reason recorded.")),
+            }
+        )
+    return {
+        "status": "Locked",
+        "status_detail": "No real platform publisher API is called from this page.",
+        "media": _path_readiness(root, execution.get("video_path") or job.video_path),
+        "caption_ready": bool(str(execution.get("caption") or package.get("caption") or "").strip()),
+        "hashtags_ready": bool(execution.get("hashtags") or package.get("hashtags")),
+        "platforms": platforms,
+        "approval_status": str(execution.get("live_publish_approval", {}).get("status", "not_requested"))
+        if isinstance(execution.get("live_publish_approval"), dict)
+        else "not_requested",
+        "next_action": "Use this gate for final inspection only. Add a separate live publisher action only after explicit Captain approval.",
+    }
+
+
 GENERATION_FILTERS = (
     ("all", "All"),
     ("waiting_real_video", "Waiting real video"),
@@ -2060,7 +2187,7 @@ def _record_publish_package(
         "faq_path": job.community_faq_path,
         "publish_notes": cleaned_notes,
         "created_at": recorded_at,
-        "next_action": "Publish package is ready for scheduling or manual publish.",
+        "next_action": "Publish package is ready for Captain review before dashboard handoff.",
     }
     job.stage = "publish_packaged"
     job.status = JobStatus.AWAITING_APPROVAL
@@ -2082,7 +2209,7 @@ def _create_publish_execution(root: Path, job: ContentJob) -> ContentJob:
         "faq_path": package.get("faq_path"),
         "video_path": job.video_path,
         "created_at": created_at,
-        "next_action": "Captain can schedule publish when platform readiness is confirmed.",
+        "next_action": "Captain review required before dashboard handoff. Live publishing remains locked.",
     }
     job.stage = "ready_to_publish"
     job.status = JobStatus.AWAITING_APPROVAL
@@ -2906,6 +3033,8 @@ def aurora_learning(request: Request, _: str = Depends(verify_auth)):
         {
             "latest_brief": _latest_learning_brief(root),
             "review_note": _read_review_note(root),
+            "asset_audit_note": _read_asset_audit_note(root),
+            "crew_asset_audit": _crew_asset_audit(root),
         },
     )
 
@@ -3193,6 +3322,29 @@ def captain_approval(job_id: str, request: Request, _: str = Depends(verify_auth
             "publish_execution_summary": _publish_execution_summary(job),
             "publish_result_reason": _publish_result_reason(job),
             "faq_content": faq_content,
+        },
+    )
+
+
+@app.get("/jobs/{job_id}/live-publish-approval", response_class=HTMLResponse)
+def live_publish_approval(job_id: str, request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    if _publish_execution_status(job) != "scheduled":
+        raise HTTPException(status_code=400, detail="Job must have a dashboard handoff before live publish review")
+    return templates.TemplateResponse(
+        request,
+        "live_publish_approval.html",
+        {
+            "job": job,
+            "publish_package": getattr(job, "publish_package", None),
+            "publish_execution": getattr(job, "publish_execution", None),
+            "publish_execution_summary": _publish_execution_summary(job),
+            "publish_result_reason": _publish_result_reason(job),
+            "live_gate": _live_publish_gate_summary(root, job),
         },
     )
 

@@ -5,6 +5,12 @@ Date: 2026-05-16
 Scope: review-only character art for NayzFreedom Fleet. These notes do not
 approve overwriting `static/crew/` and do not authorize deploy.
 
+Status update, 2026-05-17: these v7 notes are now historical review evidence
+and style-anchor material. The current production canon is documented in
+`review/crew_static_production_2026-05-17/asset_audit.md` and stored under
+`static/crew/`. Do not copy v7 files over production portraits without a new
+review folder and explicit Captain Nayz approval for each replacement.
+
 ## Style Target
 
 Preferred direction for the next pass:

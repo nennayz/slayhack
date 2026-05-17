@@ -157,6 +157,7 @@
   {% endif %}
   {% if publish_execution_summary.status == "scheduled" %}
   <p class="muted">This package already has a dashboard handoff. Live publishing remains locked until explicit approval.</p>
+  <a class="button button-secondary" href="/jobs/{{ job.id }}/live-publish-approval">Open live publish approval gate</a>
   {% else %}
   <form class="inline-form approval-decision-form" method="post" action="/jobs/{{ job.id }}/captain-review">
     <label for="captain_note_{{ job.id }}">Review note</label>

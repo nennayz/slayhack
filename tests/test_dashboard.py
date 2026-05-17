@@ -528,6 +528,18 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     assert "Handoff audit" in approved_page.text
     assert "Dashboard schedule handoff only; no external platform API was called." in approved_page.text
     assert "Tiktok handoff" in approved_page.text
+    assert "Open live publish approval gate" in approved_page.text
+
+    live_gate = client.get(f"/jobs/{job_id}/live-publish-approval", headers=_auth())
+
+    assert live_gate.status_code == 200
+    assert "Live publish approval" in live_gate.text
+    assert "Real posting remains blocked" in live_gate.text
+    assert "No real platform publisher API is called from this page." in live_gate.text
+    assert "Dashboard handoff is dry-run evidence, not a live post approval." in live_gate.text
+    assert "Tiktok" in live_gate.text
+    assert "Dry-run" in live_gate.text
+    assert f'action="/jobs/{job_id}/live-publish-approval"' not in live_gate.text
 
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):
@@ -1029,6 +1041,20 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     (latest_review_dir / "review_notes.md").write_text(
         "# Crew Final Style v8 Approved Production Notes\n\nMia keeps the blue signal-scout direction.\n"
     )
+    audit_dir = tmp_path / "review" / "crew_static_production_2026-05-17"
+    audit_dir.mkdir(parents=True)
+    (audit_dir / "asset_audit.md").write_text(
+        "# Crew Static Production Asset Audit\n\nCurrent `static/crew/` production portrait provenance.\n"
+    )
+    png_bytes = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+    )
+    static_crew = tmp_path / "static" / "crew"
+    static_crew.mkdir(parents=True)
+    (static_crew / "mia.png").write_bytes(png_bytes)
+    (static_crew / "nami.png").write_bytes(png_bytes)
+    v7_review = tmp_path / "review" / "crew_final_style_v7"
+    (v7_review / "mia.png").write_bytes(png_bytes)
 
     resp = client.get("/aurora/learning", headers=_auth())
 
@@ -1039,10 +1065,16 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Crew Final Style v8 Approved Production Notes" in resp.text
     assert "Mia keeps the blue signal-scout direction." in resp.text
     assert "Crew art" in resp.text
-    assert "Approved" in resp.text
+    assert "Production canon" in resp.text
+    assert "Current crew asset provenance" in resp.text
+    assert "2 PNG production assets; 1 match the v7 review folder by hash." in resp.text
+    assert "static/crew/mia.png" in resp.text
+    assert "Matches v7 review" in resp.text
+    assert "Approved concept portrait" in resp.text
+    assert "Crew Static Production Asset Audit" in resp.text
     assert "Deploy status" in resp.text
     assert "Live" in resp.text
-    assert "current manual crew portrait set is approved production canon" in resp.text
+    assert "current manual crew portrait set is approved production canon and has a production asset audit" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):
