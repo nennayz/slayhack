@@ -2617,7 +2617,10 @@ def _captain_attention_lane(
             "title": str(manual_priority.get("status") or "Manual posting"),
             "detail": str(manual_priority.get("brief") or manual_priority.get("next_action") or ""),
             "action_label": "Open manual queue",
-            "action_url": f"/aurora/manual-posting?lane={manual_priority.get('lane')}",
+            "action_url": (
+                f"/aurora/manual-posting?lane={manual_priority.get('lane')}"
+                f"&focus={manual_priority.get('job_id')}#manual-job-{manual_priority.get('job_id')}"
+            ),
         }
         lane_state = "Needs Captain"
         count = len(manual_rows)

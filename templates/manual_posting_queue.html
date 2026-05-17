@@ -15,6 +15,14 @@
 
 {% include "_aurora_flow.html" %}
 
+{% if manual_result %}
+<section class="ops-action-result manual-posting-result">
+  <span class="badge badge-ops-ready">Manual post recorded</span>
+  <strong>{{ manual_result }}</strong>
+  <small>The job moved into the tracking lane without calling a live publish API.</small>
+</section>
+{% endif %}
+
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Kit synced</span>
@@ -70,6 +78,40 @@
   {% endfor %}
 </nav>
 
+{% if selected_lane == "kit_synced" %}
+<section class="manual-posting-checklist panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Manual Kit Posting Checklist</p>
+      <h2>Post from kit, then record URL</h2>
+    </div>
+    <p>Follow this handoff loop for each synced kit. Recording a URL queues tracking; it does not call a live publisher.</p>
+  </div>
+  <div class="manual-posting-checklist-grid">
+    <article>
+      <span class="badge badge-ops-ready">1</span>
+      <strong>Open Drive kit</strong>
+      <small>Use the synced kit assets, caption, hashtags, and timing guidance.</small>
+    </article>
+    <article>
+      <span class="badge badge-ops-missing">2</span>
+      <strong>Post manually</strong>
+      <small>Publish from the platform UI using Captain judgment.</small>
+    </article>
+    <article>
+      <span class="badge badge-ops-missing">3</span>
+      <strong>Record post URL</strong>
+      <small>Save platform, URL, posted time, and note in the Manual Posting Ledger.</small>
+    </article>
+    <article>
+      <span class="badge badge-ops-ready">4</span>
+      <strong>Tracking queued</strong>
+      <small>System schedules 24h and 72h tracking from the real posted time.</small>
+    </article>
+  </div>
+</section>
+{% endif %}
+
 <section class="panel spacious">
   <div class="section-heading">
     <div>
@@ -90,7 +132,7 @@
       </div>
       <div class="approval-queue-list">
         {% for item in group.rows %}
-        <div class="approval-queue-row manual-posting-row">
+        <div id="manual-job-{{ item.job_id }}" class="approval-queue-row manual-posting-row {{ 'focus-row' if focus_job == item.job_id else '' }}">
           <div class="approval-row-main">
             <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
             <span class="risk-chip">Live publish locked</span>
@@ -170,6 +212,7 @@
               <label for="manual_posted_at_{{ item.job_id }}">Posted at</label>
               <input id="manual_posted_at_{{ item.job_id }}" name="posted_at" type="datetime-local">
               <input name="note" type="hidden" value="Recorded from Manual Posting Queue.">
+              <input name="return_path" type="hidden" value="/aurora/manual-posting?lane=waiting_tracking">
               <button type="submit">Record manual post</button>
             </form>
           </details>

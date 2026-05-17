@@ -280,7 +280,7 @@ def test_captains_deck_prioritizes_synced_manual_kits(tmp_path, client):
     assert "1 manual posting handoff needs queue follow-through." in deck_lane
     assert "Kit synced, not posted" in deck_lane
     assert "synced kit mission" in deck_lane
-    assert "/aurora/manual-posting?lane=kit_synced" in deck_lane
+    assert "/aurora/manual-posting?lane=kit_synced&amp;focus=20260512_synced#manual-job-20260512_synced" in deck_lane
     assert "Open manual queue" in deck_lane
     assert "Kit synced, not posted" in aurora_lane
 
@@ -3505,6 +3505,45 @@ def test_job_detail_records_manual_post_and_queues_tracking(tmp_path, client, mo
     assert "Recorded manual post for 20260512_060000" in work_activity
 
 
+def test_manual_queue_record_post_redirects_with_tracking_feedback(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_synced",
+        brief="synced kit mission",
+        manual_post_kit={
+            "drive_sync": {
+                "status": "synced",
+                "synced_at": "2026-05-17T13:00:00+00:00",
+                "web_view_link": "https://drive.google.com/file/d/synced/view",
+            }
+        },
+    )
+
+    resp = client.post(
+        "/jobs/20260512_synced/manual-post",
+        data={
+            "platform": "instagram",
+            "post_url": "https://www.instagram.com/p/manual123/",
+            "posted_at": "2026-05-17T14:00:00+00:00",
+            "note": "Recorded from Manual Posting Queue.",
+            "return_path": "/aurora/manual-posting?lane=waiting_tracking",
+        },
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith("/aurora/manual-posting?lane=waiting_tracking&manual_result=")
+    assert "Recorded+manual+post+for+20260512_synced" in resp.headers["location"]
+    queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
+    assert [item["track_at"] for item in queue] == ["2026-05-18T14:00:00Z", "2026-05-20T14:00:00Z"]
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Manual post recorded" in page.text
+    assert "queued 24h and 72h tracking" in page.text
+    assert "Manual posted, waiting tracking" in page.text
+
+
 def test_job_detail_rejects_manual_post_without_url(tmp_path, client):
     _write_job(tmp_path, "20260512_060000", brief="manual post kit")
 
@@ -3673,6 +3712,21 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     assert "attention mission" in resp.text
     assert "Open Drive kit" in resp.text
     assert "Open manual post" in resp.text
+
+    kit_lane = client.get(
+        "/aurora/manual-posting?lane=kit_synced&focus=20260512_synced",
+        headers=_auth(),
+    )
+    assert kit_lane.status_code == 200
+    assert "Manual Kit Posting Checklist" in kit_lane.text
+    assert "Post from kit, then record URL" in kit_lane.text
+    assert "Open Drive kit" in kit_lane.text
+    assert "Post manually" in kit_lane.text
+    assert "Record post URL" in kit_lane.text
+    assert "Tracking queued" in kit_lane.text
+    assert 'id="manual-job-20260512_synced"' in kit_lane.text
+    assert "focus-row" in kit_lane.text
+    assert 'name="return_path" type="hidden" value="/aurora/manual-posting?lane=waiting_tracking"' in kit_lane.text
 
     default_resp = client.get("/aurora/manual-posting", headers=_auth())
     assert default_resp.status_code == 200

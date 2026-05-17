@@ -331,6 +331,8 @@ def aurora_manual_posting(request: Request, _: str = Depends(verify_auth)):
             "waiting_tracking_count": sum(1 for row in rows if row["lane"] == "waiting_tracking"),
             "tracking_complete_count": sum(1 for row in rows if row["lane"] == "tracking_complete"),
             "needs_attention_count": sum(1 for row in rows if row["lane"] == "needs_attention"),
+            "manual_result": request.query_params.get("manual_result", ""),
+            "focus_job": request.query_params.get("focus", ""),
         },
     )
 
