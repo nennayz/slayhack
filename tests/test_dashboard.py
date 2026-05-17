@@ -391,6 +391,10 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "station-icon" in resp.text
     assert "Captain Action Console" in resp.text
     assert "Command bridge actions" in resp.text
+    assert "SlayHack PM Knowledge" in resp.text
+    assert "Drive Knowledge ready" in resp.text
+    assert "Drive retrieval smoke PASS 7/7" in resp.text
+    assert "Knowledge map" in resp.text
     assert "Captain Attention Lane" in resp.text
     assert "Learning Runbook" in resp.text
 
@@ -2313,6 +2317,14 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Crew Static Production Asset Audit" in resp.text
     assert "Deploy status" in resp.text
     assert "Live" in resp.text
+    assert "SlayHack PM Knowledge" in resp.text
+    assert "Drive Knowledge ready" in resp.text
+    assert "Drive retrieval smoke PASS 7/7" in resp.text
+    assert "Read first" in resp.text
+    assert "Knowledge map" in resp.text
+    assert "Update runbook" in resp.text
+    assert "Direct UI result" in resp.text
+    assert "archived markdown duplicates are historical only" in resp.text
     assert "Manual Posting Lessons" in resp.text
     assert "Daily Learning Brief intake" in resp.text
     assert "No closed manual posting lessons are ready for the daily brief yet." in resp.text
