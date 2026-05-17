@@ -4322,6 +4322,45 @@ def _manual_posting_proof_summary(
     }
 
 
+def _manual_posting_tracking_steps(
+    *,
+    posted_at: object,
+    snapshots: int,
+    queue_summary: dict[str, object],
+) -> list[dict[str, str]]:
+    rows = queue_summary.get("rows") if isinstance(queue_summary.get("rows"), list) else []
+    queued_rows = [row for row in rows if str(row.get("status")) in {"future", "due now", "overdue", "invalid"}]
+    steps = []
+    labels = [("24h snapshot", 24), ("72h snapshot", 72)]
+    for index, (label, offset) in enumerate(labels):
+        if snapshots > index:
+            steps.append({
+                "label": label,
+                "state": "ready",
+                "status": "Complete",
+                "detail": "Performance snapshot is recorded.",
+            })
+            continue
+        queued = queued_rows[index] if index < len(queued_rows) else None
+        if queued:
+            status = str(queued.get("status") or "queued")
+            state = "failed" if status in {"overdue", "invalid"} else "missing" if status == "due now" else "ready"
+            steps.append({
+                "label": label,
+                "state": state,
+                "status": status.replace("_", " ").title(),
+                "detail": f"{queued.get('track_at', '')} - {queued.get('distance', 'unknown')}",
+            })
+            continue
+        steps.append({
+            "label": label,
+            "state": "missing",
+            "status": "Missing",
+            "detail": f"No {offset}h queue entry is present for posted time {posted_at or 'unknown'}.",
+        })
+    return steps
+
+
 def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str, object] | None:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
     drive_sync = kit.get("drive_sync") if isinstance(kit, dict) else None
@@ -4421,6 +4460,11 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
         "posted_at": first_post.get("posted_at", ""),
         "snapshot_count": snapshots,
         "queue_summary": queue_summary,
+        "tracking_steps": _manual_posting_tracking_steps(
+            posted_at=first_post.get("posted_at", ""),
+            snapshots=snapshots,
+            queue_summary=queue_summary,
+        ),
         "queued_count": int(counts["total"]),
         "proof_summary": proof_summary,
         "closeout": {
