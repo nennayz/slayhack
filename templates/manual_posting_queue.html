@@ -34,6 +34,33 @@
   </div>
 </section>
 
+<section class="manual-posting-overview panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Queue direction</p>
+      <h2>Manual Posting Queue Overview</h2>
+    </div>
+    <p>Each lane shows the first mission to handle and the next action before closeout.</p>
+  </div>
+  <div class="manual-posting-overview-grid">
+    {% for lane in manual_posting_lane_summaries %}
+    <article class="manual-posting-overview-card {{ 'active' if lane.active else '' }}">
+      <div class="manual-posting-overview-head">
+        <span class="badge badge-ops-{{ lane.state }}">{{ lane.count }}</span>
+        <strong>{{ lane.label }}</strong>
+      </div>
+      <small>{{ lane.detail }}</small>
+      <p>{{ lane.job_brief }}</p>
+      <div class="approval-next-action">
+        <span>Next action</span>
+        <strong>{{ lane.next_action }}</strong>
+      </div>
+      <a class="button button-secondary button-small" href="{{ lane.href }}">Open lane</a>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
 <nav class="filter-tabs" aria-label="Manual posting lane filters">
   {% for item in manual_posting_lane_filters %}
   <a class="filter-tab{% if item.active %} active{% endif %}" href="/aurora/manual-posting{{ '' if item.key == 'needs_attention' else '?lane=' ~ item.key }}">

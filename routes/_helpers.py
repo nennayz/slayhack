@@ -4418,6 +4418,33 @@ def _manual_posting_lane_groups(rows: list[dict[str, object]]) -> list[dict[str,
     ]
 
 
+def _manual_posting_lane_summaries(
+    groups: list[dict[str, object]],
+    selected: str,
+) -> list[dict[str, object]]:
+    summaries = []
+    for group in groups:
+        rows = group["rows"] if isinstance(group.get("rows"), list) else []
+        lead = rows[0] if rows else {}
+        key = str(group["key"])
+        summaries.append(
+            {
+                "key": key,
+                "label": str(group["label"]),
+                "detail": str(group["detail"]),
+                "count": len(rows),
+                "active": selected == key,
+                "href": "/aurora/manual-posting" if key == "needs_attention" else f"/aurora/manual-posting?lane={key}",
+                "state": str(lead.get("state") or "ready"),
+                "status": str(lead.get("status") or "Clear"),
+                "job_id": str(lead.get("job_id") or ""),
+                "job_brief": str(lead.get("brief") or "No missions in this lane."),
+                "next_action": str(lead.get("next_action") or "No immediate action in this lane."),
+            }
+        )
+    return summaries
+
+
 def _qa_status(slate: CalendarSlate | None) -> list[dict[str, str]]:
     if slate is None:
         return [{"state": "Missing", "name": "Daily slate", "detail": "No slate is configured yet."}]
