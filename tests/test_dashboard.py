@@ -23,6 +23,10 @@ def _auth(user: str = "admin", pw: str = "8888") -> dict:
     return {"Authorization": f"Basic {token}"}
 
 
+def _section_after_eyebrow(page: str, eyebrow: str) -> str:
+    return page.split(f'<p class="eyebrow">{eyebrow}</p>', 1)[1].split("</section>", 1)[0]
+
+
 def _make_pm_dict(page_name: str = "Slayhack") -> dict:
     return {
         "name": "Test PM", "page_name": page_name, "persona": "",
@@ -214,6 +218,12 @@ def test_captains_deck_empty(client):
     assert "Shipyard" in resp.text
     assert "Harbor Gate" in resp.text
     assert "Captain Log" in resp.text
+    assert "Captain Attention Lane" in resp.text
+    assert "Captain lane clear" in resp.text
+    assert "Do now" in resp.text
+    assert "System did" in resp.text
+    assert "Waiting on" in resp.text
+    assert "Open Daily Slate" in resp.text
     assert "Learning Runbook" in resp.text
     assert "Learning loop clear" in resp.text
     assert "No missions yet" in resp.text
@@ -235,6 +245,8 @@ def test_captains_deck_surfaces_attention_and_active_missions(tmp_path, client):
     assert resp.status_code == 200
     assert "Command priority" in resp.text
     assert "Review failed missions before launching new work." in resp.text
+    assert "Captain Attention Lane" in resp.text
+    assert "1 mission needs Captain attention." in resp.text
     assert "Open priority mission" in resp.text
     assert "Needs attention" in resp.text
     assert "needs review" in resp.text
@@ -300,9 +312,14 @@ def test_captains_deck_surfaces_manual_closeout_attention(tmp_path, client):
     assert "Needs Captain" in resp.text
     assert "Close manual posting lessons before launching more manual handoffs." in resp.text
     assert "1 manual post ready for closeout." in resp.text
+    assert "Captain Attention Lane" in resp.text
     assert "Learning Runbook" in resp.text
     assert "Capture closeout lesson" in resp.text
     assert "Open manual closeout" in resp.text
+    attention_lane = _section_after_eyebrow(resp.text, "Captain Attention Lane")
+    assert "Capture closeout lesson" in attention_lane
+    assert "1 manual post needs closeout learning." in attention_lane
+    assert "/aurora/manual-posting?lane=tracking_complete" in attention_lane
     attention_section = resp.text.split("<h2>Needs attention</h2>", 1)[1].split("</article>", 1)[0]
     assert "manual closeout ready" in attention_section
     assert "manual closeout closed" not in attention_section
@@ -345,6 +362,7 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "station-icon" in resp.text
     assert "Captain Action Console" in resp.text
     assert "Command bridge actions" in resp.text
+    assert "Captain Attention Lane" in resp.text
     assert "Learning Runbook" in resp.text
 
 
@@ -490,6 +508,41 @@ def test_learning_runbook_routes_to_create_daily_draft_for_closed_lessons(tmp_pa
     assert "Create daily learning draft" in resp.text
     assert "1 closed manual lesson needs a daily learning draft." in resp.text
     assert "/learning-runbook/create-draft" in resp.text
+
+
+def test_captain_attention_lane_routes_post_runbook_steps_to_anchor(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_closed_lesson",
+        brief="closed lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+            },
+        },
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    attention_lane = _section_after_eyebrow(resp.text, "Captain Attention Lane")
+    assert "Create daily learning draft" in attention_lane
+    assert "1 closed manual lesson needs a daily learning draft." in attention_lane
+    assert 'href="#learning-runbook"' in attention_lane
+    assert 'action="/learning-runbook/create-draft"' not in attention_lane
+    runbook_section = _section_after_eyebrow(resp.text, "Learning Runbook")
+    assert 'action="/learning-runbook/create-draft"' in runbook_section
 
 
 def test_learning_runbook_skips_create_draft_when_closed_lesson_is_already_drafted(tmp_path, client):
@@ -761,6 +814,28 @@ def test_learning_runbook_proof_shows_latest_runbook_action(tmp_path, client):
     assert "20260512_plan" in resp.text
     assert "20260516_manual" in resp.text
     assert "Confirm applied learning on the mission before generation." in resp.text
+
+
+def test_captain_attention_lane_surfaces_latest_runbook_proof(tmp_path, client):
+    from work_activity import write_work_activity
+
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Accepted daily learning draft from runbook",
+        actor="admin",
+        result="docs/learning/daily/2026-05-17-manual-posting-lessons.md",
+        next_action="Apply accepted learning to the next Daily Slate mission.",
+        metadata={"source_job_ids": ["20260516_manual"]},
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    attention_lane = _section_after_eyebrow(resp.text, "Captain Attention Lane")
+    assert "System did" in attention_lane
+    assert "Accepted draft" in attention_lane
+    assert "docs/learning/daily/2026-05-17-manual-posting-lessons.md" in attention_lane
 
 
 def test_learning_runbook_proof_ignores_unrelated_worklog_events(tmp_path, client):

@@ -23,6 +23,7 @@ from routes._helpers import (
     _aurora_workflow_snapshot,
     _calendar_slate,
     _captain_action_console,
+    _captain_attention_lane,
     _captain_learning_runbook,
     _console_history,
     _create_slate_ticket_mission,
@@ -137,6 +138,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
     performance = load_performance_all(root)
     signals = attention_jobs(jobs)
     active = active_jobs(jobs)
+    learning_runbook = _captain_learning_runbook(root, jobs)
     return templates.TemplateResponse(
         request,
         "aurora.html",
@@ -150,7 +152,12 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "performance": performance,
             "crew": CREW[:4],
             "captain_action_console": _captain_action_console(root, jobs),
-            "learning_runbook": _captain_learning_runbook(root, jobs),
+            "captain_attention_lane": _captain_attention_lane(
+                learning_runbook=learning_runbook,
+                attention_items=signals,
+                active_items=active,
+            ),
+            "learning_runbook": learning_runbook,
             "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,
