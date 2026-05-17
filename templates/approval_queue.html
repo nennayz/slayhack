@@ -30,6 +30,15 @@
   </div>
 </section>
 
+<nav class="filter-tabs" aria-label="Approval lane filters">
+  {% for item in approval_lane_filters %}
+  <a class="filter-tab{% if item.active %} active{% endif %}" href="/aurora/approval-queue{{ '' if item.key == 'all' else '?lane=' ~ item.key }}">
+    <span>{{ item.label }}</span>
+    <strong>{{ item.count }}</strong>
+  </a>
+  {% endfor %}
+</nav>
+
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Command lanes</p>

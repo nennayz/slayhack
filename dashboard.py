@@ -2769,6 +2769,19 @@ def _approval_lane_groups(rows: list[dict[str, object]]) -> list[dict[str, objec
     ]
 
 
+def _approval_lane_filters(groups: list[dict[str, object]], selected: str) -> list[dict[str, object]]:
+    total = sum(len(group["rows"]) for group in groups)
+    return [{"key": "all", "label": "All lanes", "count": total, "active": selected == "all"}] + [
+        {
+            "key": str(group["key"]),
+            "label": str(group["label"]),
+            "count": len(group["rows"]),
+            "active": selected == group["key"],
+        }
+        for group in groups
+    ]
+
+
 def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
     rows = []
     for job in list_all_jobs(root):
@@ -2862,9 +2875,9 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "lane": "Handoff",
                 "state": "ready",
                 "status": "Scheduled handoff",
-                "next_action": "Dashboard handoff recorded only; live publishing remains locked.",
-                "action_label": "Open mission",
-                "action_url": f"/jobs/{job.id}",
+                "next_action": "Inspect the locked live publish gate before any separate platform action.",
+                "action_label": "Open live publish gate",
+                "action_url": f"/jobs/{job.id}/live-publish-approval",
                 "action_method": "get",
             }
 
@@ -3111,12 +3124,22 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
 def aurora_approval_queue(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
     rows = _approval_queue_rows(root)
+    all_lane_groups = _approval_lane_groups(rows)
+    selected_lane = request.query_params.get("lane", "all")
+    valid_lanes = {"all"} | {str(group["key"]) for group in all_lane_groups}
+    if selected_lane not in valid_lanes:
+        selected_lane = "all"
+    lane_groups = [
+        group for group in all_lane_groups if selected_lane == "all" or group["key"] == selected_lane
+    ]
     return templates.TemplateResponse(
         request,
         "approval_queue.html",
         {
             "approval_queue": rows,
-            "approval_lane_groups": _approval_lane_groups(rows),
+            "approval_lane_groups": lane_groups,
+            "approval_lane_filters": _approval_lane_filters(all_lane_groups, selected_lane),
+            "selected_lane": selected_lane,
             "needs_review_count": sum(1 for row in rows if row["status"] == "Needs review"),
             "ready_publish_count": sum(1 for row in rows if row["status"] == "Ready to publish"),
         },
