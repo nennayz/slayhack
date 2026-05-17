@@ -1919,6 +1919,25 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .manual-tracking-steps small {
   margin-top: 0;
 }
+.manual-learning-bridge {
+  background: rgba(16,35,63,0.045);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  padding: 0.75rem;
+}
+.manual-learning-bridge span {
+  color: var(--navy-soft);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.manual-learning-bridge strong,
+.manual-learning-bridge small {
+  margin-top: 0;
+}
 .manual-posting-meta,
 .manual-tracking-list {
   display: flex;
@@ -2705,6 +2724,7 @@ a:hover { color: var(--navy-soft); }
   .manual-posting-checklist-grid,
   .manual-tracking-assist-grid,
   .manual-tracking-steps,
+  .manual-learning-bridge,
   .manual-proof-grid,
   .artifact-grid,
   .captain-history-filters,

@@ -335,6 +335,7 @@ def aurora_manual_posting(request: Request, _: str = Depends(verify_auth)):
             "needs_attention_count": sum(1 for row in rows if row["lane"] == "needs_attention"),
             "manual_result": request.query_params.get("manual_result", ""),
             "tracking_result": request.query_params.get("tracking_result", ""),
+            "closeout_result": request.query_params.get("closeout_result", ""),
             "focus_job": request.query_params.get("focus", ""),
         },
     )
@@ -430,7 +431,8 @@ def aurora_manual_posting_closeout(
         next_action="Use the captured learning note in the next daily learning brief.",
         metadata={"job_id": job_id},
     )
-    return RedirectResponse("/aurora/manual-posting?lane=tracking_complete", status_code=303)
+    message = quote(f"Closeout saved for {job_id}; create the daily learning draft next.", safe="")
+    return RedirectResponse(f"/aurora/manual-posting?lane=tracking_complete&closeout_result={message}", status_code=303)
 
 
 @router.post("/aurora/workflow/video-packages/{ticket_id}/create-mission")

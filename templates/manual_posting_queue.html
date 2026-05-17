@@ -29,6 +29,13 @@
   <small>Manual tracking actions stay inside the queue and never call a live publisher.</small>
 </section>
 {% endif %}
+{% if closeout_result %}
+<section class="ops-action-result manual-posting-result">
+  <span class="badge badge-ops-ready">Closeout saved</span>
+  <strong>{{ closeout_result }}</strong>
+  <small>Next step: use the Learning Runbook to turn the closeout note into daily learning.</small>
+</section>
+{% endif %}
 
 <section class="stat-grid wide">
   <div class="stat-card">
@@ -157,10 +164,10 @@
 <section class="manual-closeout-assist panel">
   <div class="section-heading">
     <div>
-      <p class="eyebrow">Closeout CTA</p>
-      <h2>Ready for closeout</h2>
+      <p class="eyebrow">Closeout-to-Learning Assist</p>
+      <h2>Tracking complete to learning loop</h2>
     </div>
-    <p>When 24h and 72h proof are complete, capture the learning note from this lane.</p>
+    <p>Learning bridge: track every completed manual post from closeout note to daily draft, accept, apply, and confirmation.</p>
   </div>
   <div class="manual-tracking-assist-grid">
     {% for group in manual_posting_lane_groups %}
@@ -169,6 +176,32 @@
         <span class="badge badge-ops-{{ 'missing' if item.can_closeout else 'ready' }}">{{ item.learning_completion.status }}</span>
         <strong>{{ item.brief }}</strong>
         <small>{{ item.learning_completion.detail }}</small>
+        <div class="manual-learning-bridge">
+          <span>Learning bridge</span>
+          {% if item.can_closeout %}
+          <strong>Ready for closeout</strong>
+          <small>Capture the learning note below, then create the daily learning draft.</small>
+          {% elif item.learning_completion.status == "Closeout captured" %}
+          <strong>Create daily learning draft</strong>
+          <small>The closeout note is captured and waiting for the Learning Runbook draft step.</small>
+          <a class="button button-secondary button-small" href="/#learning-runbook">Open Learning Runbook</a>
+          {% elif item.learning_completion.status == "Draft waiting review" %}
+          <strong>Accept daily learning draft</strong>
+          <small>Captain review is needed before this lesson can feed the next mission.</small>
+          <a class="button button-secondary button-small" href="/#learning-runbook">Open Learning Runbook</a>
+          {% elif item.learning_completion.status == "Learning accepted" %}
+          <strong>Apply learning to next mission</strong>
+          <small>Accepted learning is ready for the Daily Slate application step.</small>
+          <a class="button button-secondary button-small" href="/#learning-runbook">Open Learning Runbook</a>
+          {% elif item.learning_completion.status == "Learning applied" %}
+          <strong>Confirm before generation</strong>
+          <small>Applied learning should be confirmed before the crew starts generation.</small>
+          <a class="button button-secondary button-small" href="/#learning-runbook">Open Learning Runbook</a>
+          {% else %}
+          <strong>Learning loop clear</strong>
+          <small>This manual post has no open learning bridge action.</small>
+          {% endif %}
+        </div>
       </article>
       {% else %}
       <p class="muted">No manual posts are ready for closeout yet.</p>
