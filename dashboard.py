@@ -71,6 +71,7 @@ from routes._helpers import (  # noqa: F401
     _incident_summary,
     _update_ops_incident_status,
     _ops_log_status,
+    _job_state_write_health,
     _systemctl_args,
     _ops_action_buttons,
     _run_ops_action,
@@ -207,6 +208,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
     ops_reports = _recent_ops_reports(root)
     publish_summary = _ops_publish_summary(jobs)
     track_summary = _track_queue_summary(root)
+    job_state_health = _mod._job_state_write_health(root)
     performance_signals = _latest_performance_signals(jobs)
     tracking_readiness = _tracking_readiness_rows(root, jobs)
     return {
@@ -234,6 +236,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
         "ops_log": _ops_log_status(root),
         "work_activity": read_recent_work_activity(root),
         "work_activity_log": work_activity_status(root),
+        "job_state_health": job_state_health,
         "ops_incidents": _recent_ops_incidents(root),
         "ops_reports": ops_reports,
         "incident_summary": incident_summary,

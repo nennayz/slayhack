@@ -99,6 +99,25 @@ def find_child_folder(service, parent_id: str, name: str) -> Optional[dict]:
     return files[0] if files else None
 
 
+def find_child_file(service, parent_id: str, name: str) -> Optional[dict]:
+    safe_name = _escape_query_value(name)
+    safe_parent = _escape_query_value(parent_id)
+    query = (
+        "mimeType != 'application/vnd.google-apps.folder' "
+        f"and name = '{safe_name}' "
+        f"and '{safe_parent}' in parents "
+        "and trashed = false"
+    )
+    response = service.files().list(
+        q=query,
+        fields="files(id,name,webViewLink,webContentLink,parents)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+    ).execute()
+    files = response.get("files", [])
+    return files[0] if files else None
+
+
 def create_child_folder(service, parent_id: str, name: str) -> dict:
     metadata = {
         "name": name,
@@ -144,6 +163,7 @@ def upload_file_to_drive(
     credential_path: Optional[str] = None,
     oauth_client_secrets: Optional[str] = None,
     token_path: Optional[str] = None,
+    replace_existing: bool = False,
 ) -> dict:
     path = Path(source_path)
     if not path.exists():
@@ -159,11 +179,25 @@ def upload_file_to_drive(
     )
     service = get_drive_service(credentials)
 
-    file_metadata: dict[str, object] = {"name": dest_name or path.name}
+    file_name = dest_name or path.name
+    file_metadata: dict[str, object] = {"name": file_name}
     if folder_id:
         file_metadata["parents"] = [folder_id]
 
     media = MediaFileUpload(str(path), mimetype=mime_type, resumable=True)
+    if replace_existing and folder_id:
+        existing = find_child_file(service, folder_id, file_name)
+        if existing is not None:
+            updated_file = service.files().update(
+                fileId=existing["id"],
+                body={"name": file_name},
+                media_body=media,
+                fields="id,name,webViewLink,webContentLink,parents",
+                supportsAllDrives=True,
+            ).execute()
+            updated_file["syncAction"] = "updated"
+            return updated_file
+
     request = service.files().create(
         body=file_metadata,
         media_body=media,
@@ -171,6 +205,7 @@ def upload_file_to_drive(
         supportsAllDrives=True,
     )
     created_file = request.execute()
+    created_file["syncAction"] = "created"
     return created_file
 
 
@@ -205,6 +240,7 @@ def main() -> None:
         credential_path=args.credentials,
         oauth_client_secrets=args.oauth_client_secrets,
         token_path=args.token_file,
+        replace_existing=True,
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))
 
