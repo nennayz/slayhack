@@ -148,6 +148,8 @@ from routes._helpers import (  # noqa: F401
     _publish_execution_summary,
     _path_readiness,
     _live_publish_gate_summary,
+    _manual_closeout_learning_brief_intake,
+    _manual_closeout_learning_rows,
     _manual_posting_lane_filters,
     _manual_posting_lane_groups,
     _manual_posting_queue_rows,

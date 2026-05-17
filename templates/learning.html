@@ -18,6 +18,10 @@
     <strong>{{ "Ready" if latest_brief else "Missing" }}</strong>
   </div>
   <div class="stat-card">
+    <span>Manual lessons</span>
+    <strong>{{ manual_lessons | length }}</strong>
+  </div>
+  <div class="stat-card">
     <span>Art review</span>
     <strong>{{ "Ready" if review_note else "Missing" }}</strong>
   </div>
@@ -29,6 +33,46 @@
     <span>Deploy status</span>
     <strong>Live</strong>
   </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Manual Posting Lessons</p>
+    <h2>Daily Learning Brief intake</h2>
+  </div>
+  {% if manual_lessons %}
+  <div class="manual-learning-list">
+    {% for item in manual_lessons %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-ready">Closed</span>
+        <strong>{{ item.page_name }}</strong>
+        <p>{{ item.brief }}</p>
+        <small>
+          {% if item.platforms %}{{ item.platforms | join(", ") }} · {% endif %}
+          closed {{ item.closed_at }} by {{ item.closed_by }}
+        </small>
+      </div>
+      <div class="manual-proof-grid">
+        <span class="{{ 'proof-ready' if item.proof_summary.post_url_present else 'proof-missing' }}">Post URL</span>
+        <span class="{{ 'proof-ready' if item.proof_summary.snapshot_24h_present else 'proof-missing' }}">24h proof</span>
+        <span class="{{ 'proof-ready' if item.proof_summary.snapshot_72h_present else 'proof-missing' }}">72h proof</span>
+        <span class="{{ 'proof-ready' if item.proof_summary.learning_note_captured else 'proof-missing' }}">Learning note</span>
+      </div>
+      <p class="manual-learning-note">{{ item.learning_note }}</p>
+      <div class="inline-actions">
+        <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
+        {% if item.post_url %}
+        <a class="button button-secondary button-small" href="{{ item.post_url }}" target="_blank" rel="noreferrer">Open manual post</a>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">No closed manual posting lessons are ready for the daily brief yet.</p>
+  {% endif %}
+  <pre class="learning-note slate-learning-note">{{ manual_learning_intake }}</pre>
 </section>
 
 <section class="panel spacious">

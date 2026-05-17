@@ -1938,6 +1938,66 @@ def _latest_learning_brief(root: Path) -> dict | None:
     }
 
 
+def _manual_closeout_learning_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for job in list_all_jobs(root):
+        kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+        closeout = kit.get("closeout") if isinstance(kit.get("closeout"), dict) else {}
+        if closeout.get("status") != "closed":
+            continue
+        manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
+        proof = closeout.get("proof_summary") if isinstance(closeout.get("proof_summary"), dict) else {}
+        platforms = sorted(
+            str(platform)
+            for platform, value in manual_post.items()
+            if isinstance(value, dict) and value.get("status") == "posted"
+        )
+        post_url = ""
+        posted_at = ""
+        for value in manual_post.values():
+            if isinstance(value, dict) and not post_url:
+                post_url = str(value.get("post_url") or "")
+                posted_at = str(value.get("posted_at") or "")
+        rows.append(
+            {
+                "job_id": job.id,
+                "page_name": job.pm.page_name,
+                "brief": job.brief,
+                "detail_url": f"/jobs/{job.id}",
+                "platforms": platforms,
+                "post_url": post_url,
+                "posted_at": posted_at,
+                "closed_at": str(closeout.get("closed_at") or ""),
+                "closed_by": str(closeout.get("closed_by") or ""),
+                "learning_note": str(closeout.get("learning_note") or ""),
+                "proof_summary": {
+                    "drive_synced": bool(proof.get("drive_synced")),
+                    "post_url_present": bool(proof.get("post_url_present")),
+                    "snapshot_24h_present": bool(proof.get("snapshot_24h_present")),
+                    "snapshot_72h_present": bool(proof.get("snapshot_72h_present")),
+                    "learning_note_captured": bool(proof.get("learning_note_captured")),
+                },
+            }
+        )
+    return sorted(rows, key=lambda item: (str(item["closed_at"]), str(item["job_id"])), reverse=True)[:limit]
+
+
+def _manual_closeout_learning_brief_intake(rows: list[dict[str, object]]) -> str:
+    if not rows:
+        return "No closed manual posting lessons are ready for the daily brief yet."
+    lines = ["## Manual Posting Lessons", ""]
+    for row in rows:
+        platforms = ", ".join(str(platform) for platform in row.get("platforms", [])) or "manual platform"
+        lines.extend(
+            [
+                f"- {row['page_name']} / {platforms}: {row['brief']}",
+                f"  - Lesson: {row['learning_note']}",
+                f"  - Proof: post URL={row['proof_summary']['post_url_present']}, 24h={row['proof_summary']['snapshot_24h_present']}, 72h={row['proof_summary']['snapshot_72h_present']}",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def _build_voyage_steps(job) -> list[dict]:
     order = [step.stage for step in WORKFLOW_STEPS]
     current_index = order.index(job.stage) if job.stage in order else 0

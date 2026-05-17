@@ -130,6 +130,7 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
             forbidden_text=("video-producer.svg",),
         ),
         PageCheck("crew_detail", "/aurora/crew/robin", ("Back to crew deck", "Station handoff", "Robin")),
+        PageCheck("learning", "/aurora/learning", ("Aurora Learning Desk", "Manual Posting Lessons", "Daily Learning Brief intake", "Production canon")),
         PageCheck("ops", "/ops", ("Ops", "Production controls", "Ops summary")),
     ]
     if mission:
