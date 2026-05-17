@@ -120,7 +120,7 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
     checks = [
         PageCheck("captain_deck", "/", ("NayzFreedom Fleet", "Next best action", "Fleet")),
         PageCheck("aurora", "/aurora", ("The Aurora", "Approval queue", "Generation queue")),
-        PageCheck("daily_slate", "/aurora/daily-slate", ("PM Command Slate", "PM action plan", "Approval queue")),
+        PageCheck("daily_slate", "/aurora/daily-slate", ("PM Command Slate", "Project filters", "All pages", "Ticket drawer", "Video package drawer", "PM action plan", "Approval queue")),
         PageCheck("approval_queue", "/aurora/approval-queue", ("Ready but Not Published", "Command lanes", "Approval route", "Next action")),
         PageCheck(
             "crew",
@@ -183,6 +183,8 @@ def _css_checks(root: Path) -> dict[str, Any]:
         "mobile_media": r"@media\s*\(max-width:\s*860px\)",
         "daily_slate_mobile": r"\.daily-slate-grid",
         "pm_action_mobile": r"\.pm-action-panel",
+        "slate_filter_mobile": r"\.slate-filter-tabs",
+        "slate_drawer_mobile": r"\.slate-drawer summary",
         "approval_lane_mobile": r"\.approval-lane-board",
         "approval_next_action_mobile": r"\.approval-next-action",
         "next_action_mobile": r"\.next-action-panel",
