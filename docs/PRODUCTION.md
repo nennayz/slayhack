@@ -148,6 +148,16 @@ GOOGLE_DRIVE_OAUTH_TOKEN_FILE=/opt/nayzfreedom/secrets/google-oauth-token.json
 
 Drive upload failures are logged as `drive_backup=failed` while the local VPS backup still succeeds.
 
+For manual post kits, create a separate Google Drive folder named `NayzFreedom Fleet Manual Kits`,
+share it with the same service account or OAuth user, then set:
+
+```text
+GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID=<manual-kits-root-folder-id>
+```
+
+The dashboard creates project/type subfolders inside that folder, for example
+`SlayHack/04_Video_PreProduction`, and uploads structured ZIP kits for manual posting.
+
 Verify the latest local backup archive:
 
 ```bash

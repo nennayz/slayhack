@@ -76,6 +76,66 @@ def get_drive_service(credentials) -> object:
     return build("drive", "v3", credentials=credentials)
 
 
+def _escape_query_value(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def find_child_folder(service, parent_id: str, name: str) -> Optional[dict]:
+    safe_name = _escape_query_value(name)
+    safe_parent = _escape_query_value(parent_id)
+    query = (
+        "mimeType = 'application/vnd.google-apps.folder' "
+        f"and name = '{safe_name}' "
+        f"and '{safe_parent}' in parents "
+        "and trashed = false"
+    )
+    response = service.files().list(
+        q=query,
+        fields="files(id,name,webViewLink,parents)",
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True,
+    ).execute()
+    files = response.get("files", [])
+    return files[0] if files else None
+
+
+def create_child_folder(service, parent_id: str, name: str) -> dict:
+    metadata = {
+        "name": name,
+        "mimeType": "application/vnd.google-apps.folder",
+        "parents": [parent_id],
+    }
+    return service.files().create(
+        body=metadata,
+        fields="id,name,webViewLink,parents",
+        supportsAllDrives=True,
+    ).execute()
+
+
+def ensure_drive_folder_path(
+    root_folder_id: str,
+    folder_names: list[str],
+    credential_path: Optional[str] = None,
+    oauth_client_secrets: Optional[str] = None,
+    token_path: Optional[str] = None,
+) -> dict:
+    credentials = get_credentials(
+        Path(credential_path) if credential_path else None,
+        Path(oauth_client_secrets) if oauth_client_secrets else None,
+        Path(token_path) if token_path else None,
+    )
+    service = get_drive_service(credentials)
+    parent_id = root_folder_id
+    folders = []
+    for name in folder_names:
+        folder = find_child_folder(service, parent_id, name)
+        if folder is None:
+            folder = create_child_folder(service, parent_id, name)
+        folders.append(folder)
+        parent_id = folder["id"]
+    return {"folder_id": parent_id, "folders": folders}
+
+
 def upload_file_to_drive(
     source_path: str,
     folder_id: Optional[str] = None,

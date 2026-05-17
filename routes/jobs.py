@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import tempfile
-import zipfile
+import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException
@@ -12,6 +12,12 @@ from fastapi.requests import Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from starlette.background import BackgroundTask
 
+from manual_post_kit import (
+    create_manual_post_kit_archive,
+    drive_folder_path,
+    manual_kit_filename,
+    manual_kit_summary,
+)
 from routes.deps import templates, verify_auth, _root
 from track_queue import job_tracking_summary, read_queue
 from routes._helpers import (
@@ -107,6 +113,7 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
     else:
         snapshot_status = "No performance data yet"
     tracking_summary = job_tracking_summary(job, queue)
+    manual_kit = manual_kit_summary(job, root)
     can_track_now = (
         job.stage == "publish_done"
         and isinstance(job.publish_result, dict)
@@ -133,6 +140,7 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
             "snapshot_status": snapshot_status,
             "tracking_summary": tracking_summary,
             "can_track_now": can_track_now,
+            "manual_kit": manual_kit,
         },
     )
 
@@ -149,21 +157,75 @@ def download_job_artifacts(job_id: str, request: Request, _: str = Depends(verif
     job_dir = (output_root / job.pm.page_name / job.id).resolve()
     if not job_dir.exists() or not job_dir.is_dir() or output_root not in job_dir.parents:
         raise HTTPException(status_code=404, detail="Job artifact folder not found")
-
-    tmp = tempfile.NamedTemporaryFile(prefix=f"{job.id}-", suffix=".zip", delete=False)
-    zip_path = Path(tmp.name)
-    tmp.close()
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for path in sorted(job_dir.rglob("*")):
-            if path.is_file():
-                archive.write(path, arcname=str(path.relative_to(job_dir)))
+    zip_path = create_manual_post_kit_archive(root, job)
 
     return FileResponse(
         zip_path,
         media_type="application/zip",
-        filename=f"{job.id}-artifacts.zip",
+        filename=manual_kit_filename(job),
         background=BackgroundTask(zip_path.unlink, missing_ok=True),
     )
+
+
+@router.post("/jobs/{job_id}/sync-drive")
+def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+
+    root_folder_id = os.getenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "").strip()
+    if not root_folder_id:
+        raise HTTPException(status_code=400, detail="GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID is not configured")
+
+    zip_path = create_manual_post_kit_archive(root, job)
+    try:
+        from google_drive import ensure_drive_folder_path, upload_file_to_drive
+
+        folder_result = ensure_drive_folder_path(
+            root_folder_id,
+            drive_folder_path(job),
+            credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+            oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
+            token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
+        )
+        uploaded = upload_file_to_drive(
+            str(zip_path),
+            folder_id=folder_result["folder_id"],
+            dest_name=manual_kit_filename(job),
+            mime_type="application/zip",
+            credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+            oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
+            token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
+        )
+    finally:
+        zip_path.unlink(missing_ok=True)
+
+    kit = dict(job.manual_post_kit or {})
+    kit["drive_sync"] = {
+        "status": "synced",
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+        "synced_by": user,
+        "filename": manual_kit_filename(job),
+        "folder_path": drive_folder_path(job),
+        "folder_id": folder_result["folder_id"],
+        "file_id": uploaded.get("id"),
+        "web_view_link": uploaded.get("webViewLink"),
+        "web_content_link": uploaded.get("webContentLink"),
+    }
+    job.manual_post_kit = kit
+    _save_job_at_root(root, job)
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Synced manual post kit for {job_id}",
+        actor=user,
+        result="drive_sync synced",
+        next_action="Download or open the Drive kit, then post manually.",
+        metadata={"job_id": job_id, "drive_file_id": uploaded.get("id")},
+    )
+    return RedirectResponse(f"/jobs/{job_id}", status_code=303)
 
 
 @router.get("/jobs/{job_id}/captain-approval", response_class=HTMLResponse)

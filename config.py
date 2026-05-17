@@ -15,6 +15,7 @@ class Config:
     openai_agent_model: str = "gpt-4o-mini"
     google_cloud_project: str = ""
     google_application_credentials: str = ""
+    google_drive_manual_kits_folder_id: str = ""
     meta_access_token: str = ""
     meta_page_id: str = ""
     meta_ig_user_id: str = ""
@@ -36,6 +37,7 @@ class Config:
             openai_agent_model=os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini"),
             google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT", ""),
             google_application_credentials=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", ""),
+            google_drive_manual_kits_folder_id=os.getenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", ""),
             meta_access_token=os.getenv("META_ACCESS_TOKEN", ""),
             meta_page_id=os.getenv("META_PAGE_ID", ""),
             meta_ig_user_id=os.getenv("META_IG_USER_ID", ""),
