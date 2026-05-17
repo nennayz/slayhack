@@ -40,7 +40,7 @@ from models.aurora_workflow import (
     VideoProductionPackage,
     StoryboardScene,
 )
-from models.content_job import ContentJob, ContentType, GrowthStrategy, JobStatus, QAResult
+from models.content_job import ContentJob, ContentType, GrowthStrategy, JobStatus, PostPerformance, QAResult
 from project_loader import (
     list_project_slugs,
     load_project,
@@ -423,6 +423,100 @@ def _track_queue_summary(root: Path) -> dict[str, object]:
 
 def _recent_track_queue_history(root: Path, limit: int = 5) -> list[dict[str, object]]:
     return recent_track_scheduler_history(root, limit=limit)
+
+
+def _metric_value(perf: PostPerformance, name: str) -> int:
+    value = getattr(perf, name)
+    return int(value) if value is not None else 0
+
+
+def _performance_bucket(perf: PostPerformance) -> PerformanceBucket:
+    reach = _metric_value(perf, "reach")
+    likes = _metric_value(perf, "likes")
+    saves = _metric_value(perf, "saves")
+    shares = _metric_value(perf, "shares")
+    if reach >= 1000 or likes >= 100 or saves >= 20 or shares >= 10:
+        return PerformanceBucket.SCALE
+    if (perf.reach is not None and reach < 100) or (perf.likes is not None and likes < 10):
+        return PerformanceBucket.REPAIR
+    return PerformanceBucket.LESSON_LEARNED
+
+
+def _performance_signal_state(bucket: PerformanceBucket) -> str:
+    if bucket == PerformanceBucket.SCALE:
+        return "Ready"
+    if bucket == PerformanceBucket.REPAIR:
+        return "Failed"
+    return "Missing"
+
+
+def _performance_signal_action(bucket: PerformanceBucket, job: ContentJob, perf: PostPerformance) -> str:
+    if bucket == PerformanceBucket.SCALE:
+        return "Scale this angle: reuse the hook, format, and platform timing in the next slate."
+    if bucket == PerformanceBucket.REPAIR:
+        return "Repair before repeating: adjust hook, creative, platform fit, or publish setup."
+    return "Capture the lesson, then wait for another signal before scaling."
+
+
+def _performance_metrics_text(perf: PostPerformance) -> str:
+    parts = []
+    for label, value in (
+        ("reach", perf.reach),
+        ("likes", perf.likes),
+        ("saves", perf.saves),
+        ("shares", perf.shares),
+    ):
+        if value is not None:
+            parts.append(f"{label}={value}")
+    return " ".join(parts) if parts else "metrics recorded"
+
+
+def _latest_performance_signals(jobs, limit: int = 6) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    epoch = datetime.min.replace(tzinfo=timezone.utc)
+    for job in jobs:
+        for perf in job.performance:
+            bucket = _performance_bucket(perf)
+            recorded_at = perf.recorded_at or epoch
+            if recorded_at.tzinfo is None:
+                recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+            rows.append({
+                "job_id": job.id,
+                "page_name": job.pm.page_name,
+                "platform": perf.platform,
+                "bucket": bucket.value.replace("_", " "),
+                "state": _performance_signal_state(bucket),
+                "summary": f"{job.brief[:90]} - {_performance_metrics_text(perf)}",
+                "next_action": _performance_signal_action(bucket, job, perf),
+                "recorded_at": recorded_at.isoformat() if perf.recorded_at else "",
+                "_recorded_at": recorded_at,
+            })
+    rows = sorted(rows, key=lambda item: item["_recorded_at"], reverse=True)
+    for row in rows:
+        row.pop("_recorded_at", None)
+    return rows[:limit]
+
+
+def _tracking_failure_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for run in recent_track_scheduler_history(root, limit=20):
+        for job in run.get("jobs", []):
+            if not isinstance(job, dict):
+                continue
+            state = str(job.get("state", ""))
+            if state not in {"failed", "retrying"}:
+                continue
+            rows.append({
+                "job_id": str(job.get("job_id", "")),
+                "state": "Failed" if state == "failed" else "Missing",
+                "status": state,
+                "attempt": int(job.get("attempt") or 0),
+                "timestamp": str(run.get("timestamp", "")),
+                "detail": _sanitize_ops_detail(job.get("detail", "No tracker error detail recorded.")),
+            })
+            if len(rows) >= limit:
+                return rows
+    return rows
 
 
 def _sanitize_ops_report_summary(report: object) -> str:
@@ -1180,6 +1274,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
     ops_reports = _recent_ops_reports(root)
     publish_summary = _ops_publish_summary(jobs)
     track_summary = _track_queue_summary(root)
+    performance_signals = _latest_performance_signals(jobs)
     return {
         "units": units,
         "backup": backup,
@@ -1195,6 +1290,8 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
         "instagram_queue_history": _recent_instagram_queue_history(root),
         "track_summary": track_summary,
         "track_scheduler_history": _recent_track_queue_history(root),
+        "tracking_failures": _tracking_failure_rows(root),
+        "performance_signals": performance_signals,
         "smoke_results": smoke_results,
         "action_buttons": _ops_action_buttons(),
         "action_result": None,

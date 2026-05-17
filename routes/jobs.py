@@ -103,6 +103,11 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
     else:
         snapshot_status = "No performance data yet"
     tracking_summary = job_tracking_summary(job, queue)
+    can_track_now = (
+        job.stage == "publish_done"
+        and isinstance(job.publish_result, dict)
+        and any(isinstance(value, dict) and value.get("status") == "published" for value in job.publish_result.values())
+    )
     return templates.TemplateResponse(
         request,
         "job_detail.html",
@@ -123,6 +128,7 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
             "publish_execution_summary": _publish_execution_summary(job),
             "snapshot_status": snapshot_status,
             "tracking_summary": tracking_summary,
+            "can_track_now": can_track_now,
         },
     )
 
@@ -428,6 +434,33 @@ def publish_instagram_now(job_id: str, request: Request, user: str = Depends(ver
         actor=user,
         command="instagram_queue.py",
         result="subprocess started",
+        metadata={"job_id": job_id},
+    )
+    return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+
+
+@router.post("/jobs/{job_id}/track-now")
+def track_job_now(job_id: str, request: Request, user: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    has_published_platform = (
+        isinstance(job.publish_result, dict)
+        and any(isinstance(value, dict) and value.get("status") == "published" for value in job.publish_result.values())
+    )
+    if job.stage != "publish_done" or not has_published_platform:
+        raise HTTPException(status_code=400, detail="Job must be published before performance tracking can run")
+    subprocess.Popen([sys.executable, "main.py", "--track", job_id], cwd=str(root))
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Manual performance tracking requested for {job_id}",
+        actor=user,
+        command="main.py --track",
+        result="subprocess started",
+        next_action="Refresh job detail or Ops after the tracker finishes.",
         metadata={"job_id": job_id},
     )
     return RedirectResponse(f"/jobs/{job_id}", status_code=303)

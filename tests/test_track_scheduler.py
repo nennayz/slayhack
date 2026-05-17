@@ -68,12 +68,15 @@ def test_failed_track_increments_attempt_and_stays_in_queue(tmp_path, monkeypatc
     write_queue([{"job_id": "abc", "page_name": "Test",
                   "track_at": _past(), "attempt": 0}])
     mocker.patch("track_scheduler.subprocess.run",
-                 return_value=MagicMock(returncode=1))
+                 return_value=MagicMock(returncode=1, stderr="meta metrics failed", stdout=""))
     from track_scheduler import run_track_scheduler
     run_track_scheduler(root=tmp_path)
     entries = read_queue()
     assert len(entries) == 1
     assert entries[0]["attempt"] == 1
+    from track_scheduler import recent_track_scheduler_history
+    history = recent_track_scheduler_history(tmp_path)
+    assert history[0]["jobs"][0]["detail"] == "meta metrics failed"
 
 
 def test_second_failure_increments_attempt_to_2(tmp_path, monkeypatch, mocker):

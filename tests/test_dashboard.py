@@ -35,11 +35,12 @@ def _make_pm_dict(page_name: str = "Slayhack") -> dict:
 
 def _write_job(tmp_path: Path, job_id: str, brief: str = "test brief",
                status: str = "completed", page: str = "Slayhack",
-               stage: str = "init", publish_result: dict | None = None) -> None:
+               stage: str = "init", publish_result: dict | None = None,
+               performance: list[dict] | None = None) -> None:
     job = {
         "id": job_id, "project": "nayzfreedom_fleet", "pm": _make_pm_dict(page),
         "brief": brief, "platforms": ["facebook"], "status": status,
-        "stage": stage, "dry_run": False, "performance": [], "checkpoint_log": [],
+        "stage": stage, "dry_run": False, "performance": performance or [], "checkpoint_log": [],
     }
     if publish_result is not None:
         job["publish_result"] = publish_result
@@ -309,6 +310,21 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     (daily_dir / "2026-05-16-character-art-learning-brief.md").write_text(
         "# Daily Learning Brief\n\nKeep PM decisions separate from central crew execution.\n"
     )
+    _write_job(
+        tmp_path,
+        "20260516_120000",
+        brief="winning hook test",
+        performance=[
+            {
+                "platform": "instagram",
+                "reach": 2200,
+                "likes": 140,
+                "saves": 30,
+                "shares": 12,
+                "recorded_at": "2026-05-16T18:00:00Z",
+            }
+        ],
+    )
 
     resp = client.get("/aurora/daily-slate", headers=_auth())
 
@@ -336,6 +352,10 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Create mission" in resp.text
     assert "/aurora/daily-slate/stadium_sweethearts/video-packages/" in resp.text
     assert "Latest learning" in resp.text
+    assert "Performance signal" in resp.text
+    assert "Latest learning from tracked posts" in resp.text
+    assert "winning hook test" in resp.text
+    assert "Scale this angle" in resp.text
     assert "workflow-rail-step active" in resp.text
     assert "Keep PM decisions separate from central crew execution." in resp.text
     assert "Use this view for" in resp.text
@@ -1315,6 +1335,16 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
         "20260512_060000",
         brief="publish failed",
         status="failed",
+        performance=[
+            {
+                "platform": "instagram",
+                "reach": 1500,
+                "likes": 120,
+                "saves": 25,
+                "shares": 10,
+                "recorded_at": "2026-05-16T06:10:00Z",
+            }
+        ],
         publish_result={
             "facebook": {
                 "status": "failed",
@@ -1357,6 +1387,7 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
         "failed": 0,
         "remaining": 1,
         "dry_run": False,
+        "jobs": [{"job_id": "20260512_060000", "state": "retrying", "attempt": 1, "detail": "returncode=1"}],
     }) + "\n")
     monkeypatch.setattr(
         _dm,
@@ -1395,6 +1426,10 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
     assert "processed 2 - published 1 - retrying 1 - failed 0" in resp.text
     assert "Tracking queue" in resp.text
     assert "Scheduler history" in resp.text
+    assert "Learning signals" in resp.text
+    assert "scale" in resp.text
+    assert "Tracking failures" in resp.text
+    assert "returncode=1" in resp.text
     assert "Queued 1" in resp.text
     assert "Retrying 1" in resp.text
     assert "processed 1" in resp.text
@@ -1995,6 +2030,58 @@ def test_job_detail_shows_tracking_queue_status(tmp_path, client):
     assert "Queued" in resp.text
     assert "1 queued snapshot checks" in resp.text
     assert "attempt 1" in resp.text
+
+
+def test_job_detail_shows_manual_tracking_action_for_published_job(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_060000",
+        stage="publish_done",
+        publish_result={"instagram": {"status": "published", "id": "media-1"}},
+    )
+    from models.content_job import ContentJob
+    job = ContentJob.model_validate_json(
+        (tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text()
+    )
+    with patch.object(_dm, "find_job", return_value=job):
+        resp = client.get("/jobs/20260512_060000", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Check performance now" in resp.text
+
+
+def test_manual_tracking_action_spawns_track_only(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_060000",
+        stage="publish_done",
+        publish_result={"instagram": {"status": "published", "id": "media-1"}},
+    )
+    mock_popen = MagicMock()
+    with patch("dashboard.subprocess.Popen", mock_popen):
+        resp = client.post(
+            "/jobs/20260512_060000/track-now",
+            headers=_auth(),
+            follow_redirects=False,
+        )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/jobs/20260512_060000"
+    cmd = mock_popen.call_args.args[0]
+    assert cmd[1:] == ["main.py", "--track", "20260512_060000"]
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Manual performance tracking requested for 20260512_060000" in work_activity
+
+
+def test_manual_tracking_action_rejects_unpublished_job(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_060000",
+        stage="publish_done",
+        publish_result={"instagram": {"status": "pending_queue"}},
+    )
+    resp = client.post("/jobs/20260512_060000/track-now", headers=_auth())
+    assert resp.status_code == 400
 
 
 def test_job_detail_shows_publish_controls(tmp_path, client):

@@ -173,6 +173,11 @@
       {{ item.status }} · {{ item.track_at }} · {{ item.distance }} · attempt {{ item.attempt }}
     </small>
     {% endfor %}
+    {% if can_track_now %}
+    <form class="inline-form compact-action-form" method="post" action="/jobs/{{ job.id }}/track-now">
+      <button type="submit">Check performance now</button>
+    </form>
+    {% endif %}
   </div>
   {% endif %}
 </section>

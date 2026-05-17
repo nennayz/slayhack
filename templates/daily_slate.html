@@ -182,6 +182,24 @@
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
+      <p class="eyebrow">Performance signal</p>
+      <h2>Latest learning from tracked posts</h2>
+    </div>
+    <div class="ops-list">
+      {% for item in performance_signals[:4] %}
+      <a class="ops-row" href="/jobs/{{ item.job_id }}">
+        <span class="badge badge-ops-{{ item.state | lower }}">{{ item.bucket }}</span>
+        <strong>{{ item.page_name }} · {{ item.platform }}</strong>
+        <small>{{ item.summary }}</small>
+        <small>{{ item.next_action }}</small>
+      </a>
+      {% else %}
+      <p class="muted">No tracked performance signals yet. After the next approved live publish, snapshot results will appear here.</p>
+      {% endfor %}
+    </div>
+  </article>
+  <article class="panel">
+    <div class="section-heading">
       <p class="eyebrow">Latest learning</p>
       <h2>{{ latest_brief.path if latest_brief else "No brief yet" }}</h2>
     </div>
