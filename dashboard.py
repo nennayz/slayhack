@@ -1790,6 +1790,8 @@ def _publish_execution_label(job: ContentJob) -> str:
     status = _publish_execution_status(job)
     labels = {
         "ready_to_publish": "Ready to publish",
+        "captain_hold": "Captain hold",
+        "needs_edits": "Needs edits",
         "scheduled": "Scheduled publish",
         "published": "Published",
         "failed": "Publish failed",
@@ -1801,7 +1803,7 @@ def _publish_execution_state(job: ContentJob) -> str:
     status = _publish_execution_status(job)
     if status in {"scheduled", "published"}:
         return "ready"
-    if status == "ready_to_publish":
+    if status in {"ready_to_publish", "captain_hold", "needs_edits"}:
         return "missing"
     if status == "failed":
         return "failed"
@@ -2070,6 +2072,54 @@ def _create_publish_execution(root: Path, job: ContentJob) -> ContentJob:
         "next_action": "Captain can schedule publish when platform readiness is confirmed.",
     }
     job.stage = "ready_to_publish"
+    job.status = JobStatus.AWAITING_APPROVAL
+    _save_job_at_root(root, job)
+    return job
+
+
+def _record_captain_review(root: Path, job: ContentJob, decision: str, note: str | None = None) -> ContentJob:
+    execution = dict(job.publish_execution or {})
+    if execution.get("status") not in {"ready_to_publish", "captain_hold", "needs_edits"}:
+        raise ValueError("Publish job must be ready for Captain review")
+
+    cleaned_note = (note or "").strip()[:1000] or None
+    reviewed_at = datetime.now(timezone.utc).isoformat()
+    review = {
+        "decision": decision,
+        "reviewed_at": reviewed_at,
+        "reviewed_by": "Captain Nayz",
+        "note": cleaned_note,
+    }
+    history = list(execution.get("captain_review_history") or [])
+    history.append(review)
+    execution["captain_review_history"] = history
+    execution["captain_review"] = review
+
+    if decision == "approve_schedule_handoff":
+        execution["status"] = "ready_to_publish"
+        execution["next_action"] = "Captain approved dashboard schedule handoff."
+        job.publish_execution = execution
+        return _schedule_publish_execution(root, job)
+    if decision == "hold":
+        execution.update(
+            {
+                "status": "captain_hold",
+                "next_action": "Captain hold is active. Do not schedule until the hold is cleared.",
+            }
+        )
+        job.stage = "captain_hold"
+    elif decision == "needs_edits":
+        execution.update(
+            {
+                "status": "needs_edits",
+                "next_action": "Package needs edits before Captain approval. Send back to PM, Roxy, Emma, or Nora.",
+            }
+        )
+        job.stage = "publish_needs_edits"
+    else:
+        raise ValueError("Unknown Captain review decision")
+
+    job.publish_execution = execution
     job.status = JobStatus.AWAITING_APPROVAL
     _save_job_at_root(root, job)
     return job
@@ -2496,8 +2546,28 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "state": "missing",
                 "status": "Ready to publish",
                 "next_action": "Captain approval required before schedule handoff. Dashboard scheduling is not a live post.",
-                "action_label": "Open mission",
-                "action_url": f"/jobs/{job.id}",
+                "action_label": "Captain review",
+                "action_url": f"/jobs/{job.id}/captain-approval",
+                "action_method": "get",
+            }
+        elif publish_status == "captain_hold":
+            row = {
+                "lane": "Captain approval",
+                "state": "missing",
+                "status": "Captain hold",
+                "next_action": "Hold is active. Review the note before changing this package.",
+                "action_label": "Captain review",
+                "action_url": f"/jobs/{job.id}/captain-approval",
+                "action_method": "get",
+            }
+        elif publish_status == "needs_edits":
+            row = {
+                "lane": "Revision",
+                "state": "missing",
+                "status": "Needs edits",
+                "next_action": "Package needs edits before schedule handoff approval.",
+                "action_label": "Captain review",
+                "action_url": f"/jobs/{job.id}/captain-approval",
                 "action_method": "get",
             }
         elif publish_status == "scheduled":
@@ -2537,7 +2607,9 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
         "Ready packaging": 4,
         "Package complete": 5,
         "Ready to publish": 6,
-        "Scheduled publish": 7,
+        "Captain hold": 7,
+        "Needs edits": 8,
+        "Scheduled publish": 9,
     }
     return sorted(rows, key=lambda item: (order.get(str(item["status"]), 99), str(item["page_name"]), str(item["job_id"])))
 
@@ -3087,6 +3159,30 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
     )
 
 
+@app.get("/jobs/{job_id}/captain-approval", response_class=HTMLResponse)
+def captain_approval(job_id: str, request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    if _publish_execution_status(job) not in {"ready_to_publish", "captain_hold", "needs_edits", "scheduled"}:
+        raise HTTPException(status_code=400, detail="Job is not ready for Captain approval")
+    faq_path = root / "output" / job.pm.page_name / job_id / "faq.md"
+    faq_content = faq_path.read_text() if faq_path.exists() else None
+    return templates.TemplateResponse(
+        request,
+        "captain_approval.html",
+        {
+            "job": job,
+            "publish_package": getattr(job, "publish_package", None),
+            "publish_execution": getattr(job, "publish_execution", None),
+            "publish_execution_summary": _publish_execution_summary(job),
+            "faq_content": faq_content,
+        },
+    )
+
+
 @app.post("/jobs/{job_id}/ready-for-generation")
 def ready_for_generation(job_id: str, request: Request, user: str = Depends(verify_auth)):
     root = _root(request)
@@ -3232,6 +3328,37 @@ def create_publish_job(job_id: str, request: Request, user: str = Depends(verify
         metadata={"job_id": job_id},
     )
     return RedirectResponse(f"/jobs/{job_id}", status_code=303)
+
+
+@app.post("/jobs/{job_id}/captain-review")
+def captain_review(
+    job_id: str,
+    request: Request,
+    decision: str = Form(...),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    try:
+        _record_captain_review(root, job, decision, note)
+    except ValueError as exc:
+        _write_work_event(root, "blocker", f"Captain review blocked for {job_id}", actor=user, result=str(exc))
+        raise HTTPException(status_code=400, detail=str(exc))
+    result = "scheduled publish handoff" if decision == "approve_schedule_handoff" else decision
+    _write_work_event(
+        root,
+        "production_smoke" if decision == "approve_schedule_handoff" else "implementation_step",
+        f"Captain review decision for {job_id}",
+        actor=user,
+        result=result,
+        next_action="Use platform publisher controls for live posting." if decision == "approve_schedule_handoff" else "Review approval queue for next action.",
+        metadata={"job_id": job_id, "decision": decision},
+    )
+    return RedirectResponse(f"/jobs/{job_id}/captain-approval", status_code=303)
 
 
 @app.post("/jobs/{job_id}/schedule-publish")

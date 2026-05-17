@@ -955,6 +955,44 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .approval-package-form {
   min-width: min(560px, 100%);
 }
+.approval-review-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.approval-review-list div {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.7rem;
+}
+.approval-review-list div:last-child {
+  border-bottom: none;
+}
+.approval-review-list span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.approval-review-list p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.approval-decision-form {
+  display: grid;
+  gap: 0.7rem;
+}
+.approval-decision-form label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.approval-decision-form textarea {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  padding: 0.65rem;
+  width: min(720px, 100%);
+}
 .slate-learning-note {
   max-height: 420px;
 }

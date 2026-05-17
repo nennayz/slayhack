@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header">
+  <div>
+    <p class="eyebrow">Captain approval</p>
+    <h1>{{ job.pm.page_name }}</h1>
+    <p class="hero-copy">Final package review before dashboard schedule handoff. This page does not call a live publisher API.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/approval-queue">Approval queue</a>
+    <a class="button button-secondary" href="/jobs/{{ job.id }}">Open mission</a>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Status</span>
+    <strong>{{ publish_execution_summary.label }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Stage</span>
+    <strong>{{ job.stage.replace("_", " ").title() }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Platforms</span>
+    <strong>{{ publish_execution.platforms | join(", ") if publish_execution and publish_execution.platforms else job.platforms | join(", ") }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Live API</span>
+    <strong>Blocked</strong>
+  </div>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Package</p>
+      <h2>Publish review</h2>
+    </div>
+    <div class="approval-review-list">
+      <div>
+        <span>Brief</span>
+        <p>{{ job.brief }}</p>
+      </div>
+      <div>
+        <span>Video path</span>
+        <p>{{ publish_execution.video_path if publish_execution and publish_execution.video_path else job.video_path }}</p>
+      </div>
+      <div>
+        <span>Caption</span>
+        <p>{{ publish_package.caption if publish_package else "" }}</p>
+      </div>
+      <div>
+        <span>Hashtags</span>
+        <p>{{ publish_package.hashtags | join(", ") if publish_package and publish_package.hashtags else "" }}</p>
+      </div>
+      <div>
+        <span>Publish notes</span>
+        <p>{{ publish_package.publish_notes if publish_package and publish_package.publish_notes else "No notes recorded." }}</p>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Emma</p>
+      <h2>FAQ and safety</h2>
+    </div>
+    {% if faq_content %}
+    <pre class="learning-note slate-learning-note">{{ faq_content }}</pre>
+    {% else %}
+    <p class="muted">No FAQ content is attached.</p>
+    {% endif %}
+    <div class="learning-gates">
+      <span>Dashboard schedule handoff only; no external publish API call from this approval page.</span>
+      <span>Keep fictional adult framing and avoid real team marks or real-person likeness.</span>
+      <span>Captain approval is required before any schedule handoff.</span>
+    </div>
+  </article>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Decision</p>
+    <h2>Captain review controls</h2>
+  </div>
+  {% if publish_execution and publish_execution.captain_review %}
+  <div class="generation-result">
+    <span class="badge badge-ops-missing">Last decision</span>
+    <p>{{ publish_execution.captain_review.decision.replace("_", " ").title() }}</p>
+    {% if publish_execution.captain_review.note %}<small>{{ publish_execution.captain_review.note }}</small>{% endif %}
+  </div>
+  {% endif %}
+  {% if publish_execution_summary.status == "scheduled" %}
+  <p class="muted">This package already has a dashboard schedule handoff. Use platform publisher controls for any live posting decision.</p>
+  {% else %}
+  <form class="inline-form approval-decision-form" method="post" action="/jobs/{{ job.id }}/captain-review">
+    <label for="captain_note_{{ job.id }}">Review note</label>
+    <textarea id="captain_note_{{ job.id }}" name="note" rows="3" placeholder="Reason, edit request, or approval note"></textarea>
+    <div class="slate-actions">
+      <button type="submit" name="decision" value="hold">Hold</button>
+      <button type="submit" name="decision" value="needs_edits">Needs edits</button>
+      <button type="submit" name="decision" value="approve_schedule_handoff">Approve schedule handoff</button>
+    </div>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

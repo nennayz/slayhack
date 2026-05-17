@@ -215,9 +215,7 @@
       </div>
       {% if publish_execution_summary.status != "scheduled" %}
         {% if publish_execution_summary.status == "ready_to_publish" %}
-        <form class="inline-form" method="post" action="/jobs/{{ job.id }}/schedule-publish">
-          <button type="submit">Schedule publish</button>
-        </form>
+        <a class="button button-secondary" href="/jobs/{{ job.id }}/captain-approval">Captain approval</a>
         {% else %}
         <form class="inline-form" method="post" action="/jobs/{{ job.id }}/create-publish-job">
           <button type="submit">Create publish job</button>
