@@ -2395,7 +2395,13 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
         for row in registry["rows"]
         if row.get("status") in {"draft", "reviewed", "legacy", "needs_edits"}
     ]
+    actionable_draft = next(
+        (row for row in draft_rows if row.get("status") in {"draft", "reviewed", "legacy"} and row.get("source_job_ids")),
+        None,
+    )
     accepted_intake = _accepted_learning_intake(root)
+    slate_cards = _daily_slate_cards(root)
+    apply_target = next((card for card in slate_cards if card.get("next_ticket")), None)
     accepted_source_ids = set(str(item) for item in accepted_intake.get("source_job_ids", []))
     applied_jobs = []
     unconfirmed_jobs = []
@@ -2423,6 +2429,8 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
             ),
             "action_label": "Open manual closeout",
             "action_url": "/aurora/manual-posting?lane=tracking_complete",
+            "action_method": "get",
+            "action_payload": {},
         },
         {
             "key": "accept_draft",
@@ -2434,8 +2442,10 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
                 if draft_rows
                 else "No daily learning draft is waiting for Captain review."
             ),
-            "action_label": "Open learning desk",
-            "action_url": "/aurora/learning",
+            "action_label": "Accept daily learning draft" if actionable_draft else "Open learning desk",
+            "action_url": "/learning-runbook/accept-draft" if actionable_draft else "/aurora/learning",
+            "action_method": "post" if actionable_draft else "get",
+            "action_payload": {"draft_path": actionable_draft["path"]} if actionable_draft else {},
         },
         {
             "key": "apply_learning",
@@ -2447,8 +2457,10 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
                 if accepted_waiting_apply
                 else "No accepted learning artifact is waiting for mission application."
             ),
-            "action_label": "Open Daily Slate",
-            "action_url": "/aurora/daily-slate",
+            "action_label": "Apply learning to next mission" if accepted_waiting_apply and apply_target else "Open Daily Slate",
+            "action_url": "/learning-runbook/apply-learning" if accepted_waiting_apply and apply_target else "/aurora/daily-slate",
+            "action_method": "post" if accepted_waiting_apply and apply_target else "get",
+            "action_payload": {"project_slug": apply_target["project"]} if accepted_waiting_apply and apply_target else {},
         },
         {
             "key": "confirm_learning",
@@ -2462,8 +2474,12 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
                 if unconfirmed_jobs
                 else "No mission is blocked by unconfirmed learning."
             ),
-            "action_label": "Open mission",
-            "action_url": unconfirmed_jobs[0]["url"] if unconfirmed_jobs else "/aurora/generation",
+            "action_label": "Confirm learning used in plan" if unconfirmed_jobs else "Open mission",
+            "action_url": "/learning-runbook/confirm-learning" if unconfirmed_jobs else "/aurora/generation",
+            "action_method": "post" if unconfirmed_jobs else "get",
+            "action_payload": {"job_id": unconfirmed_jobs[0]["job_id"]} if unconfirmed_jobs else {},
+            "secondary_label": "Open mission" if unconfirmed_jobs else "",
+            "secondary_url": unconfirmed_jobs[0]["url"] if unconfirmed_jobs else "",
         },
     ]
 
