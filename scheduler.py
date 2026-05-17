@@ -92,7 +92,12 @@ def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_typ
                 "exit_code": None, "failed": True}
 
 
-def run_scheduler(dry_run: bool = False, root: Path | None = None, max_workers: int = 3) -> int:
+def run_scheduler(
+    dry_run: bool = False,
+    root: Path | None = None,
+    max_workers: int = 3,
+    safe_prep: bool = False,
+) -> int:
     _root = root if root is not None else _ROOT
     calendars = sorted(_root.glob("projects/*/weekly_calendar.yaml"))
     if not calendars:
@@ -143,6 +148,8 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None, max_workers: 
             ]
             if dry_run:
                 cmd.append("--dry-run")
+            if safe_prep:
+                cmd.append("--safe-prep")
 
             log_command("scheduler_run_command", {
                 "project": project_slug,
@@ -150,6 +157,7 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None, max_workers: 
                 "content_type": content_type,
                 "cmd": cmd,
                 "dry_run": dry_run,
+                "safe_prep": safe_prep,
             })
             pending.append((cmd, project_slug, key, content_type))
 
@@ -187,5 +195,10 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="NayzFreedom daily content scheduler")
     parser.add_argument("--dry-run", action="store_true", help="Pass --dry-run to each main.py call")
+    parser.add_argument(
+        "--safe-prep",
+        action="store_true",
+        help="Pass --safe-prep to each main.py call so jobs stop before external publish APIs",
+    )
     args = parser.parse_args()
-    sys.exit(run_scheduler(dry_run=args.dry_run))
+    sys.exit(run_scheduler(dry_run=args.dry_run, safe_prep=args.safe_prep))

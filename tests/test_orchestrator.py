@@ -145,3 +145,31 @@ def test_orchestrator_marks_publish_failures_failed(mocker, tmp_path, monkeypatc
     result = orch.run(job)
 
     assert result.status == JobStatus.FAILED
+
+
+def test_orchestrator_safe_prep_intercepts_publish(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+
+    orch = Orchestrator(make_config(), safe_prep=True)
+    job = make_job(dry_run=False)
+    job.growth_strategy = __import__(
+        "models.content_job", fromlist=["GrowthStrategy"]
+    ).GrowthStrategy(
+        hashtags=["#test"],
+        caption="Safe caption",
+        best_post_time_utc="12:00",
+        best_post_time_thai="19:00",
+    )
+    publish_agent = MagicMock()
+    orch.agents["publish"] = publish_agent
+
+    result = orch._dispatch("run_publish", {"schedule": True}, job)
+
+    publish_agent.run.assert_not_called()
+    assert result == {"status": "safe_prep", "stage": "ready_to_publish"}
+    assert job.stage == "ready_to_publish"
+    assert job.publish_package["status"] == "completed"
+    assert job.publish_execution["status"] == "ready_to_publish"
+    assert job.publish_result["instagram"]["status"] == "ready_to_publish"
+    assert job.publish_result["instagram"]["dry_run"] is True

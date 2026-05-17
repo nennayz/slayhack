@@ -105,6 +105,24 @@ def test_main_unattended_flag_passed_to_orchestrator(mocker, tmp_path, monkeypat
     assert kwargs.get("unattended") is True
 
 
+def test_main_safe_prep_flag_passed_to_orchestrator(mocker, tmp_path, monkeypatch):
+    import main as main_module
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(main_module, "_LOCK_FILE", tmp_path / "pipeline.lock")
+    returned_job = make_job()
+    returned_job.status = __import__('models.content_job', fromlist=['JobStatus']).JobStatus.COMPLETED
+    mock_orchestrator = mocker.patch("main.Orchestrator")
+    mock_orchestrator.return_value.run.return_value = returned_job
+    mocker.patch.object(main_module.Config, "from_env", return_value=mocker.MagicMock())
+    mocker.patch("main.load_project", return_value=make_job().pm)
+    sys.argv = ["main.py", "--project", "nayzfreedom_fleet", "--brief", "test brief", "--safe-prep"]
+    try:
+        main_module.main()
+    except SystemExit:
+        pass
+    assert mock_orchestrator.call_args.kwargs["safe_prep"] is True
+
+
 
 def test_pause_uses_telegram_when_env_set(monkeypatch):
     import checkpoint as cp

@@ -116,6 +116,20 @@ def test_scheduler_dry_run_passes_flag(tmp_path, monkeypatch):
         assert "--dry-run" in c.args[0]
 
 
+def test_scheduler_safe_prep_passes_flag(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
+    import yaml
+    (tmp_path / "projects" / "nayzfreedom_fleet" / "weekly_calendar.yaml").write_text(
+        yaml.dump(MONDAY_CALENDAR)
+    )
+    monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()) as mock_run:
+        sched_module.run_scheduler(safe_prep=True, root=tmp_path)
+    for c in mock_run.call_args_list:
+        assert "--safe-prep" in c.args[0]
+
+
 def test_scheduler_exit_code_zero_on_all_success(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
