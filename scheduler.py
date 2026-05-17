@@ -9,6 +9,7 @@ from pathlib import Path
 import yaml
 from activity_logger import log_action, log_command
 from notifier import send_slack_alert
+from project_loader import list_project_slugs
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,7 +100,14 @@ def run_scheduler(
     safe_prep: bool = False,
 ) -> int:
     _root = root if root is not None else _ROOT
-    calendars = sorted(_root.glob("projects/*/weekly_calendar.yaml"))
+    active_slugs = list_project_slugs(_root)
+    calendars = [
+        _root / "projects" / slug / "weekly_calendar.yaml"
+        for slug in active_slugs
+        if (_root / "projects" / slug / "weekly_calendar.yaml").exists()
+    ]
+    if not calendars and not active_slugs:
+        calendars = sorted(_root.glob("projects/*/weekly_calendar.yaml"))
     if not calendars:
         logger.warning("No weekly_calendar.yaml found under projects/")
         return 0
