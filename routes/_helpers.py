@@ -588,19 +588,79 @@ def _tracking_readiness_rows(root: Path, jobs, limit: int = 10) -> list[dict[str
 
 def _safe_console_action(row: dict[str, object]) -> dict[str, object]:
     method = str(row.get("action_method", "get"))
+    status = str(row.get("status", ""))
+    action_label = str(row.get("action_label", "Open"))
+    risk_label = str(row.get("risk_label", ""))
+    if status == "Scheduled handoff":
+        return {
+            "label": "Open locked live gate",
+            "url": str(row.get("action_url", row.get("detail_url", "#"))),
+            "method": "get",
+            "enabled": True,
+        }
+    if action_label == "Run generation dry-run":
+        action_label = "Run dry-run only"
+    elif action_label == "Create publish job":
+        action_label = "Create publish job (locked)"
+    elif action_label == "Mark ready":
+        action_label = "Mark ready for generation"
     if method in {"post", "get"}:
         return {
-            "label": str(row.get("action_label", "Open")),
+            "label": action_label,
             "url": str(row.get("action_url", row.get("detail_url", "#"))),
             "method": method,
             "enabled": True,
         }
+    if "live publish" in risk_label:
+        action_label = "Open locked live gate"
     return {
-        "label": "Open mission",
+        "label": action_label if action_label != "Open" else "Open mission",
         "url": str(row.get("detail_url", "#")),
         "method": "get",
         "enabled": True,
     }
+
+
+def _station_count_label(count: int) -> str:
+    if count == 0:
+        return "Clear"
+    if count == 1:
+        return "1 waiting"
+    return f"{count} waiting"
+
+
+def _console_history(root: Path, limit: int = 4) -> list[dict[str, object]]:
+    keywords = (
+        "captain",
+        "console",
+        "mission",
+        "generation",
+        "dry-run",
+        "publish",
+        "tracking",
+        "track",
+        "approval",
+        "handoff",
+    )
+    rows = []
+    for item in read_recent_work_activity(root, limit=30):
+        haystack = " ".join(
+            str(item.get(key, ""))
+            for key in ("summary", "result", "next_action", "command", "event_type")
+        ).lower()
+        if not any(keyword in haystack for keyword in keywords):
+            continue
+        rows.append(
+            {
+                "timestamp": item.get("timestamp", ""),
+                "event_type": str(item.get("event_type", "")).replace("_", " "),
+                "summary": item.get("summary", ""),
+                "result": item.get("result", ""),
+            }
+        )
+        if len(rows) >= limit:
+            break
+    return rows
 
 
 def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
@@ -608,6 +668,24 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
     approval_rows = _approval_queue_rows(root)
     tracking_rows = _tracking_readiness_rows(root, jobs, limit=6)
     actions: list[dict[str, object]] = []
+    route_count = sum(
+        1
+        for card in slate_cards
+        for ticket in card.get("tickets", [])
+        if isinstance(ticket, dict) and not ticket.get("has_mission")
+    )
+    shipyard_rows = [
+        row
+        for row in approval_rows
+        if row.get("lane_key") in {"nora", "generation"}
+        and row.get("action_method") in {"post", "get", "generation_result"}
+    ]
+    harbor_rows = [
+        row
+        for row in approval_rows
+        if row.get("lane_key") in {"packaging", "captain", "handoff", "revision"}
+    ]
+    tracking_count = sum(1 for row in tracking_rows if row.get("status") != "learning ready")
 
     next_ticket = next(
         (
@@ -625,13 +703,16 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "route-map",
                 "state": "missing",
                 "risk_label": "safe mission create",
+                "count": route_count,
+                "count_label": _station_count_label(route_count),
+                "urgency": "Needs route" if route_count else "Clear",
                 "title": f"{card['page_name']} next course",
                 "detail": (
                     f"{ticket.get('title')} - {ticket.get('owner')} owns - "
                     f"{ticket.get('decision_owner')} decides"
                 ),
                 "action": {
-                    "label": str(ticket.get("create_label", "Create mission")).title(),
+                    "label": "Create safe mission",
                     "url": str(ticket.get("create_mission_url")),
                     "method": "post",
                     "enabled": True,
@@ -647,6 +728,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "route-map",
                 "state": "ready",
                 "risk_label": "read only",
+                "count": route_count,
+                "count_label": _station_count_label(route_count),
+                "urgency": "Clear",
                 "title": "Daily Slate",
                 "detail": "No unlaunched slate tickets are waiting at the top of the route map.",
                 "action": {"label": "Open Daily Slate", "url": "/aurora/daily-slate", "method": "get", "enabled": True},
@@ -655,15 +739,7 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
             }
         )
 
-    shipyard_row = next(
-        (
-            row
-            for row in approval_rows
-            if row.get("lane_key") in {"nora", "generation"}
-            and row.get("action_method") in {"post", "get", "generation_result"}
-        ),
-        None,
-    )
+    shipyard_row = next(iter(shipyard_rows), None)
     if shipyard_row:
         actions.append(
             {
@@ -671,6 +747,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "shipyard",
                 "state": str(shipyard_row.get("state", "missing")),
                 "risk_label": str(shipyard_row.get("risk_label", "review gate")),
+                "count": len(shipyard_rows),
+                "count_label": _station_count_label(len(shipyard_rows)),
+                "urgency": "Generation waiting",
                 "title": str(shipyard_row.get("status")),
                 "detail": f"{shipyard_row.get('page_name')} - {shipyard_row.get('next_action')}",
                 "action": _safe_console_action(shipyard_row),
@@ -685,6 +764,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "shipyard",
                 "state": "ready",
                 "risk_label": "read only",
+                "count": len(shipyard_rows),
+                "count_label": _station_count_label(len(shipyard_rows)),
+                "urgency": "Clear",
                 "title": "Generation clear",
                 "detail": "No generation package is waiting for Nora, dry-run, or manual video intake.",
                 "action": {"label": "Open Shipyard", "url": "/aurora/generation", "method": "get", "enabled": True},
@@ -693,21 +775,21 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
             }
         )
 
-    harbor_row = next(
-        (
-            row
-            for row in approval_rows
-            if row.get("lane_key") in {"packaging", "captain", "handoff", "revision"}
-        ),
-        None,
-    )
+    harbor_row = next(iter(harbor_rows), None)
     if harbor_row:
         actions.append(
             {
                 "station": "Harbor Gate",
                 "station_key": "harbor-gate",
                 "state": str(harbor_row.get("state", "missing")),
-                "risk_label": str(harbor_row.get("risk_label", "locked live publish")),
+                "risk_label": (
+                    "live publish locked"
+                    if harbor_row.get("status") == "Scheduled handoff"
+                    else str(harbor_row.get("risk_label", "locked live publish"))
+                ),
+                "count": len(harbor_rows),
+                "count_label": _station_count_label(len(harbor_rows)),
+                "urgency": "Gate waiting",
                 "title": str(harbor_row.get("status")),
                 "detail": f"{harbor_row.get('page_name')} - {harbor_row.get('next_action')}",
                 "action": _safe_console_action(harbor_row),
@@ -722,6 +804,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "harbor-gate",
                 "state": "ready",
                 "risk_label": "live publish locked",
+                "count": len(harbor_rows),
+                "count_label": _station_count_label(len(harbor_rows)),
+                "urgency": "Clear",
                 "title": "No package at gate",
                 "detail": "No Roxy/Emma package, Captain approval, or handoff is waiting right now.",
                 "action": {"label": "Open Approval Queue", "url": "/aurora/approval-queue", "method": "get", "enabled": True},
@@ -739,6 +824,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "captain-log",
                 "state": str(tracking_row.get("state", "missing")).lower(),
                 "risk_label": str(tracking_row.get("status", "tracking")),
+                "count": tracking_count,
+                "count_label": _station_count_label(tracking_count),
+                "urgency": "Tracking waiting" if tracking_count else "Learning ready",
                 "title": f"{tracking_row.get('page_name')} tracking",
                 "detail": str(tracking_row.get("detail")),
                 "action": {
@@ -758,6 +846,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
                 "station_key": "captain-log",
                 "state": "ready",
                 "risk_label": "read only",
+                "count": tracking_count,
+                "count_label": _station_count_label(tracking_count),
+                "urgency": "Clear",
                 "title": "Learning clear",
                 "detail": "No published mission is waiting for tracking proof right now.",
                 "action": {"label": "Open Learning", "url": "/aurora/learning", "method": "get", "enabled": True},

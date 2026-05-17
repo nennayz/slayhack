@@ -269,6 +269,8 @@ def test_aurora_overview_shows_projects(tmp_path, client):
 
 
 def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
+    from work_activity import write_work_activity
+
     _write_slay_hack_project(tmp_path)
     short_video_ticket_id = _slay_hack_ticket_id(tmp_path, "short-video-1")
     created = client.post(
@@ -286,17 +288,47 @@ def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
         stage="publish_done",
         publish_result={"instagram": {"status": "published"}},
     )
+    _write_job(
+        tmp_path,
+        "20260512_handoff",
+        brief="handoff mission",
+        status="completed",
+        stage="publish_scheduled",
+        publish_result={"instagram": {"status": "scheduled", "dry_run": True}},
+    )
+    handoff_path = tmp_path / "output" / "Slayhack" / "20260512_handoff" / "job.json"
+    handoff_data = json.loads(handoff_path.read_text())
+    handoff_data["publish_execution"] = {
+        "status": "scheduled",
+        "platforms": ["instagram"],
+        "next_action": "Dashboard handoff only.",
+    }
+    handoff_path.write_text(json.dumps(handoff_data))
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Created daily slate mission for console test",
+        actor="codex",
+        result="console action history",
+    )
     deck = client.get("/", headers=_auth())
     aurora = client.get("/aurora", headers=_auth())
 
     assert deck.status_code == 200
     assert aurora.status_code == 200
     assert "Captain Action Console" in deck.text
+    assert "Command history" in deck.text
+    assert "Created daily slate mission for console test" in deck.text
     assert "Slay Hack next course" in deck.text
+    assert "waiting" in deck.text
     assert "safe mission create" in deck.text
+    assert "Create safe mission" in deck.text
     assert "/aurora/daily-slate?project=slay_hack" in deck.text
     assert f'action="/jobs/{job_id}/run-generation-dry-run"' in deck.text
-    assert "Run generation dry-run" in deck.text
+    assert "Run dry-run only" in deck.text
+    assert "Open locked live gate" in deck.text
+    assert 'action="/jobs/20260512_handoff/live-publish-approval"' not in deck.text
+    assert 'href="/jobs/20260512_handoff/live-publish-approval"' in deck.text
     assert "Check performance now" in deck.text
     assert 'action="/jobs/20260512_published/track-now"' in deck.text
     assert "live publish locked" in deck.text

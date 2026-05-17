@@ -17,6 +17,10 @@
         </div>
         <em class="badge badge-ops-{{ item.state }}">{{ item.risk_label }}</em>
       </div>
+      <div class="captain-action-meter">
+        <strong>{{ item.count_label }}</strong>
+        <span>{{ item.urgency }}</span>
+      </div>
       <p>{{ item.detail }}</p>
       <div class="captain-action-controls">
         {% if item.action.method == "post" %}
@@ -32,5 +36,24 @@
       </div>
     </article>
     {% endfor %}
+  </div>
+  <div class="captain-action-history">
+    <div class="section-heading compact">
+      <p class="eyebrow">Command history</p>
+      <h3>Recent console-relevant actions</h3>
+    </div>
+    {% if captain_action_history %}
+    <div class="captain-history-list">
+      {% for item in captain_action_history %}
+      <div class="captain-history-row">
+        <span>{{ item.event_type }}</span>
+        <strong>{{ item.summary }}</strong>
+        <small>{{ item.timestamp }}{% if item.result %} - {{ item.result }}{% endif %}</small>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No console-relevant actions have been logged yet.</p>
+    {% endif %}
   </div>
 </section>
