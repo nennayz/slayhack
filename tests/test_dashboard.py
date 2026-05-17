@@ -321,6 +321,8 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Quick hack" in resp.text
     assert "Touchdown Reaction" in resp.text
     assert "Next best ticket" in resp.text
+    assert "PM action plan" in resp.text
+    assert "Create next video mission" in resp.text
     assert "No mission yet" in resp.text
     assert "Video packages" in resp.text
     assert "Approval queue" in resp.text
@@ -368,9 +370,11 @@ def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):
     assert "Stadium Sweethearts" in queue.text
     assert "Needs review" in queue.text
     assert "review gate" in queue.text
+    assert "Next action" in queue.text
     assert "Mark ready" in queue.text
     assert slate.status_code == 200
     assert "Mission exists" in slate.text
+    assert "Open mission" in slate.text
     assert job_id in slate.text
 
 
@@ -392,6 +396,7 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert "Generation" in queue.text
     assert "Ready" in queue.text
     assert "safe dry-run" in queue.text
+    assert "Next action" in queue.text
     assert "Run generation dry-run" in queue.text
     assert f"/jobs/{job_id}/run-generation-dry-run" in queue.text
 

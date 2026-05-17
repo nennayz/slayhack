@@ -2609,6 +2609,11 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
         if slate is None:
             continue
         tickets = _annotate_ticket_missions(_ticket_rows(slate), mission_index)
+        video_packages = _daily_slate_video_package_rows(slate)
+        for package in video_packages:
+            mission = mission_index.get(str(package.get("ticket_id") or ""))
+            package["has_mission"] = mission is not None
+            package["mission"] = mission
         cards.append(
             {
                 "project": slate.project,
@@ -2621,7 +2626,8 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
                 "ticket_count": len(tickets),
                 "tickets": tickets,
                 "next_ticket": _next_slate_ticket(tickets),
-                "video_packages": _daily_slate_video_package_rows(slate),
+                "next_package": next((package for package in video_packages if not package.get("has_mission")), video_packages[0] if video_packages else None),
+                "video_packages": video_packages,
                 "qa_status": _qa_status(slate),
             }
         )

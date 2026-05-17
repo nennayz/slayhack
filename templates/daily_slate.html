@@ -54,6 +54,27 @@
       <span class="badge badge-ops-ready">{{ slate.slate_date }}</span>
     </div>
     <p class="muted">{{ slate.notes }}</p>
+    <div class="pm-action-panel">
+      <div>
+        <p class="eyebrow">PM action plan</p>
+        <strong>{{ "Open active mission" if slate.next_ticket and slate.next_ticket.has_mission else "Create next video mission" if slate.next_package else "Review slate coverage" }}</strong>
+        {% if slate.next_ticket %}
+        <small>{{ slate.next_ticket.title }} - {{ slate.next_ticket.owner }} owns - {{ slate.next_ticket.decision_owner }} decides</small>
+        {% else %}
+        <small>No ticket is currently selected for this page.</small>
+        {% endif %}
+      </div>
+      <div class="pm-action-buttons">
+        {% if slate.next_ticket and slate.next_ticket.has_mission %}
+        <a class="button button-secondary button-small" href="{{ slate.next_ticket.mission.mission_url }}">Open active mission</a>
+        {% elif slate.next_package %}
+        <form class="inline-form compact-action-form" method="post" action="{{ slate.next_package.daily_create_mission_url }}">
+          <button type="submit">Create next video mission</button>
+        </form>
+        {% endif %}
+        <a class="button button-secondary button-small" href="/aurora/approval-queue">Queue</a>
+      </div>
+    </div>
     {% if slate.next_ticket %}
     <div class="next-ticket-card">
       <span class="badge badge-ops-{{ 'ready' if slate.next_ticket.has_mission else 'missing' }}">
@@ -94,10 +115,13 @@
         <strong>{{ package.title }}</strong>
         <small>{{ package.owner }} - {{ package.scene_count }} scenes - {{ package.total_duration_seconds }}s</small>
         <div class="slate-actions">
-          <a class="button button-secondary button-small" href="/aurora/workflow">Open package</a>
+          {% if package.has_mission %}
+          <a class="button button-secondary button-small" href="{{ package.mission.mission_url }}">Open mission</a>
+          {% else %}
           <form class="inline-form" method="post" action="{{ package.daily_create_mission_url }}">
             <button type="submit">Create mission</button>
           </form>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

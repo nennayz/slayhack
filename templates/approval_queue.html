@@ -53,9 +53,13 @@
             <span class="risk-chip">{{ item.risk_label }}</span>
             <strong>{{ item.page_name }}</strong>
             <p>{{ item.brief }}</p>
-            <small>{{ item.next_action }}</small>
+            <div class="approval-next-action">
+              <span>Next action</span>
+              <strong>{{ item.next_action }}</strong>
+              <small>{{ item.lane }} - {{ item.risk_label }}</small>
+            </div>
           </div>
-          <div class="slate-actions">
+          <div class="approval-row-actions">
             {% if item.action_method == "post" %}
             <form class="inline-form" method="post" action="{{ item.action_url }}">
               <button type="submit">{{ item.action_label }}</button>
