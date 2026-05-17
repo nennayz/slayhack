@@ -75,6 +75,11 @@ def main() -> None:
         action="store_true",
         help="Auto-approve all checkpoints — required when running from cron",
     )
+    parser.add_argument(
+        "--safe-prep",
+        action="store_true",
+        help="Run production prep through Roxy/Emma, then stop before any external publish API call",
+    )
     args = parser.parse_args()
     log_command("main_invocation", {"argv": sys.argv[1:]})
 
@@ -177,7 +182,7 @@ def main() -> None:
             print("[DRY-RUN MODE] No real API calls will be made.\n")
 
     lock_acquired = _acquire_lock()
-    orchestrator = Orchestrator(config)
+    orchestrator = Orchestrator(config, safe_prep=args.safe_prep)
     try:
         result = orchestrator.run(job, unattended=args.unattended)
     finally:

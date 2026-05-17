@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import anthropic
 from activity_logger import log_action
@@ -76,7 +77,7 @@ def _compact_messages(messages: list[dict], keep_recent_pairs: int = 3) -> list[
 
 
 class Orchestrator:
-    def __init__(self, config: Config):
+    def __init__(self, config: Config, safe_prep: bool = False):
         self.config = config
         self.client = anthropic.Anthropic(api_key=config.anthropic_api_key)
         self.agents = {
@@ -90,6 +91,7 @@ class Orchestrator:
             "publish": PublishAgent(config),
         }
         self._unattended: bool = False
+        self.safe_prep = safe_prep
 
     def run(self, job: ContentJob, unattended: bool = False) -> ContentJob:
         self._unattended = unattended
@@ -219,6 +221,14 @@ class Orchestrator:
         kwargs = {}
         if agent_name == "publish" and "schedule" in tool_input:
             kwargs["schedule"] = bool(tool_input["schedule"])
+        if agent_name == "publish" and self.safe_prep:
+            self._mark_safe_publish_handoff(job)
+            log_action("safe_prep_publish_handoff", {
+                "job_id": job.id,
+                "stage": job.stage,
+                "platforms": job.platforms,
+            })
+            return {"status": "safe_prep", "stage": job.stage}
         self.agents[agent_name].run(job, **kwargs)
         log_action("run_agent", {
             "job_id": job.id,
@@ -226,3 +236,44 @@ class Orchestrator:
             "stage": job.stage,
         })
         return {"status": "ok", "stage": job.stage}
+
+    def _mark_safe_publish_handoff(self, job: ContentJob) -> ContentJob:
+        """Record publish readiness without calling any external publisher API."""
+        created_at = datetime.now(timezone.utc).isoformat()
+        hashtags = job.growth_strategy.hashtags if job.growth_strategy else []
+        caption = job.growth_strategy.caption if job.growth_strategy else ""
+        package = {
+            "status": "completed",
+            "owners": ["Roxy", "Emma"],
+            "caption": caption,
+            "hashtags": hashtags,
+            "faq_path": job.community_faq_path,
+            "publish_notes": "Safe production prep stopped before external publish.",
+            "created_at": created_at,
+            "next_action": "Captain review required before dashboard handoff. Live publishing remains locked.",
+            "source": "safe_prep_cli",
+        }
+        job.publish_package = package
+        job.publish_execution = {
+            "status": "ready_to_publish",
+            "owners": ["Roxy", "Emma"],
+            "platforms": list(job.platforms),
+            "caption": caption,
+            "hashtags": hashtags,
+            "faq_path": job.community_faq_path,
+            "video_path": job.video_path,
+            "image_path": job.image_path,
+            "created_at": created_at,
+            "next_action": "Captain review required before dashboard handoff. Live publishing remains locked.",
+            "source": "safe_prep_cli",
+        }
+        job.publish_result = {
+            str(platform): {
+                "status": "ready_to_publish",
+                "dry_run": True,
+                "reason": "Safe production prep stopped before external platform API call.",
+            }
+            for platform in job.platforms
+        }
+        job.stage = "ready_to_publish"
+        return job
