@@ -121,7 +121,7 @@ class PostPerformance(BaseModel):
 
 
 class ContentJob(BaseModel):
-    id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S"))
+    id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
     project: str
     pm: PMProfile
     brief: str
@@ -150,3 +150,4 @@ class ContentJob(BaseModel):
     publish_result: Optional[dict] = None
     checkpoint_log: list[CheckpointDecision] = Field(default_factory=list)
     performance: list[PostPerformance] = Field(default_factory=list)
+    published_at: Optional[datetime] = None

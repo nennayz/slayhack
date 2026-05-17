@@ -1,0 +1,12 @@
+[Unit]
+Description=NayzFreedom Track Scheduler — hourly performance snapshot worker
+After=network.target
+
+[Service]
+Type=oneshot
+User=nayzfreedom
+WorkingDirectory=/opt/nayzfreedom
+EnvironmentFile=/opt/nayzfreedom/.env
+ExecStart=/opt/nayzfreedom/.venv/bin/python track_scheduler.py
+StandardOutput=append:/var/log/nayzfreedom.log
+StandardError=append:/var/log/nayzfreedom.log

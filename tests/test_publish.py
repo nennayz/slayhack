@@ -250,6 +250,49 @@ def test_publish_agent_registered_in_orchestrator():
     assert "publish" in orch.agents
 
 
+def test_publish_sets_published_at_for_immediate_post(mocker, tmp_path, monkeypatch):
+    from datetime import datetime, timezone
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+    img_file = tmp_path / "image.png"
+    img_file.write_bytes(b"PNG")
+    agent = PublishAgent(make_publish_config())
+    job = make_image_job(dry_run=False)
+    job.image_path = str(img_file)
+    job.platforms = ["facebook", "instagram"]
+    mocker.patch.object(agent, "_post_facebook", return_value={"id": "fb1"})
+    mocker.patch.object(agent, "_post_instagram", return_value={"id": "ig1"})
+    mocker.patch("agents.publish.enqueue_track_snapshots")
+    before = datetime.now(timezone.utc)
+    agent.run_live(job)
+    after = datetime.now(timezone.utc)
+    assert job.published_at is not None
+    assert before <= job.published_at <= after
+
+
+def test_publish_enqueues_track_snapshots_after_live_publish(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+    img_file = tmp_path / "image.png"
+    img_file.write_bytes(b"PNG")
+    agent = PublishAgent(make_publish_config())
+    job = make_image_job(dry_run=False)
+    job.image_path = str(img_file)
+    job.platforms = ["facebook"]
+    mocker.patch.object(agent, "_post_facebook", return_value={"id": "fb1"})
+    mock_enqueue = mocker.patch("agents.publish.enqueue_track_snapshots")
+    agent.run_live(job)
+    mock_enqueue.assert_called_once_with(job)
+
+
+def test_publish_dry_run_does_not_enqueue(mocker):
+    agent = PublishAgent(make_publish_config())
+    job = make_image_job(dry_run=True)
+    mock_enqueue = mocker.patch("agents.publish.enqueue_track_snapshots")
+    agent.run_dry(job)
+    mock_enqueue.assert_not_called()
+
+
 def test_main_publish_only_flag_dispatches_publish_agent(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     from job_store import save_job

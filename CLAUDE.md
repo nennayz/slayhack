@@ -71,11 +71,14 @@ Jobs are resumable: `python main.py --resume <job_id>`
 ## Setup
 
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv   # Python 3.12+ required (3.9 is EOL)
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill in API keys
 ```
+
+**Python version:** The project requires Python 3.12+. Python 3.9 reached end-of-life in October 2024.
+To upgrade an existing venv: `rm -rf .venv && python3.12 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
 
 Required env vars:
 ```

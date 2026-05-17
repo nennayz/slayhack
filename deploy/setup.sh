@@ -103,7 +103,9 @@ for unit in \
     nayzfreedom-backup.service \
     nayzfreedom-backup.timer \
     nayzfreedom-healthcheck.service \
-    nayzfreedom-healthcheck.timer; do
+    nayzfreedom-healthcheck.timer \
+    nayzfreedom-track-scheduler.service \
+    nayzfreedom-track-scheduler.timer; do
     cp "$DEPLOY_DIR/$unit" "/etc/systemd/system/$unit"
 done
 
@@ -141,6 +143,7 @@ systemctl enable --now nayzfreedom-instagram-queue.timer
 systemctl enable --now nayzfreedom-production-summary.timer
 systemctl enable --now nayzfreedom-log-retention.timer
 systemctl enable --now nayzfreedom-ops-report.timer
+systemctl enable --now nayzfreedom-track-scheduler.timer
 
 echo ""
 echo "=== Setup complete ==="
@@ -163,4 +166,5 @@ echo "  IG queue:  every 5 minutes"
 echo "  Summary:   daily at 00:15 UTC"
 echo "  Logs:      daily at 00:30 UTC"
 echo "  Ops report: every Monday at 00:45 UTC"
+echo "  Track:     every hour (on-demand)"
 echo "  Check with: systemctl list-timers | grep nayz"

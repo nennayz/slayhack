@@ -142,8 +142,10 @@ def _fetch_tiktok(result: dict, job: ContentJob, config: Config) -> PostPerforma
 
 
 def _job_publish_time(job: ContentJob) -> int:
+    if job.published_at is not None:
+        return int(job.published_at.timestamp())
     try:
-        dt = datetime.strptime(job.id, "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
+        dt = datetime.strptime(job.id[:15], "%Y%m%d_%H%M%S").replace(tzinfo=timezone.utc)
         return int(dt.timestamp())
     except (ValueError, AttributeError):
         return int(datetime.now(timezone.utc).timestamp())

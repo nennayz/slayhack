@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
+from job_store import load_recent_performance
 from models.content_job import ContentJob, Idea, ContentType
 
 _DRY_RUN_IDEAS = [
@@ -52,11 +53,15 @@ class ZoeAgent(BaseAgent):
             f"Brand tone: {job.pm.brand.tone}. "
             f"Target audience: {job.pm.brand.target_audience}."
         )
+        perf_context = load_recent_performance(job.pm.page_name)
+        perf_section = f"\n{perf_context}\n" if perf_context else ""
         user = (
             f"Brief: {job.brief}\nPlatforms: {', '.join(job.platforms)}\n"
             f"Allowed content types: {', '.join(allowed_types)}\n"
-            f"Trends: {trends_str}\n\n"
-            "Generate 5-7 content ideas. Return a JSON array of objects with keys: "
+            f"Trends: {trends_str}\n"
+            f"{perf_section}\n"
+            "Generate 5-7 content ideas. Favour angles and content types that historically "
+            "drove the highest reach. Return a JSON array of objects with keys: "
             "number (int), title (str), hook (str, max 10 words), angle (str), "
             "content_type (str, one of the allowed content types). JSON only."
         )

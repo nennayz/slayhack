@@ -70,6 +70,7 @@ def test_pause_unattended_does_not_call_input(monkeypatch):
 def test_main_content_type_flag_sets_job_content_type(mocker, tmp_path, monkeypatch):
     import main as main_module
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(main_module, "_LOCK_FILE", tmp_path / "pipeline.lock")
     returned_job = make_job()
     returned_job.status = __import__('models.content_job', fromlist=['JobStatus']).JobStatus.COMPLETED
     mock_orch = mocker.patch.object(main_module.Orchestrator, "run", return_value=returned_job)
@@ -88,6 +89,7 @@ def test_main_content_type_flag_sets_job_content_type(mocker, tmp_path, monkeypa
 def test_main_unattended_flag_passed_to_orchestrator(mocker, tmp_path, monkeypatch):
     import main as main_module
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(main_module, "_LOCK_FILE", tmp_path / "pipeline.lock")
     returned_job = make_job()
     returned_job.status = __import__('models.content_job', fromlist=['JobStatus']).JobStatus.COMPLETED
     mock_run = mocker.patch.object(main_module.Orchestrator, "run", return_value=returned_job)

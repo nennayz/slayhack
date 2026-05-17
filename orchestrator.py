@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import anthropic
 from activity_logger import log_action
 from agents.mia import MiaAgent
@@ -35,13 +36,43 @@ You coordinate Freedom Architects (Mia, Zoe, Bella, Lila, Nora, Roxy, Emma) thro
 6. request_checkpoint (stage: "content_review") — show content and visual (if applicable) for approval
 7. run_nora — QA review. If QA fails and retry count < max_retries, re-run the relevant agent.
 8. request_checkpoint (stage: "qa_review") — show QA result
-9. run_roxy — hashtags + caption + timing + editorial guidance
-10. run_emma — community FAQ
-11. request_checkpoint (stage: "final_approval") — final sign-off before publishing
-12. run_publish — publish to Meta (Facebook + Instagram). Pass schedule=true to post at Roxy's recommended time.
+9. run_roxy and run_emma — call BOTH in the same response (they are independent and run in parallel); do not wait for one before calling the other
+10. request_checkpoint (stage: "final_approval") — final sign-off before publishing
+11. run_publish — publish to Meta (Facebook + Instagram). Pass schedule=true to post at Roxy's recommended time.
 
 Never skip a checkpoint. After run_publish completes, declare the job complete.
 """
+
+
+def _compact_messages(messages: list[dict], keep_recent_pairs: int = 3) -> list[dict]:
+    """Trim Robin's older assistant text blocks to prevent context bloat.
+
+    Keeps the initial brief and the most recent round-trips in full.
+    Older assistant turns are compacted to tool_use blocks only (text
+    reasoning is dropped). Tool results are already minimal so left as-is.
+    """
+    # Each round-trip = 2 messages: assistant turn + user turn (tool_results)
+    if len(messages) < 1 + keep_recent_pairs * 2:
+        return messages
+
+    first = messages[:1]
+    old = messages[1: -(keep_recent_pairs * 2)]
+    recent = messages[-(keep_recent_pairs * 2):]
+
+    compacted: list[dict] = []
+    for msg in old:
+        if msg["role"] == "assistant" and isinstance(msg["content"], list):
+            # Keep tool_use blocks; drop text blocks to save tokens
+            slim = [
+                {"type": "tool_use", "id": b.id, "name": b.name, "input": b.input}
+                for b in msg["content"]
+                if hasattr(b, "type") and b.type == "tool_use"
+            ]
+            compacted.append({"role": "assistant", "content": slim or msg["content"]})
+        else:
+            compacted.append(msg)
+
+    return first + compacted + recent
 
 
 class Orchestrator:
@@ -94,10 +125,14 @@ class Orchestrator:
                 save_job(job)
                 raise RuntimeError(f"Unexpected stop_reason: {response.stop_reason}")
 
+            tool_blocks = [b for b in response.content if b.type == "tool_use"]
+            checkpoint_blocks = [b for b in tool_blocks if b.name == "request_checkpoint"]
+            agent_blocks = [b for b in tool_blocks if b.name != "request_checkpoint"]
+
             tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
+
+            # Checkpoints run sequentially — they block for user input
+            for block in checkpoint_blocks:
                 result = self._dispatch(block.name, block.input, job)
                 save_job(job)
                 tool_results.append({
@@ -106,8 +141,37 @@ class Orchestrator:
                     "content": json.dumps(result),
                 })
 
+            # Independent agent calls (e.g. run_roxy + run_emma) run concurrently
+            if len(agent_blocks) > 1:
+                results_map: dict[str, dict] = {}
+                with ThreadPoolExecutor(max_workers=len(agent_blocks)) as executor:
+                    future_to_block = {
+                        executor.submit(self._dispatch, b.name, b.input, job): b
+                        for b in agent_blocks
+                    }
+                    for future in as_completed(future_to_block):
+                        blk = future_to_block[future]
+                        results_map[blk.id] = future.result()
+                save_job(job)
+                for block in agent_blocks:
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(results_map[block.id]),
+                    })
+            else:
+                for block in agent_blocks:
+                    result = self._dispatch(block.name, block.input, job)
+                    save_job(job)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": json.dumps(result),
+                    })
+
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user", "content": tool_results})
+            messages = _compact_messages(messages)
 
     def _dispatch(self, tool_name: str, tool_input: dict, job: ContentJob) -> dict:
         if tool_name == "request_checkpoint":

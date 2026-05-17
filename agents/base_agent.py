@@ -1,5 +1,8 @@
 from __future__ import annotations
+import random
+import time
 from abc import ABC, abstractmethod
+import anthropic
 from anthropic import Anthropic
 from config import Config
 from models.content_job import ContentJob
@@ -28,16 +31,37 @@ class BaseAgent(ABC):
 
     def _call_claude(self, system: str, user: str, max_tokens: int = 2048) -> str:
         from anthropic.types import TextBlock
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": user}],
-        )
-        for block in response.content:
-            if isinstance(block, TextBlock):
-                return block.text
-        raise ValueError("No text block in Claude response")
+        last_exc: Exception | None = None
+        for attempt in range(4):
+            try:
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=max_tokens,
+                    system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+                    messages=[{"role": "user", "content": user}],
+                )
+                for block in response.content:
+                    if isinstance(block, TextBlock):
+                        return block.text
+                raise ValueError("No text block in Claude response")
+            except anthropic.RateLimitError as exc:
+                last_exc = exc
+                if attempt == 3:
+                    raise
+                time.sleep((2 ** attempt) + random.random())
+            except anthropic.APIStatusError as exc:
+                last_exc = exc
+                if exc.status_code in (500, 529) and attempt < 3:
+                    time.sleep((2 ** attempt) + random.random())
+                else:
+                    raise
+            except anthropic.APIConnectionError as exc:
+                last_exc = exc
+                if attempt < 3:
+                    time.sleep((2 ** attempt) + random.random())
+                else:
+                    raise
+        raise last_exc  # type: ignore[misc]
 
     def _parse_json(self, raw: str) -> dict | list:
         import json
