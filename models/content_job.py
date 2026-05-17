@@ -137,6 +137,7 @@ class ContentJob(BaseModel):
     visual_prompt: Optional[str] = None
     image_path: Optional[str] = None
     video_path: Optional[str] = None
+    production_ticket: Optional[dict] = None
     video_package: Optional[dict] = None
     generation_request: Optional[dict] = None
     generation_result: Optional[dict] = None

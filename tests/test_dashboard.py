@@ -326,8 +326,8 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Video package drawer" in resp.text
     assert "Next best ticket" in resp.text
     assert "PM action plan" in resp.text
-    assert "Create next video mission" in resp.text
-    assert "No mission yet" in resp.text
+    assert "Create short video mission" in resp.text
+    assert "Create article mission" in resp.text
     assert "Video packages" in resp.text
     assert "Approval queue" in resp.text
     assert "Nora" in resp.text
@@ -392,6 +392,72 @@ def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):
     assert "Mission exists" in slate.text
     assert "Open mission" in slate.text
     assert job_id in slate.text
+
+
+def test_daily_slate_mission_index_is_project_scoped(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    _write_stadium_project(tmp_path)
+    ticket_id = _project_ticket_id(tmp_path, "slay_hack", "short-video-1")
+    created = client.post(
+        f"/aurora/daily-slate/slay_hack/tickets/{ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    job_id = created.headers["location"].split("/")[-1]
+
+    stadium_only = client.get("/aurora/daily-slate?project=stadium_sweethearts", headers=_auth())
+
+    assert stadium_only.status_code == 200
+    assert "Touchdown Reaction" in stadium_only.text
+    assert "Create short video mission" in stadium_only.text
+    assert job_id not in stadium_only.text
+
+
+def test_daily_slate_primary_action_uses_next_uncreated_ticket(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    short_ticket_id = _project_ticket_id(tmp_path, "slay_hack", "short-video-1")
+    long_ticket_id = _project_ticket_id(tmp_path, "slay_hack", "long-video")
+    article_ticket_id = _project_ticket_id(tmp_path, "slay_hack", "article-1")
+    client.post(
+        f"/aurora/daily-slate/slay_hack/tickets/{short_ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    client.post(
+        f"/aurora/daily-slate/slay_hack/tickets/{long_ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    slate = client.get("/aurora/daily-slate?project=slay_hack", headers=_auth())
+
+    assert slate.status_code == 200
+    assert "Guide one - Bella owns - Slay decides" in slate.text
+    assert "Create article mission" in slate.text
+    assert f"/aurora/daily-slate/slay_hack/tickets/{article_ticket_id}/create-mission" in slate.text
+
+
+def test_daily_slate_creates_non_video_ticket_mission(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    ticket_id = _project_ticket_id(tmp_path, "slay_hack", "article-1")
+
+    resp = client.post(
+        f"/aurora/daily-slate/slay_hack/tickets/{ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    job_id = resp.headers["location"].split("/")[-1]
+    job_path = next((tmp_path / "output" / "Slay Hack").glob("*/job.json"))
+    data = json.loads(job_path.read_text())
+    assert data["id"] == job_id
+    assert data["content_type"] == "article"
+    assert data["production_ticket"]["ticket_id"] == ticket_id
+    assert data["production_ticket"]["project"] == "slay_hack"
+    assert data["stage"] == "slate_ticket_ready"
+    assert "video_package" not in data or data["video_package"] is None
 
 
 def test_approval_queue_advances_generation_actions(tmp_path, client):
