@@ -115,10 +115,40 @@ PM_KNOWLEDGE_LINKS = [
 ]
 
 PM_KNOWLEDGE_STATUS = {
-    "state": "Drive Knowledge ready",
-    "proof": "Drive retrieval smoke PASS 7/7",
-    "next_action": "Run the seven-question direct PM UI confirmation before calling the PM fully certified.",
+    "state": "PM Knowledge certification pending",
+    "summary": "Drive retrieval is ready; direct PM UI still needs the seven-question confirmation.",
+    "next_action": "Run the PM UI smoke checklist, then update the Direct UI result log before calling Slay certified.",
+    "rows": [
+        {
+            "label": "Drive retrieval",
+            "status": "PASS",
+            "class": "proof-ready",
+            "detail": "Connected Drive Knowledge fetch/search passed 7 of 7.",
+        },
+        {
+            "label": "Direct PM UI",
+            "status": "PARTIAL",
+            "class": "proof-missing",
+            "detail": "Claude PM UI automation timed out; final seven-question confirmation is still required.",
+        },
+        {
+            "label": "Smoke checklist",
+            "status": "READY",
+            "class": "proof-ready",
+            "detail": "Checklist and result log are linked for Captain-run certification.",
+        },
+    ],
 }
+
+PM_KNOWLEDGE_SMOKE_CHECKS = [
+    "What is the canonical SlayHack knowledge root?",
+    "Who is Slay, who is Nayz, and what is NayzFreedom Fleet?",
+    "Which audience signal should guide the next product decision?",
+    "What should Slay read first before answering a strategy question?",
+    "Is live publish automatic or manually gated?",
+    "When should _Archive be used?",
+    "What is the best next product/action recommendation style?",
+]
 
 
 def _manual_posted_at(job) -> datetime | None:
@@ -199,6 +229,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "learning_runbook": learning_runbook,
             "pm_knowledge_links": PM_KNOWLEDGE_LINKS,
             "pm_knowledge_status": PM_KNOWLEDGE_STATUS,
+            "pm_knowledge_smoke_checks": PM_KNOWLEDGE_SMOKE_CHECKS,
             "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,
@@ -601,6 +632,7 @@ def aurora_learning(request: Request, _: str = Depends(verify_auth)):
             "crew_asset_audit": _crew_asset_audit(root),
             "pm_knowledge_links": PM_KNOWLEDGE_LINKS,
             "pm_knowledge_status": PM_KNOWLEDGE_STATUS,
+            "pm_knowledge_smoke_checks": PM_KNOWLEDGE_SMOKE_CHECKS,
         },
     )
 

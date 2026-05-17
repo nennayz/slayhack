@@ -392,8 +392,12 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "Captain Action Console" in resp.text
     assert "Command bridge actions" in resp.text
     assert "SlayHack PM Knowledge" in resp.text
-    assert "Drive Knowledge ready" in resp.text
-    assert "Drive retrieval smoke PASS 7/7" in resp.text
+    assert "PM Knowledge certification pending" in resp.text
+    assert "Drive retrieval is ready" in resp.text
+    assert "Drive retrieval: PASS" in resp.text
+    assert "Direct PM UI: PARTIAL" in resp.text
+    assert "Smoke checklist: READY" in resp.text
+    assert "Run PM smoke checklist" in resp.text
     assert "Knowledge map" in resp.text
     assert "Captain Attention Lane" in resp.text
     assert "Learning Runbook" in resp.text
@@ -2318,8 +2322,12 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Deploy status" in resp.text
     assert "Live" in resp.text
     assert "SlayHack PM Knowledge" in resp.text
-    assert "Drive Knowledge ready" in resp.text
-    assert "Drive retrieval smoke PASS 7/7" in resp.text
+    assert "PM Knowledge certification pending" in resp.text
+    assert "Direct PM UI: PARTIAL" in resp.text
+    assert "Run PM smoke checklist" in resp.text
+    assert "What is the canonical SlayHack knowledge root?" in resp.text
+    assert "Any answer that renames PM Slay to Nayz fails the identity gate." in resp.text
+    assert "Record PM UI result" in resp.text
     assert "Read first" in resp.text
     assert "Knowledge map" in resp.text
     assert "Update runbook" in resp.text

@@ -12,15 +12,43 @@
 
 {% include "_aurora_flow.html" %}
 
-<section class="panel spacious">
+<section class="panel spacious" id="pm-knowledge-certification">
   <div class="section-heading">
     <p class="eyebrow">SlayHack PM Knowledge</p>
     <h2>{{ pm_knowledge_status.state }}</h2>
   </div>
   <div class="learning-gates">
-    <span>{{ pm_knowledge_status.proof }}</span>
+    <span>{{ pm_knowledge_status.summary }}</span>
     <span>{{ pm_knowledge_status.next_action }}</span>
     <span>Use native Google Docs entrypoints first; archived markdown duplicates are historical only.</span>
+  </div>
+  <div class="manual-proof-grid">
+    {% for item in pm_knowledge_status.rows %}
+    <span class="{{ item.class }}">{{ item.label }}: {{ item.status }}</span>
+    {% endfor %}
+  </div>
+  <div class="section-heading">
+    <p class="eyebrow">Certification checklist</p>
+    <h2>Run PM smoke checklist</h2>
+  </div>
+  <div class="manual-learning-list">
+    {% for question in pm_knowledge_smoke_checks %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-ready">Check {{ loop.index }}</span>
+        <strong>{{ question }}</strong>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  <div class="learning-gates">
+    <span>Pass threshold: at least 6 of 7 correct, with checks 1-5 mandatory.</span>
+    <span>Any answer that renames PM Slay to Nayz fails the identity gate.</span>
+    <span>Any answer that implies automatic live publishing fails the safety gate.</span>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-small" href="https://docs.google.com/document/d/1q3Xzk0_mnrNIFmw1tMdXYgbp8S8K584DpU7KAuuGCwE/edit?usp=drivesdk" target="_blank" rel="noreferrer">Record PM UI result</a>
+    <a class="button button-secondary button-small" href="https://docs.google.com/document/d/18Z_IMg5hsMPTj2n_gVpujFiycO3dAes7jKWh3jB3YSc/edit?usp=drivesdk" target="_blank" rel="noreferrer">Open update runbook</a>
   </div>
   <div class="manual-learning-list">
     {% for item in pm_knowledge_links %}
