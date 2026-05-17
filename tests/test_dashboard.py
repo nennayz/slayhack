@@ -320,8 +320,13 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "PM Stadium" in resp.text
     assert "Quick hack" in resp.text
     assert "Touchdown Reaction" in resp.text
+    assert "Next best ticket" in resp.text
+    assert "No mission yet" in resp.text
     assert "Video packages" in resp.text
     assert "Approval queue" in resp.text
+    assert "Nora" in resp.text
+    assert "Generation" in resp.text
+    assert "Roxy + Emma" in resp.text
     assert "Create mission" in resp.text
     assert "/aurora/daily-slate/stadium_sweethearts/video-packages/" in resp.text
     assert "Latest learning" in resp.text
@@ -354,12 +359,19 @@ def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):
     assert data["generation_request"]["status"] == "nora_review"
 
     queue = client.get("/aurora/approval-queue", headers=_auth())
+    slate = client.get("/aurora/daily-slate", headers=_auth())
 
     assert queue.status_code == 200
     assert "Ready but Not Published" in queue.text
+    assert "Command lanes" in queue.text
+    assert "Approval route" in queue.text
     assert "Stadium Sweethearts" in queue.text
     assert "Needs review" in queue.text
+    assert "review gate" in queue.text
     assert "Mark ready" in queue.text
+    assert slate.status_code == 200
+    assert "Mission exists" in slate.text
+    assert job_id in slate.text
 
 
 def test_approval_queue_advances_generation_actions(tmp_path, client):
@@ -379,6 +391,7 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert queue.status_code == 200
     assert "Generation" in queue.text
     assert "Ready" in queue.text
+    assert "safe dry-run" in queue.text
     assert "Run generation dry-run" in queue.text
     assert f"/jobs/{job_id}/run-generation-dry-run" in queue.text
 
@@ -389,6 +402,8 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert waiting_queue.status_code == 200
     assert "Waiting real video" in waiting_queue.text
     assert "Attach the final generated video before publish packaging." in waiting_queue.text
+    assert "manual upload" in waiting_queue.text
+    assert "Open action" in waiting_queue.text
     assert "Record real video" in waiting_queue.text
     assert "output/Stadium Sweethearts/" in waiting_queue.text
 
@@ -408,6 +423,7 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert recorded_generation.status_code == 303
     assert packaging_queue.status_code == 200
     assert "Ready packaging" in packaging_queue.text
+    assert "manual package" in packaging_queue.text
     assert "Record publish package" in packaging_queue.text
     assert "Fictional adult fan-cam replay" in packaging_queue.text
 
@@ -435,6 +451,7 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert ready_publish.status_code == 303
     assert ready_queue.status_code == 200
     assert "Ready to publish" in ready_queue.text
+    assert "locked live publish" in ready_queue.text
     assert "Captain approval required before schedule handoff" in ready_queue.text
     assert "Captain review" in ready_queue.text
     assert f'action="/jobs/{job_id}/schedule-publish"' not in ready_queue.text
@@ -483,6 +500,9 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     assert "Dashboard schedule handoff only" in approval.text
     assert "Approve schedule handoff" in approval.text
     assert detail.status_code == 200
+    assert "Current next action" in detail.text
+    assert "Live publish locked" in detail.text
+    assert "Workflow stage" in detail.text
     assert "Captain approval" in detail.text
     assert f'action="/jobs/{job_id}/schedule-publish"' not in detail.text
 
