@@ -456,6 +456,26 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   line-height: 1.5;
   margin: 0;
 }
+.captain-action-meter {
+  align-items: center;
+  background: rgba(16,35,63,0.045);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+}
+.captain-action-meter strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+.captain-action-meter span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
 .captain-action-controls {
   display: flex;
   flex-wrap: wrap;
@@ -467,6 +487,39 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 }
 .captain-action-controls .button-secondary {
   background: rgba(16,35,63,0.04);
+}
+.captain-action-history {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(246,239,224,0.52));
+  border: 1px solid rgba(208,160,84,0.2);
+  border-radius: 16px;
+  margin-top: 0.9rem;
+  padding: 0.9rem;
+}
+.captain-history-list {
+  display: grid;
+  gap: 0.55rem;
+}
+.captain-history-row {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+}
+.captain-history-row span,
+.captain-history-row small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.captain-history-row span {
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.captain-history-row strong {
+  color: var(--ink);
+  font-size: 0.92rem;
 }
 
 .button,

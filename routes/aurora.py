@@ -19,6 +19,7 @@ from routes._helpers import (
     _aurora_workflow_snapshot,
     _calendar_slate,
     _captain_action_console,
+    _console_history,
     _create_slate_ticket_mission,
     _create_video_package_mission,
     _daily_slate_cards,
@@ -88,6 +89,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "performance": performance,
             "crew": CREW[:4],
             "captain_action_console": _captain_action_console(root, jobs),
+            "captain_action_history": _console_history(root),
         },
     )
 
