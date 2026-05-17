@@ -221,6 +221,8 @@
           <button type="submit">Create publish job</button>
         </form>
         {% endif %}
+      {% else %}
+        <a class="button button-secondary" href="/jobs/{{ job.id }}/live-publish-approval">Live publish approval</a>
       {% endif %}
       {% endif %}
     </article>

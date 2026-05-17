@@ -72,7 +72,7 @@ open a major new ship, or override brand-world direction.
 | Lila Lens | The Aurora | Visual Director | South Asian high-fashion visual director | Visual creator, mood builder, prompt stylist | stylish, visionary, polished, exacting | jet-black waist-length glass-straight hair with violet underside | camera-lens monocle, prompt cards, violet light meter | violet |
 | Vera Reel | The Aurora | Cinematographer | Eastern European art-film producer | Video producer for scene timing and generation packages | structured, cinematic, production-minded | short dark French bob with a single teal streak | camera harness, production slate, storyboard cards | teal |
 | Nora Sharp | The Aurora | Inspector | Northern European ice-editor precision | QA editor and risk gate | precise, honest, supportive, clean | silver-white blunt bob with straight micro fringe | checklist blade, magnifying lens, silver clipboard | silver, slate |
-| Roxy Rise | The Aurora | Trade Winds Strategist | pending redesign | Growth strategist for captions, hashtags, timing | upbeat, tactical, data-aware, bold | pending redesign; must read clearly female and not resemble Captain Nayz | chrome megaphone, launch cards, distribution signals | electric lime |
+| Roxy Rise | The Aurora | Trade Winds Strategist | electric-lime trade-winds strategist | Growth strategist for captions, hashtags, timing | upbeat, tactical, data-aware, bold | approved production portrait direction; clearly distinct from Captain Nayz | chrome megaphone, launch cards, distribution signals | electric lime |
 | Emma Heart | The Aurora | Community Keeper | West African / British harbor-host warmth | FAQ and audience response care | warm, clear, attentive, emotionally steady | rich mahogany shoulder-length coils with rose-gold cuffs | heart-stamped reply cards, harbor lantern | rose |
 | Mara Vale | The Aurora | Market & Monetization Analyst | Persian / European luxury strategist | Audience, competitor, niche, revenue, and viability analysis | sharp, luxurious, strategic, investor-brained | sleek black asymmetrical bob tucked behind one ear | gold coin monocle, revenue map, green-black velvet pirate suit | emerald, black, gold |
 | Iris Gauge | The Aurora | Signal Analyst | Korean cyber-runway analyst | Post-publish metrics, winner detection, repair reads | cool, precise, daring, data-driven | asymmetrical black bob with lime-green underlight | transparent analytics visor, data-chain necklace, luminous wrist cuff | lime, cobalt |
@@ -91,6 +91,11 @@ All approved production portraits are stored in `static/crew/`.
 Review folders under `review/` are historical evidence and prompt history, not
 the active gate. Future portrait changes should go through a new review folder
 before replacing `static/crew/`.
+
+Current production asset provenance is recorded in
+`review/crew_static_production_2026-05-17/asset_audit.md`. The production set is
+not a direct copy of `review/crew_final_style_v7/`; v7 remains review evidence
+and style-anchor material.
 
 Concept boundary still applies:
 Nami and Genie have approved portraits for planned ship cards, but they do not
@@ -260,7 +265,8 @@ imply live access to Freedom private data or Lyra music workflow data.
 - Visual heritage direction: electric-lime trade-winds strategist.
 - Role: caption, hashtags, timing, platform packaging.
 - Personality: upbeat, tactical, data-aware, bold.
-- Hair: approved production portrait direction; keep distinct from Captain Nayz.
+- Hair: approved production portrait direction; keep distinct from Captain Nayz
+  and visibly tied to the electric-lime distribution strategist role.
 - Fashion read: electric-lime pirate-market strategist, confident glam, clear
   feminine face direction, and no overlap with Captain Nayz.
 - Signature object: chrome megaphone, launch cards, distribution signals.
@@ -371,7 +377,8 @@ imply live access to Freedom private data or Lyra music workflow data.
 - Blue scout split: Mia owns short ice-blue lookout hair and sky-blue signal
   gear; no other crew member should use this scout silhouette.
 - Blonde split: Slay is platinum silver-blond superstar wolf cut; Genie is
-  blonde stage-rock waves with guitar. Roxy remains pending redesign.
+  blonde stage-rock waves with guitar. Roxy stays in the electric-lime
+  distribution strategist lane and must not borrow Captain command cues.
 - Bob split: Vera has a short French bob with teal streak; Nora has a silver
   blunt bob with micro fringe; Iris has an asymmetrical black cyber bob with
   lime underlight.
@@ -445,5 +452,5 @@ imply live access to Freedom private data or Lyra music workflow data.
   hair, lens monocle, violet-black styling.
 - Vera: Eastern European art-film producer, short French bob with teal streak,
   camera harness, slate, storyboard cards.
-- Roxy: pending redesign; must read clearly female, distinct from Captain Nayz,
-  electric-lime growth strategist, chrome megaphone, launch cards.
+- Roxy: approved electric-lime growth strategist, distinct from Captain Nayz,
+  chrome megaphone, launch cards, distribution signals.

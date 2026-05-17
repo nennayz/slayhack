@@ -201,11 +201,11 @@ CREW = (
         strengths=["distribution", "hashtags", "timing"],
         watch_outs=[
             "growth should amplify, not distort, the message",
-            "portrait is pending rework; latest rejected direction resembled Captain Nayz and did not read clearly female",
+            "keep portrait cues distinct from Captain Nayz and tied to electric-lime distribution strategy",
         ],
         inputs=["finished content", "platform context"],
         outputs=["caption", "hashtags", "posting timing"],
-        visual_signature="portrait pending redesign; must read clearly female, distinct from Captain Nayz, with electric-lime growth strategist styling, chrome megaphone, launch cards, and distribution signals",
+        visual_signature="approved electric-lime growth strategist styling, distinct from Captain Nayz, with chrome megaphone, launch cards, and distribution signals",
         accent_color="#b8d837",
         quote="Even treasure needs the right tide.",
     ),

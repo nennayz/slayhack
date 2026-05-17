@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header">
+  <div>
+    <p class="eyebrow">Live publish approval</p>
+    <h1>{{ job.pm.page_name }}</h1>
+    <p class="hero-copy">Final inspection gate after dashboard handoff. This page is locked and does not call a real platform publisher API.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/jobs/{{ job.id }}/captain-approval">Captain approval</a>
+    <a class="button button-secondary" href="/jobs/{{ job.id }}">Open mission</a>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Live API</span>
+    <strong>{{ live_gate.status }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Handoff</span>
+    <strong>{{ publish_execution_summary.label }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Media</span>
+    <strong>{{ live_gate.media.label }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Approval</span>
+    <strong>{{ live_gate.approval_status.replace("_", " ").title() }}</strong>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Publisher lock</p>
+    <h2>Real posting remains blocked</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ live_gate.status_detail }}</span>
+    <span>Dashboard handoff is dry-run evidence, not a live post approval.</span>
+    <span>{{ live_gate.next_action }}</span>
+  </div>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Package readiness</p>
+      <h2>What would be reviewed before live publishing</h2>
+    </div>
+    <div class="approval-review-list">
+      <div>
+        <span>Media path</span>
+        <p>{{ live_gate.media.path if live_gate.media.path else "Missing" }}</p>
+        <small>{{ live_gate.media.label }}</small>
+      </div>
+      <div>
+        <span>Caption</span>
+        <p>{{ publish_execution.caption if publish_execution and publish_execution.caption else publish_package.caption if publish_package else "Missing" }}</p>
+      </div>
+      <div>
+        <span>Hashtags</span>
+        <p>{{ publish_execution.hashtags | join(", ") if publish_execution and publish_execution.hashtags else publish_package.hashtags | join(", ") if publish_package and publish_package.hashtags else "Missing" }}</p>
+      </div>
+      <div>
+        <span>Handoff reason</span>
+        <p>{{ publish_result_reason }}</p>
+      </div>
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Platform handoff</p>
+      <h2>Dry-run status</h2>
+    </div>
+    <div class="approval-review-list">
+      {% for platform in live_gate.platforms %}
+      <div>
+        <span>{{ platform.name.title() }}</span>
+        <p>{{ platform.handoff_status.replace("_", " ").title() }}{% if platform.dry_run %} · Dry-run{% endif %}</p>
+        <small>{{ platform.reason }}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Required next build</p>
+    <h2>Explicit live publisher action</h2>
+  </div>
+  <p class="muted">The next implementation should add a separate action that names the platform, shows the exact API call risk, records Captain Nayz approval, and then invokes the platform publisher. Until then, this gate is inspection-only.</p>
+</section>
+{% endblock %}
