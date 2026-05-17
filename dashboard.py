@@ -2342,6 +2342,41 @@ def _ticket_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
     ]
 
 
+def _slate_counts(slate: CalendarSlate | None) -> dict[str, int]:
+    counts = slate.counts_by_type() if slate else {}
+    return {
+        "articles": counts.get(ProductionTicketType.ARTICLE, 0),
+        "infographics": counts.get(ProductionTicketType.INFOGRAPHIC, 0),
+        "short_videos": counts.get(ProductionTicketType.SHORT_VIDEO, 0),
+        "long_videos": counts.get(ProductionTicketType.LONG_VIDEO, 0),
+    }
+
+
+def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
+    cards = []
+    for project_slug in list_project_slugs(root):
+        slate = _calendar_slate(root, project_slug)
+        if slate is None:
+            continue
+        tickets = _ticket_rows(slate)
+        cards.append(
+            {
+                "project": slate.project,
+                "page_name": slate.page_name,
+                "pm_name": slate.pm_name,
+                "slate_date": slate.slate_date,
+                "notes": slate.notes,
+                "minimum_met": slate.satisfies_daily_minimum(),
+                "counts": _slate_counts(slate),
+                "ticket_count": len(tickets),
+                "tickets": tickets,
+                "video_packages": _video_package_rows(slate),
+                "qa_status": _qa_status(slate),
+            }
+        )
+    return cards
+
+
 def _qa_status(slate: CalendarSlate | None) -> list[dict[str, str]]:
     if slate is None:
         return [{"state": "Missing", "name": "Daily slate", "detail": "No slate is configured yet."}]
@@ -2435,18 +2470,12 @@ def _cross_team_requests() -> list[CrossTeamRequest]:
 def _aurora_workflow_snapshot(root: Path) -> dict[str, object]:
     jobs = list_all_jobs(root)
     slate = _calendar_slate(root)
-    counts = slate.counts_by_type() if slate else {}
     video_packages = _video_package_rows(slate)
     return {
         "mission_types": _mission_type_cards(),
         "workflow_lanes": _workflow_lanes(),
         "slate": slate,
-        "slate_counts": {
-            "articles": counts.get(ProductionTicketType.ARTICLE, 0),
-            "infographics": counts.get(ProductionTicketType.INFOGRAPHIC, 0),
-            "short_videos": counts.get(ProductionTicketType.SHORT_VIDEO, 0),
-            "long_videos": counts.get(ProductionTicketType.LONG_VIDEO, 0),
-        },
+        "slate_counts": _slate_counts(slate),
         "tickets": _ticket_rows(slate),
         "video_packages": video_packages,
         "featured_video_package": video_packages[0] if video_packages else None,
@@ -2507,6 +2536,22 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
 @app.get("/aurora/workflow", response_class=HTMLResponse)
 def aurora_workflow(request: Request, _: str = Depends(verify_auth)):
     return templates.TemplateResponse(request, "aurora_workflow.html", _aurora_workflow_snapshot(_root(request)))
+
+
+@app.get("/aurora/daily-slate", response_class=HTMLResponse)
+def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    slate_cards = _daily_slate_cards(root)
+    return templates.TemplateResponse(
+        request,
+        "daily_slate.html",
+        {
+            "slate_cards": slate_cards,
+            "latest_brief": _latest_learning_brief(root),
+            "total_tickets": sum(int(card["ticket_count"]) for card in slate_cards),
+            "ready_pages": sum(1 for card in slate_cards if card["minimum_met"]),
+        },
+    )
 
 
 @app.get("/aurora/generation", response_class=HTMLResponse)

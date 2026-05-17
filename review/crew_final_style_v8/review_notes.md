@@ -1,9 +1,20 @@
-# Crew Final Style v8 Review Plan
+# Crew Final Style v8 Approved Production Notes
 
 Date: 2026-05-16
 
-Scope: targeted continuation after the v7 review. This is still review-only and
-does not approve overwriting `static/crew/` or deploying.
+Scope: final approval notes after Nayz manually updated and approved every crew
+portrait for production.
+
+## Production Decision
+
+Nayz manually updated every crew picture and approved the set for production.
+
+System action taken:
+
+- Approved portraits are now live in `static/crew/`.
+- Production deploy completed through PR #39.
+- This v8 note is no longer an active review gate; it is the historical approval
+  record for the production art set.
 
 ## Captain Decision Applied
 
@@ -16,33 +27,33 @@ System action taken:
   signal scout.
 - `crew_registry.py` now describes Mia as a blue-haired signal scout.
 
-## Current Locks
+## Approved Production Locks
 
-These characters are locked as the current v7/v8 direction unless Nayz changes
-the taste decision:
+These characters are locked as the approved production direction unless Nayz
+opens a new review pass:
 
 | Character | Status |
 |---|---|
-| Captain Nayz | lock direction |
-| Slay | lock direction |
-| Robin | lock direction |
-| Mia Trend | lock blue signal-scout direction |
-| Bella Quill | lock direction |
-| Lila Lens | lock direction |
-| Vera Reel | lock direction |
-| Nora Sharp | lock direction |
-| Iris Gauge | lock direction |
-| Sage Ledger | lock direction |
-| Genie | lock direction |
+| Captain Nayz | approved production portrait |
+| Slay | approved production portrait |
+| Stadium | approved production portrait |
+| Robin | approved production portrait |
+| Mia Trend | approved blue signal-scout portrait |
+| Zoe Spark | approved production portrait |
+| Bella Quill | approved production portrait |
+| Lila Lens | approved production portrait |
+| Vera Reel | approved production portrait |
+| Nora Sharp | approved production portrait |
+| Roxy Rise | approved production portrait |
+| Emma Heart | approved production portrait |
+| Iris Gauge | approved production portrait |
+| Sage Ledger | approved production portrait |
+| Nami | approved concept-card portrait |
+| Genie | approved concept-card portrait |
 
-## Remaining Targeted Work
+## Future Review Only
 
-| Character | Target | Why |
-|---|---|---|
-| Zoe Spark | sharper idea-cartographer identity | current image is attractive, but the route/map logic can read more clearly |
-| Roxy Rise | electric-lime growth strategist | current image is improved, but needs clearer launch/distribution tools and less warm-gold overlap |
-| Emma Heart | practical community keeper | current image is warm, but needs stronger reply/tablet/lantern signal and less romantic fantasy |
-| Nami | concept-only crop/status handling | image can stay beautiful, but the dashboard must not imply live Freedom data access |
+Use the prompt pack below only if Nayz opens a future revision pass.
 
 ## Prompt Pack
 
@@ -130,9 +141,9 @@ Avoid:
   that suggests current Freedom access
 - Captain authority symbols
 
-## Crop Review Checklist
+## Future Crop Review Checklist
 
-Before any `static/crew/` promotion:
+Before any future `static/crew/` replacement:
 
 1. Create square avatar crops in a separate review folder.
 2. Confirm every crop keeps the face, hair silhouette, and signature prop
@@ -143,6 +154,7 @@ Before any `static/crew/` promotion:
 6. Confirm Nami is visibly concept-only in copy and placement.
 7. Run tests and local smoke before any asset copy.
 
-## Gate
+## Production Boundary
 
-No deploy and no live-asset overwrite until Nayz approves the v8 targeted output.
+The current set is approved and deployed. Future portrait replacements still
+require a new review folder, test pass, and explicit approval before deploy.

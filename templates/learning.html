@@ -3,7 +3,7 @@
 <section class="hero compact-hero mission-hero">
   <p class="eyebrow">Learning loop</p>
   <h1>Aurora Learning Desk</h1>
-  <p class="hero-copy">Review what the Fleet learned today, what should change next, and which creative assets still need Captain approval before they become live system assets.</p>
+  <p class="hero-copy">Review what the Fleet learned today, what should change next, and which creative assets are approved production canon or waiting for a new review pass.</p>
   <div class="hero-actions">
     <a class="button" href="/aurora/workflow">Operating workflow</a>
     <a class="button button-secondary" href="/aurora/crew">Crew registry</a>
@@ -20,12 +20,12 @@
     <strong>{{ "Ready" if review_note else "Missing" }}</strong>
   </div>
   <div class="stat-card">
-    <span>Live asset gate</span>
-    <strong>Closed</strong>
+    <span>Crew art</span>
+    <strong>Approved</strong>
   </div>
   <div class="stat-card">
-    <span>Deploy gate</span>
-    <strong>Closed</strong>
+    <span>Deploy status</span>
+    <strong>Live</strong>
   </div>
 </section>
 
@@ -58,19 +58,19 @@
     </div>
     <pre class="learning-note">{{ review_note.body }}</pre>
     {% else %}
-    <p class="muted">No v7 review note found under <code>review/crew_final_style_v7/</code>.</p>
+    <p class="muted">No crew style review note found under <code>review/crew_final_style_v*/</code>.</p>
     {% endif %}
   </article>
 </section>
 
 <section class="panel spacious">
   <div class="section-heading">
-    <p class="eyebrow">Captain approval gate</p>
-    <h2>What stays blocked</h2>
+    <p class="eyebrow">Production boundary</p>
+    <h2>What stays protected</h2>
   </div>
   <div class="learning-gates">
-    <span>Do not overwrite <code>static/crew/</code> until Nayz approves the art direction.</span>
-    <span>Do not deploy review assets until the live promotion step is explicitly approved.</span>
+    <span>The current manual crew portrait set is approved production canon.</span>
+    <span>Future portrait replacements still need a new review folder and explicit approval.</span>
     <span>Keep Captain Nayz and PM Slay as separate identities in all docs, assets, and dashboard copy.</span>
   </div>
 </section>
