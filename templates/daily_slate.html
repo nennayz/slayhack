@@ -200,6 +200,24 @@
   </article>
   <article class="panel">
     <div class="section-heading">
+      <p class="eyebrow">Tracking proof</p>
+      <h2>Snapshot readiness</h2>
+    </div>
+    <div class="ops-list">
+      {% for item in tracking_readiness %}
+      <a class="ops-row" href="/jobs/{{ item.job_id }}">
+        <span class="badge badge-ops-{{ item.state | lower }}">{{ item.status }}</span>
+        <strong>{{ item.page_name }} · {{ item.job_id }}</strong>
+        <small>{{ item.detail }}</small>
+        <small>{{ item.next_action }}</small>
+      </a>
+      {% else %}
+      <p class="muted">No missions are ready for tracking proof yet. Approved live publish creates the first snapshot queue.</p>
+      {% endfor %}
+    </div>
+  </article>
+  <article class="panel">
+    <div class="section-heading">
       <p class="eyebrow">Latest learning</p>
       <h2>{{ latest_brief.path if latest_brief else "No brief yet" }}</h2>
     </div>

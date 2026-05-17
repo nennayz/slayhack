@@ -65,6 +65,7 @@ from routes._helpers import (  # noqa: F401
     _track_queue_summary,
     _recent_track_queue_history,
     _tracking_failure_rows,
+    _tracking_readiness_rows,
     _latest_performance_signals,
     _sanitize_ops_report_summary,
     _incident_summary,
@@ -207,6 +208,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
     publish_summary = _ops_publish_summary(jobs)
     track_summary = _track_queue_summary(root)
     performance_signals = _latest_performance_signals(jobs)
+    tracking_readiness = _tracking_readiness_rows(root, jobs)
     return {
         "units": units,
         "backup": backup,
@@ -224,6 +226,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
         "track_scheduler_history": _recent_track_queue_history(root),
         "tracking_failures": _tracking_failure_rows(root),
         "performance_signals": performance_signals,
+        "tracking_readiness": tracking_readiness,
         "smoke_results": smoke_results,
         "action_buttons": _ops_action_buttons(),
         "action_result": None,

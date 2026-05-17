@@ -356,6 +356,9 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Latest learning from tracked posts" in resp.text
     assert "winning hook test" in resp.text
     assert "Scale this angle" in resp.text
+    assert "Tracking proof" in resp.text
+    assert "Snapshot readiness" in resp.text
+    assert "learning ready" in resp.text
     assert "workflow-rail-step active" in resp.text
     assert "Keep PM decisions separate from central crew execution." in resp.text
     assert "Use this view for" in resp.text
@@ -1353,6 +1356,19 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
             }
         },
     )
+    _write_job(
+        tmp_path,
+        "20260512_070000",
+        brief="published tracking candidate",
+        stage="publish_done",
+        publish_result={"instagram": {"status": "published", "id": "media-1"}},
+    )
+    _write_job(
+        tmp_path,
+        "20260512_080000",
+        brief="handoff waiting candidate",
+        publish_result={"instagram": {"status": "pending_queue"}},
+    )
     logs = tmp_path / "logs"
     logs.mkdir(exist_ok=True)
     (logs / "ops_reports.jsonl").write_text(json.dumps({
@@ -1430,6 +1446,11 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
     assert "scale" in resp.text
     assert "Tracking failures" in resp.text
     assert "returncode=1" in resp.text
+    assert "Tracking proof readiness" in resp.text
+    assert "ready now" in resp.text
+    assert "Published on instagram with no metrics recorded yet." in resp.text
+    assert "waiting publish" in resp.text
+    assert "live publish is still separate" in resp.text
     assert "Queued 1" in resp.text
     assert "Retrying 1" in resp.text
     assert "processed 1" in resp.text

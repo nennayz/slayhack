@@ -219,6 +219,25 @@
   </article>
 </section>
 
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Performance</p>
+    <h2>Tracking proof readiness</h2>
+  </div>
+  <div class="ops-list">
+    {% for item in tracking_readiness %}
+    <a class="ops-row" href="/jobs/{{ item.job_id }}">
+      <span class="badge badge-ops-{{ item.state | lower }}">{{ item.status }}</span>
+      <strong>{{ item.page_name }} · {{ item.job_id }}</strong>
+      <small>{{ item.detail }}</small>
+      <small>{{ item.next_action }}</small>
+    </a>
+    {% else %}
+    <p class="muted">No missions are ready for tracking proof yet.</p>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">

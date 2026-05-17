@@ -519,6 +519,73 @@ def _tracking_failure_rows(root: Path, limit: int = 8) -> list[dict[str, object]
     return rows
 
 
+def _published_platform_names(job: ContentJob) -> list[str]:
+    result = job.publish_result or {}
+    if not isinstance(result, dict):
+        return []
+    return [
+        str(platform)
+        for platform, value in result.items()
+        if isinstance(value, dict) and value.get("status") == "published"
+    ]
+
+
+def _handoff_platform_names(job: ContentJob) -> list[str]:
+    result = job.publish_result or {}
+    if not isinstance(result, dict):
+        return []
+    return [
+        str(platform)
+        for platform, value in result.items()
+        if isinstance(value, dict) and value.get("status") in {"scheduled", "pending_queue", "retrying"}
+    ]
+
+
+def _tracking_readiness_rows(root: Path, jobs, limit: int = 10) -> list[dict[str, object]]:
+    queue_entries = read_queue(root)
+    queued_by_job: dict[str, list[dict]] = {}
+    for entry in queue_entries:
+        queued_by_job.setdefault(str(entry.get("job_id", "")), []).append(entry)
+    rows: list[dict[str, object]] = []
+    for job in jobs:
+        queued = queued_by_job.get(job.id, [])
+        published_platforms = _published_platform_names(job)
+        handoff_platforms = _handoff_platform_names(job)
+        if job.performance:
+            state = "Ready"
+            status = "learning ready"
+            detail = f"{len(job.performance)} snapshot{'s' if len(job.performance) != 1 else ''} recorded."
+            next_action = "Use this result in Daily Slate learning decisions."
+        elif queued:
+            state = "Missing"
+            status = "queued"
+            detail = f"{len(queued)} snapshot check{'s' if len(queued) != 1 else ''} queued."
+            next_action = "Wait for the hourly tracker or use Check performance now after the due time."
+        elif job.stage == "publish_done" and published_platforms:
+            state = "Missing"
+            status = "ready now"
+            detail = f"Published on {', '.join(published_platforms)} with no metrics recorded yet."
+            next_action = "Open the mission and use Check performance now."
+        elif handoff_platforms:
+            state = "Missing"
+            status = "waiting publish"
+            detail = f"Handoff exists for {', '.join(handoff_platforms)}; live publish is still separate."
+            next_action = "Only after explicit live publish approval, watch for queued snapshots."
+        else:
+            continue
+        rows.append({
+            "job_id": job.id,
+            "page_name": job.pm.page_name,
+            "state": state,
+            "status": status,
+            "detail": detail,
+            "next_action": next_action,
+            "brief": job.brief[:90],
+        })
+    order = {"ready now": 0, "queued": 1, "waiting publish": 2, "learning ready": 3}
+    return sorted(rows, key=lambda item: (order.get(str(item["status"]), 9), str(item["job_id"])), reverse=False)[:limit]
+
+
 def _sanitize_ops_report_summary(report: object) -> str:
     lines = []
     for line in _sanitize_ops_detail(report).splitlines():
@@ -1275,6 +1342,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
     publish_summary = _ops_publish_summary(jobs)
     track_summary = _track_queue_summary(root)
     performance_signals = _latest_performance_signals(jobs)
+    tracking_readiness = _tracking_readiness_rows(root, jobs)
     return {
         "units": units,
         "backup": backup,
@@ -1292,6 +1360,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
         "track_scheduler_history": _recent_track_queue_history(root),
         "tracking_failures": _tracking_failure_rows(root),
         "performance_signals": performance_signals,
+        "tracking_readiness": tracking_readiness,
         "smoke_results": smoke_results,
         "action_buttons": _ops_action_buttons(),
         "action_result": None,
