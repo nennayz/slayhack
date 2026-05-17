@@ -1896,6 +1896,19 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   padding: 0.45rem 0.5rem;
   text-align: center;
 }
+.manual-learning-state {
+  background: rgba(16,35,63,0.045);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  padding: 0.75rem;
+}
+.manual-learning-state strong,
+.manual-learning-state small {
+  margin-top: 0;
+}
 .proof-ready {
   background: #d9f2e4;
   color: #17603e;

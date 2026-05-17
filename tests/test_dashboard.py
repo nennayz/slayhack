@@ -256,6 +256,35 @@ def test_captains_deck_surfaces_attention_and_active_missions(tmp_path, client):
     assert "Running" in resp.text
 
 
+def test_captains_deck_prioritizes_synced_manual_kits(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_synced",
+        brief="synced kit mission",
+        manual_post_kit={
+            "drive_sync": {
+                "status": "synced",
+                "synced_at": "2026-05-17T13:00:00+00:00",
+                "web_view_link": "https://drive.google.com/file/d/synced/view",
+            }
+        },
+    )
+
+    deck = client.get("/", headers=_auth())
+    aurora = client.get("/aurora", headers=_auth())
+
+    assert deck.status_code == 200
+    assert aurora.status_code == 200
+    deck_lane = _section_after_eyebrow(deck.text, "Captain Attention Lane")
+    aurora_lane = _section_after_eyebrow(aurora.text, "Captain Attention Lane")
+    assert "1 manual posting handoff needs queue follow-through." in deck_lane
+    assert "Kit synced, not posted" in deck_lane
+    assert "synced kit mission" in deck_lane
+    assert "/aurora/manual-posting?lane=kit_synced" in deck_lane
+    assert "Open manual queue" in deck_lane
+    assert "Kit synced, not posted" in aurora_lane
+
+
 def test_captains_deck_surfaces_manual_closeout_attention(tmp_path, client):
     _write_job(
         tmp_path,
@@ -3626,6 +3655,11 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     assert "Wait for queued tracking snapshot at 2026-05-18T14:00:00Z." in resp.text
     assert "Review the performance proof and capture the learning note." in resp.text
     assert "Manual post is recorded, but no snapshot checks are queued." in resp.text
+    assert "Learning completion" in resp.text
+    assert "Waiting manual post" in resp.text
+    assert "Waiting tracking proof" in resp.text
+    assert "Ready for closeout" in resp.text
+    assert "Learning not ready" in resp.text
     assert "Kit synced, not posted" in resp.text
     assert "Manual posted, waiting tracking" in resp.text
     assert "Tracking complete" in resp.text
@@ -3748,6 +3782,8 @@ def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):
     page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
     assert page.status_code == 200
     assert "Needs Captain learning review" in page.text
+    assert "Closeout captured" in page.text
+    assert "Create the daily learning draft from this closed manual lesson." in page.text
     assert "Hook worked; keep the shorter CTA." in page.text
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Closed manual post for 20260512_complete" in work_activity

@@ -17,6 +17,7 @@ from routes._helpers import (
     _console_history,
     _find_job_at_root,
     _manual_closeout_undrafted_learning_rows,
+    _manual_posting_queue_rows,
     _update_daily_brief_draft_status,
     _write_manual_closeout_learning_draft,
     _write_work_event,
@@ -53,6 +54,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
     brief = command_brief(jobs)
     ships = fleet_status(jobs)
     learning_runbook = _captain_learning_runbook(root, jobs)
+    manual_posting_rows = _manual_posting_queue_rows(root)
     return templates.TemplateResponse(
         request,
         "captains_deck.html",
@@ -67,6 +69,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             "captain_action_console": _captain_action_console(root, jobs),
             "captain_attention_lane": _captain_attention_lane(
                 learning_runbook=learning_runbook,
+                manual_posting_rows=manual_posting_rows,
                 attention_items=signals,
                 active_items=active,
             ),

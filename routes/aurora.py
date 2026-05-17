@@ -140,6 +140,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
     signals = attention_jobs(jobs)
     active = active_jobs(jobs)
     learning_runbook = _captain_learning_runbook(root, jobs)
+    manual_posting_rows = _manual_posting_queue_rows(root)
     return templates.TemplateResponse(
         request,
         "aurora.html",
@@ -155,6 +156,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "captain_action_console": _captain_action_console(root, jobs),
             "captain_attention_lane": _captain_attention_lane(
                 learning_runbook=learning_runbook,
+                manual_posting_rows=manual_posting_rows,
                 attention_items=signals,
                 active_items=active,
             ),
