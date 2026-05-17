@@ -17,7 +17,7 @@
     <h2>Station order</h2>
   </div>
   <div class="crew-chain">
-    {% for member in crew %}
+    {% for member in crew if member.slug not in ["captain-nayz", "slay", "stadium"] %}
     <a class="crew-chain-step" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
       <span>{{ member.mission_phase }}</span>
       <strong>{{ member.workflow_stage }}</strong>
@@ -27,16 +27,29 @@
   </div>
 </section>
 
-<section class="crew-grid">
-  {% for member in crew %}
-  <a class="crew-card" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
-    <img class="crew-portrait" src="{{ member.image }}" alt="{{ member.name }}">
-    <p class="eyebrow">{{ member.ship_role }}</p>
-    <h2>{{ member.name }}</h2>
-    <span class="role-pill">{{ member.operational_role }}</span>
-    <span class="crew-station">{{ member.station }}</span>
-    <p>{{ member.summary }}</p>
-  </a>
+<div class="crew-section-stack">
+  {% for group in crew_groups %}
+  <section class="crew-section">
+    <div class="section-heading crew-section-heading">
+      <div>
+        <p class="eyebrow">{{ group.eyebrow }}</p>
+        <h2>{{ group.title }}</h2>
+      </div>
+      <p>{{ group.description }}</p>
+    </div>
+    <div class="crew-grid crew-grid-{{ group.members | length }}">
+      {% for member in group.members %}
+      <a class="crew-card" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
+        <img class="crew-portrait" src="{{ member.image }}" alt="{{ member.name }}">
+        <p class="eyebrow">{{ member.ship_role }}</p>
+        <h2>{{ member.name }}</h2>
+        <span class="role-pill">{{ member.operational_role }}</span>
+        <span class="crew-station">{{ member.station }}</span>
+        <p>{{ member.summary }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
   {% endfor %}
-</section>
+</div>
 {% endblock %}

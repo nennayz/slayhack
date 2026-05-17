@@ -23,6 +23,7 @@ class PageCheck:
     path: str
     required_text: tuple[str, ...]
     min_links: int = 1
+    forbidden_text: tuple[str, ...] = ()
 
 
 class DashboardHTMLParser(HTMLParser):
@@ -121,7 +122,12 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
         PageCheck("aurora", "/aurora", ("The Aurora", "Approval queue", "Generation queue")),
         PageCheck("daily_slate", "/aurora/daily-slate", ("PM Command Slate", "Next best ticket", "Approval queue")),
         PageCheck("approval_queue", "/aurora/approval-queue", ("Ready but Not Published", "Command lanes", "Approval route")),
-        PageCheck("crew", "/aurora/crew", ("Crew Stations", "Aurora route map", "Workflow route")),
+        PageCheck(
+            "crew",
+            "/aurora/crew",
+            ("Crew Stations", "Aurora route map", "Fleet Command", "Page PMs", "Aurora Production Route", "Learning Loop", "Captain Nayz", "Stadium"),
+            forbidden_text=("video-producer.svg",),
+        ),
         PageCheck("crew_detail", "/aurora/crew/robin", ("Back to crew deck", "Station handoff", "Robin")),
         PageCheck("ops", "/ops", ("Ops", "Production controls", "Ops summary")),
     ]
@@ -150,13 +156,15 @@ def _analyze_html(page: PageCheck, status_code: int, html: str) -> dict[str, Any
     parser = DashboardHTMLParser()
     parser.feed(html)
     missing = [item for item in page.required_text if item not in parser.text]
+    forbidden = [item for item in page.forbidden_text if item in html or item in parser.text]
     duplicate_headings = sorted({heading for heading in parser.headings if parser.headings.count(heading) > 1})
     return {
         "name": page.name,
         "path": page.path,
         "status_code": status_code,
-        "ok": status_code == 200 and not missing and len(parser.links) >= page.min_links,
+        "ok": status_code == 200 and not missing and not forbidden and len(parser.links) >= page.min_links,
         "missing_text": missing,
+        "forbidden_text": forbidden,
         "links": len(parser.links),
         "forms": len(parser.forms),
         "buttons": len(parser.buttons),
@@ -177,6 +185,7 @@ def _css_checks(root: Path) -> dict[str, Any]:
         "approval_lane_mobile": r"\.approval-lane-board",
         "next_action_mobile": r"\.next-action-panel",
         "workflow_blocks_mobile": r"\.workflow-block summary",
+        "crew_sections_mobile": r"\.crew-section-heading",
         "crew_mobile": r"\.crew-grid",
         "no_negative_tracking": r"letter-spacing:\s*-\d",
     }
@@ -229,6 +238,8 @@ def _print_text(report: dict[str, Any]) -> None:
         )
         if page["missing_text"]:
             print(f"  missing={', '.join(page['missing_text'])}")
+        if page["forbidden_text"]:
+            print(f"  forbidden={', '.join(page['forbidden_text'])}")
         if page["duplicate_headings"]:
             print(f"  duplicate_headings={', '.join(page['duplicate_headings'])}")
     css_state = "pass" if report["css"]["ok"] else "fail"

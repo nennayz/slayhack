@@ -1019,8 +1019,15 @@ def test_aurora_crew_pages_render(client):
     assert "/static/crew/sage-ledger.png" in crew.text
     assert "Crew Stations" in crew.text
     assert "Aurora route map" in crew.text
+    assert "Fleet Command" in crew.text
+    assert "Page PMs" in crew.text
+    assert "Aurora Production Route" in crew.text
+    assert "Learning Loop" in crew.text
+    assert "Captain direction" in crew.text
+    assert "Island owners" in crew.text
     assert "Mission command" in crew.text
     assert "Captain&#39;s Bridge" in crew.text
+    assert "video-producer.svg" not in crew.text
     assert detail.status_code == 200
     assert "Chief Officer" in detail.text
     assert "Back to crew deck" in detail.text

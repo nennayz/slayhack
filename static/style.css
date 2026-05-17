@@ -1396,6 +1396,33 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .crew-grid {
   grid-template-columns: repeat(4, 1fr);
 }
+.crew-section-stack {
+  display: grid;
+  gap: 1rem;
+}
+.crew-section {
+  background: rgba(255,255,255,0.58);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 1rem;
+}
+.crew-section-heading {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(180px, 0.45fr) minmax(0, 1fr);
+}
+.crew-section-heading p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+.crew-grid-1 {
+  grid-template-columns: minmax(260px, 0.5fr);
+}
+.crew-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .route-panel {
   margin-bottom: 1rem;
 }
@@ -1728,6 +1755,7 @@ a:hover { color: var(--navy-soft); }
   .output-grid,
   .readiness-grid,
   .domain-grid,
+  .crew-section-heading,
   .crew-chain,
   .crew-grid {
     grid-template-columns: 1fr;
@@ -1803,6 +1831,10 @@ a:hover { color: var(--navy-soft); }
   .stat-card,
   .crew-card {
     border-radius: 16px;
+  }
+  .crew-section {
+    border-radius: 16px;
+    padding: 0.85rem;
   }
   .crew-grid {
     gap: 0.85rem;
