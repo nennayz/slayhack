@@ -1816,6 +1816,19 @@ def _find_video_ticket(slate: CalendarSlate | None, ticket_id: str) -> Productio
     return None
 
 
+def _find_slate_ticket(slate: CalendarSlate | None, ticket_id: str) -> ProductionTicket | None:
+    if slate is None:
+        return None
+    for ticket in slate.tickets:
+        if ticket.ticket_id == ticket_id:
+            return ticket
+    return None
+
+
+def _ticket_payload(ticket: ProductionTicket) -> dict[str, object]:
+    return ticket.model_dump(mode="json")
+
+
 def _video_package_payload(package: VideoProductionPackage) -> dict[str, object]:
     return package.model_dump(mode="json")
 
@@ -2387,6 +2400,25 @@ def _video_package_job(root: Path, ticket: ProductionTicket, package: VideoProdu
     return job
 
 
+def _slate_ticket_job(root: Path, ticket: ProductionTicket) -> ContentJob:
+    pm = load_project(ticket.project, root=root)
+    suffix = _safe_job_suffix(ticket.ticket_id)
+    content_label = ticket.ticket_type.value.replace("_", " ")
+    job = ContentJob(
+        id=f"{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{suffix}",
+        project=ticket.project,
+        pm=pm,
+        brief=f"Daily slate {content_label} mission: {ticket.title}",
+        platforms=ticket.platforms,
+        stage="slate_ticket_ready",
+        status=JobStatus.RUNNING,
+        dry_run=True,
+        content_type=ticket.content_type,
+        production_ticket=_ticket_payload(ticket),
+    )
+    return job
+
+
 def _create_video_package_mission(root: Path, project_slug: str, ticket_id: str) -> ContentJob:
     slate = _calendar_slate(root, project_slug)
     ticket = _find_video_ticket(slate, ticket_id)
@@ -2396,6 +2428,18 @@ def _create_video_package_mission(root: Path, project_slug: str, ticket_id: str)
     if package is None:
         raise ValueError(f"Ticket {ticket_id!r} is not a video package")
     job = _video_package_job(root, ticket, package)
+    _save_job_at_root(root, job)
+    return job
+
+
+def _create_slate_ticket_mission(root: Path, project_slug: str, ticket_id: str) -> ContentJob:
+    slate = _calendar_slate(root, project_slug)
+    ticket = _find_slate_ticket(slate, ticket_id)
+    if ticket is None:
+        raise ValueError(f"Production ticket {ticket_id!r} not found")
+    if ticket.ticket_type in {ProductionTicketType.SHORT_VIDEO, ProductionTicketType.LONG_VIDEO}:
+        return _create_video_package_mission(root, project_slug, ticket_id)
+    job = _slate_ticket_job(root, ticket)
     _save_job_at_root(root, job)
     return job
 
@@ -2540,7 +2584,9 @@ def _ticket_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
     return [
         {
             "ticket_id": ticket.ticket_id,
+            "project": ticket.project,
             "ticket_type": ticket.ticket_type.value.replace("_", " "),
+            "content_type": ticket.content_type.value,
             "title": ticket.title,
             "owner": ticket.owner,
             "decision_owner": ticket.decision_owner,
@@ -2551,6 +2597,8 @@ def _ticket_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
             "storyboard_count": len(ticket.storyboard),
             "acceptance_count": len(ticket.acceptance_criteria),
             "asset_count": len(ticket.asset_requirements),
+            "create_mission_url": f"/aurora/daily-slate/{ticket.project}/tickets/{ticket.ticket_id}/create-mission",
+            "create_label": f"Create {ticket.ticket_type.value.replace('_', ' ')} mission",
         }
         for ticket in slate.tickets
     ]
@@ -2569,13 +2617,17 @@ def _slate_counts(slate: CalendarSlate | None) -> dict[str, int]:
 def _mission_ticket_index(root: Path) -> dict[str, dict[str, str]]:
     index: dict[str, dict[str, str]] = {}
     for job in list_all_jobs(root):
-        package = getattr(job, "video_package", None)
-        if not isinstance(package, dict):
+        ticket_source = getattr(job, "production_ticket", None)
+        if not isinstance(ticket_source, dict):
+            ticket_source = getattr(job, "video_package", None)
+        if not isinstance(ticket_source, dict):
             continue
-        ticket_id = str(package.get("ticket_id") or "")
-        if not ticket_id or ticket_id in index:
+        ticket_id = str(ticket_source.get("ticket_id") or "")
+        project = resolve_project_slug(str(ticket_source.get("project") or job.project), root=root)
+        index_key = f"{project}:{ticket_id}"
+        if not ticket_id or index_key in index:
             continue
-        index[ticket_id] = {
+        index[index_key] = {
             "job_id": job.id,
             "mission_url": f"/jobs/{job.id}",
             "mission_status": getattr(job.status, "value", str(job.status)).replace("_", " "),
@@ -2588,7 +2640,8 @@ def _annotate_ticket_missions(tickets: list[dict[str, object]], mission_index: d
     annotated = []
     for ticket in tickets:
         row = dict(ticket)
-        mission = mission_index.get(str(ticket.get("ticket_id") or ""))
+        index_key = f"{ticket.get('project')}:{ticket.get('ticket_id')}"
+        mission = mission_index.get(index_key)
         row["has_mission"] = mission is not None
         row["mission"] = mission
         annotated.append(row)
@@ -2611,7 +2664,8 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
         tickets = _annotate_ticket_missions(_ticket_rows(slate), mission_index)
         video_packages = _daily_slate_video_package_rows(slate)
         for package in video_packages:
-            mission = mission_index.get(str(package.get("ticket_id") or ""))
+            index_key = f"{slate.project}:{package.get('ticket_id')}"
+            mission = mission_index.get(index_key)
             package["has_mission"] = mission is not None
             package["mission"] = mission
         cards.append(
@@ -2626,7 +2680,7 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
                 "ticket_count": len(tickets),
                 "tickets": tickets,
                 "next_ticket": _next_slate_ticket(tickets),
-                "next_package": next((package for package in video_packages if not package.get("has_mission")), video_packages[0] if video_packages else None),
+                "next_package": next((package for package in video_packages if not package.get("has_mission")), None),
                 "video_packages": video_packages,
                 "qa_status": _qa_status(slate),
             }
@@ -3134,6 +3188,36 @@ def create_daily_slate_video_package_mission(
         actor=user,
         result=f"{project_slug}:{ticket_id}",
         next_action="Mark ready for generation after Nora review.",
+        metadata={"job_id": job.id, "project": project_slug, "ticket_id": ticket_id},
+    )
+    return RedirectResponse(f"/jobs/{job.id}", status_code=303)
+
+
+@app.post("/aurora/daily-slate/{project_slug}/tickets/{ticket_id}/create-mission")
+def create_daily_slate_ticket_mission(
+    project_slug: str,
+    ticket_id: str,
+    request: Request,
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        project_slug = resolve_project_slug(project_slug, root=root)
+        job = _create_slate_ticket_mission(root, project_slug, ticket_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    next_action = (
+        "Mark ready for generation after Nora review."
+        if job.content_type == ContentType.VIDEO
+        else "Open the mission and run the appropriate content workflow."
+    )
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Created daily slate ticket mission {job.id}",
+        actor=user,
+        result=f"{project_slug}:{ticket_id}",
+        next_action=next_action,
         metadata={"job_id": job.id, "project": project_slug, "ticket_id": ticket_id},
     )
     return RedirectResponse(f"/jobs/{job.id}", status_code=303)

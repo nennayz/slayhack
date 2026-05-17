@@ -69,7 +69,7 @@
     <div class="pm-action-panel">
       <div>
         <p class="eyebrow">PM action plan</p>
-        <strong>{{ "Open active mission" if slate.next_ticket and slate.next_ticket.has_mission else "Create next video mission" if slate.next_package else "Review slate coverage" }}</strong>
+        <strong>{{ "Open active mission" if slate.next_ticket and slate.next_ticket.has_mission else slate.next_ticket.create_label.title() if slate.next_ticket else "Review slate coverage" }}</strong>
         {% if slate.next_ticket %}
         <small>{{ slate.next_ticket.title }} - {{ slate.next_ticket.owner }} owns - {{ slate.next_ticket.decision_owner }} decides</small>
         {% else %}
@@ -79,9 +79,9 @@
       <div class="pm-action-buttons">
         {% if slate.next_ticket and slate.next_ticket.has_mission %}
         <a class="button button-secondary button-small" href="{{ slate.next_ticket.mission.mission_url }}">Open active mission</a>
-        {% elif slate.next_package %}
-        <form class="inline-form compact-action-form" method="post" action="{{ slate.next_package.daily_create_mission_url }}">
-          <button type="submit">Create next video mission</button>
+        {% elif slate.next_ticket %}
+        <form class="inline-form compact-action-form" method="post" action="{{ slate.next_ticket.create_mission_url }}">
+          <button type="submit">{{ slate.next_ticket.create_label }}</button>
         </form>
         {% endif %}
         <a class="button button-secondary button-small" href="/aurora/approval-queue">Queue</a>
@@ -119,7 +119,9 @@
           {% if ticket.has_mission %}
           <a class="mission-chip" href="{{ ticket.mission.mission_url }}">Mission exists - {{ ticket.mission.job_id }} - {{ ticket.mission.mission_stage }}</a>
           {% else %}
-          <small class="mission-chip muted">No mission yet</small>
+          <form class="inline-form compact-action-form" method="post" action="{{ ticket.create_mission_url }}">
+            <button type="submit">{{ ticket.create_label }}</button>
+          </form>
           {% endif %}
         </div>
         {% endfor %}
