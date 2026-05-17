@@ -565,7 +565,8 @@ def test_learning_runbook_create_draft_action_writes_draft_without_publish_side_
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/aurora"
+    assert resp.headers["location"].startswith("/aurora?runbook_result=")
+    assert "Created%20draft%3A%20docs%2Flearning%2Fdaily%2F" in resp.headers["location"]
     draft = (tmp_path / "docs" / "learning" / "daily" / f"{today}-manual-posting-lessons.md").read_text()
     assert "status: draft" in draft
     assert "created_by: admin" in draft
@@ -576,6 +577,10 @@ def test_learning_runbook_create_draft_action_writes_draft_without_publish_side_
     assert saved.get("publish_execution") is None
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Created manual posting daily learning draft from runbook" in work_activity
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Runbook action result" in page.text
+    assert f"Created draft: docs/learning/daily/{today}-manual-posting-lessons.md" in page.text
 
 
 def test_learning_runbook_accept_action_updates_draft_status(tmp_path, client):
@@ -601,12 +606,16 @@ def test_learning_runbook_accept_action_updates_draft_status(tmp_path, client):
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/aurora"
+    assert resp.headers["location"] == "/aurora?runbook_result=Accepted%20artifact%3A%20docs%2Flearning%2Fdaily%2F2026-05-17-manual-posting-lessons.md"
     updated = draft_path.read_text()
     assert "status: accepted" in updated
     assert "reviewed_by: admin" in updated
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Accepted daily learning draft from runbook" in work_activity
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Runbook action result" in page.text
+    assert "Accepted artifact: docs/learning/daily/2026-05-17-manual-posting-lessons.md" in page.text
 
 
 def test_learning_runbook_accept_action_blocks_missing_source_ids(tmp_path, client):
@@ -658,7 +667,7 @@ def test_learning_runbook_apply_action_writes_mission_without_publish_side_effec
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/"
+    assert resp.headers["location"].startswith("/?runbook_result=Applied%20mission%3A%20")
     created = json.loads(next((tmp_path / "output").rglob("*/job.json")).read_text())
     accepted_learning = created["video_package"]["accepted_learning"]
     assert accepted_learning["status"] == "applied"
@@ -667,6 +676,11 @@ def test_learning_runbook_apply_action_writes_mission_without_publish_side_effec
     assert created["publish_execution"] is None
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Applied accepted learning from runbook" in work_activity
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Runbook action result" in page.text
+    assert f"Applied mission: {created['id']}" in page.text
+    assert "slay_hack:" in page.text
 
 
 def test_learning_runbook_confirm_action_writes_confirmation_only(tmp_path, client):
@@ -693,7 +707,7 @@ def test_learning_runbook_confirm_action_writes_confirmation_only(tmp_path, clie
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == "/aurora"
+    assert resp.headers["location"] == "/aurora?runbook_result=Confirmed%20mission%3A%2020260512_learning"
     saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_learning" / "job.json").read_text())
     learning = saved["video_package"]["accepted_learning"]
     assert learning["status"] == "confirmed"
@@ -702,6 +716,10 @@ def test_learning_runbook_confirm_action_writes_confirmation_only(tmp_path, clie
     assert saved["publish_result"] is None
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Confirmed accepted learning from runbook" in work_activity
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert "Runbook action result" in page.text
+    assert "Confirmed mission: 20260512_learning" in page.text
 
 
 def test_learning_runbook_proof_shows_latest_runbook_action(tmp_path, client):

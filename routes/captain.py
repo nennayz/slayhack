@@ -1,6 +1,8 @@
 """Captain's Deck route — /"""
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -35,6 +37,10 @@ def _runbook_return_path(value: str) -> str:
     return "/"
 
 
+def _runbook_redirect_path(value: str, result: str) -> str:
+    return f"{_runbook_return_path(value)}?runbook_result={quote(result, safe='')}"
+
+
 @router.get("/", response_class=HTMLResponse)
 def captains_deck(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
@@ -58,6 +64,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             "performance": performance,
             "captain_action_console": _captain_action_console(root, jobs),
             "learning_runbook": _captain_learning_runbook(root, jobs),
+            "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,
                 station=request.query_params.get("history_station", "all"),
@@ -89,7 +96,7 @@ def learning_runbook_create_draft(
         next_action="Accept the daily learning draft before applying it to the next mission.",
         metadata={"source_job_ids": draft["source_job_ids"]},
     )
-    return RedirectResponse(_runbook_return_path(return_path), status_code=303)
+    return RedirectResponse(_runbook_redirect_path(return_path, f"Created draft: {draft['path']}"), status_code=303)
 
 
 @router.post("/learning-runbook/accept-draft")
@@ -115,7 +122,7 @@ def learning_runbook_accept_draft(
         next_action="Apply accepted learning to the next Daily Slate mission.",
         metadata={"source_job_ids": result["source_job_ids"]},
     )
-    return RedirectResponse(_runbook_return_path(return_path), status_code=303)
+    return RedirectResponse(_runbook_redirect_path(return_path, f"Accepted artifact: {result['path']}"), status_code=303)
 
 
 @router.post("/learning-runbook/apply-learning")
@@ -145,7 +152,10 @@ def learning_runbook_apply_learning(
             "created": result["created"],
         },
     )
-    return RedirectResponse(_runbook_return_path(return_path), status_code=303)
+    return RedirectResponse(
+        _runbook_redirect_path(return_path, f"Applied mission: {result['job_id']} ({result['project']}:{result['ticket_id']})"),
+        status_code=303,
+    )
 
 
 @router.post("/learning-runbook/confirm-learning")
@@ -173,4 +183,4 @@ def learning_runbook_confirm_learning(
         next_action="Crew can use the confirmed learning in safe generation execution.",
         metadata=result,
     )
-    return RedirectResponse(_runbook_return_path(return_path), status_code=303)
+    return RedirectResponse(_runbook_redirect_path(return_path, f"Confirmed mission: {job_id}"), status_code=303)

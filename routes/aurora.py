@@ -151,6 +151,7 @@ def aurora_overview(request: Request, _: str = Depends(verify_auth)):
             "crew": CREW[:4],
             "captain_action_console": _captain_action_console(root, jobs),
             "learning_runbook": _captain_learning_runbook(root, jobs),
+            "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,
                 station=request.query_params.get("history_station", "all"),
