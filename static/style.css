@@ -1966,6 +1966,36 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   color: var(--muted);
   line-height: 1.45;
 }
+.learning-runbook-proof {
+  background: rgba(16,35,63,0.04);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  padding: 1rem;
+}
+.learning-runbook-proof h3 {
+  margin: 0.1rem 0 0;
+}
+.learning-proof-grid {
+  display: grid;
+  gap: 0.45rem 0.9rem;
+  grid-template-columns: minmax(8rem, 0.34fr) minmax(0, 1fr);
+}
+.learning-proof-grid span,
+.learning-proof-grid small {
+  color: var(--muted);
+}
+.learning-proof-grid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.learning-proof-grid small {
+  display: block;
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
 .daily-brief-review-board {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2502,6 +2532,7 @@ a:hover { color: var(--navy-soft); }
   .daily-brief-review-board,
   .learning-planning-grid,
   .learning-execution-grid,
+  .learning-proof-grid,
   .learning-runbook-steps,
   .approval-lane-summary,
   .workflow-rail,

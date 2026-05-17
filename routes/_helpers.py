@@ -2385,6 +2385,56 @@ def _confirm_mission_learning(root: Path, job: ContentJob, *, actor: str) -> dic
     }
 
 
+_RUNBOOK_PROOF_EVENTS = (
+    ("Accepted daily learning draft from runbook", "accept", "Accepted draft"),
+    ("Applied accepted learning from runbook", "apply", "Applied lesson"),
+    ("Confirmed accepted learning from runbook", "confirm", "Confirmed mission"),
+)
+
+
+def _runbook_proof_action(summary: str) -> tuple[str, str] | None:
+    for prefix, action, label in _RUNBOOK_PROOF_EVENTS:
+        if summary.startswith(prefix):
+            return action, label
+    return None
+
+
+def _captain_learning_runbook_proof(root: Path, runbook: dict[str, object]) -> dict[str, object]:
+    for item in read_recent_work_activity(root, limit=120):
+        summary = str(item.get("summary", ""))
+        matched = _runbook_proof_action(summary)
+        if not matched:
+            continue
+        action, label = matched
+        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        source_job_ids = metadata.get("source_job_ids") if isinstance(metadata.get("source_job_ids"), list) else []
+        target_mission = str(metadata.get("job_id") or metadata.get("target_job_id") or "")
+        next_step = runbook.get("next_step") if isinstance(runbook.get("next_step"), dict) else None
+        next_missing = str(next_step.get("label")) if next_step else "None"
+        loop_state = str(runbook.get("state") or "")
+        return {
+            "present": True,
+            "action": action,
+            "action_label": label,
+            "summary": f"Loop clear after {label}" if not next_step else f"Last action: {label}",
+            "loop_state": loop_state,
+            "next_missing": next_missing,
+            "timestamp": str(item.get("timestamp") or ""),
+            "actor": str(item.get("actor") or ""),
+            "source_artifact": str(item.get("result") or ""),
+            "source_job_ids": [str(source_id) for source_id in source_job_ids],
+            "target_mission": target_mission,
+            "next_action": str(item.get("next_action") or ""),
+        }
+    next_step = runbook.get("next_step") if isinstance(runbook.get("next_step"), dict) else None
+    return {
+        "present": False,
+        "summary": "No runbook proof recorded yet.",
+        "loop_state": str(runbook.get("state") or ""),
+        "next_missing": str(next_step.get("label")) if next_step else "None",
+    }
+
+
 def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) -> dict[str, object]:
     jobs = jobs if jobs is not None else list_all_jobs(root)
     manual_rows = _manual_posting_queue_rows(root)
@@ -2484,13 +2534,15 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
     ]
 
     next_step = next((step for step in steps if step["status"] == "needs_action"), None)
-    return {
+    runbook = {
         "state": "Needs Captain" if next_step else "Learning loop clear",
         "summary": next_step["detail"] if next_step else "Closeout, draft review, apply, and confirmation gates are clear.",
         "next_step": next_step,
         "steps": steps,
         "applied_jobs": applied_jobs,
     }
+    runbook["proof"] = _captain_learning_runbook_proof(root, runbook)
+    return runbook
 
 
 def _build_voyage_steps(job) -> list[dict]:

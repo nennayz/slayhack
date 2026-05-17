@@ -20,6 +20,7 @@ def test_write_work_activity_sanitizes_and_reads_recent(tmp_path, monkeypatch):
         files=["dashboard.py"],
         result="310 passed",
         next_action="Deploy",
+        metadata={"token_echo": "secret-token", "count": 1},
     )
 
     path = tmp_path / "logs" / "work_activity.jsonl"
@@ -34,6 +35,7 @@ def test_write_work_activity_sanitizes_and_reads_recent(tmp_path, monkeypatch):
     assert rows[0]["command"] == "pytest <redacted>"
     assert rows[0]["files"] == ["dashboard.py"]
     assert rows[0]["result"] == "310 passed"
+    assert rows[0]["metadata"] == {"token_echo": "<redacted>", "count": 1}
 
 
 def test_write_work_activity_rejects_invalid_event_type(tmp_path):
