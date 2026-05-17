@@ -141,7 +141,10 @@ def test_dashboard_visual_qa_local_report_passes(tmp_path, monkeypatch):
         "mission_detail",
     }
     assert report["css"]["checks"]["mobile_media"] is True
+    assert report["css"]["checks"]["crew_sections_mobile"] is True
     assert report["css"]["checks"]["no_negative_tracking"] is True
+    crew = next(page for page in report["pages"] if page["name"] == "crew")
+    assert crew["forbidden_text"] == []
 
 
 def test_dashboard_visual_qa_reports_missing_required_text(tmp_path, monkeypatch):

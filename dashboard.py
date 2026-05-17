@@ -3113,7 +3113,38 @@ def create_daily_slate_video_package_mission(
 
 @app.get("/aurora/crew", response_class=HTMLResponse)
 def aurora_crew(request: Request, _: str = Depends(verify_auth)):
-    return templates.TemplateResponse(request, "crew.html", {"crew": CREW})
+    by_slug = {member.slug: member for member in CREW}
+
+    def members(slugs: list[str]) -> list:
+        return [by_slug[slug] for slug in slugs if slug in by_slug]
+
+    crew_groups = [
+        {
+            "eyebrow": "Fleet Command",
+            "title": "Captain direction",
+            "description": "Top-level owner authority and final taste/risk decisions for the whole Fleet.",
+            "members": members(["captain-nayz"]),
+        },
+        {
+            "eyebrow": "Page PMs",
+            "title": "Island owners",
+            "description": "Project managers who turn Captain intent into page-specific plans and approvals.",
+            "members": members(["slay", "stadium"]),
+        },
+        {
+            "eyebrow": "Aurora Production Route",
+            "title": "Build and package the mission",
+            "description": "The operating chain from mission command through creative production, QA, and community prep.",
+            "members": members(["robin", "mia", "zoe", "bella", "lila", "video-producer", "nora", "roxy", "emma"]),
+        },
+        {
+            "eyebrow": "Learning Loop",
+            "title": "Read, store, and improve",
+            "description": "Post-publish intelligence and durable lesson capture for the next cycle.",
+            "members": members(["iris-gauge", "sage-ledger"]),
+        },
+    ]
+    return templates.TemplateResponse(request, "crew.html", {"crew": CREW, "crew_groups": crew_groups})
 
 
 @app.get("/aurora/learning", response_class=HTMLResponse)
