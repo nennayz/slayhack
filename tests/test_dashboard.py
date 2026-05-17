@@ -39,7 +39,9 @@ def _write_job(tmp_path: Path, job_id: str, brief: str = "test brief",
                stage: str = "init", publish_result: dict | None = None,
                performance: list[dict] | None = None,
                manual_post_kit: dict | None = None,
-               published_at: str | None = None) -> None:
+               published_at: str | None = None,
+               video_package: dict | None = None,
+               production_ticket: dict | None = None) -> None:
     job = {
         "id": job_id, "project": "nayzfreedom_fleet", "pm": _make_pm_dict(page),
         "brief": brief, "platforms": ["facebook"], "status": status,
@@ -51,6 +53,10 @@ def _write_job(tmp_path: Path, job_id: str, brief: str = "test brief",
         job["manual_post_kit"] = manual_post_kit
     if published_at is not None:
         job["published_at"] = published_at
+    if video_package is not None:
+        job["video_package"] = video_package
+    if production_ticket is not None:
+        job["production_ticket"] = production_ticket
     job_dir = tmp_path / "output" / page / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
     (job_dir / "job.json").write_text(json.dumps(job))
@@ -208,6 +214,8 @@ def test_captains_deck_empty(client):
     assert "Shipyard" in resp.text
     assert "Harbor Gate" in resp.text
     assert "Captain Log" in resp.text
+    assert "Learning Runbook" in resp.text
+    assert "Learning loop clear" in resp.text
     assert "No missions yet" in resp.text
 
 
@@ -292,6 +300,9 @@ def test_captains_deck_surfaces_manual_closeout_attention(tmp_path, client):
     assert "Needs Captain" in resp.text
     assert "Close manual posting lessons before launching more manual handoffs." in resp.text
     assert "1 manual post ready for closeout." in resp.text
+    assert "Learning Runbook" in resp.text
+    assert "Capture closeout lesson" in resp.text
+    assert "Open manual closeout" in resp.text
     attention_section = resp.text.split("<h2>Needs attention</h2>", 1)[1].split("</article>", 1)[0]
     assert "manual closeout ready" in attention_section
     assert "manual closeout closed" not in attention_section
@@ -334,6 +345,83 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "station-icon" in resp.text
     assert "Captain Action Console" in resp.text
     assert "Command bridge actions" in resp.text
+    assert "Learning Runbook" in resp.text
+
+
+def test_learning_runbook_routes_to_daily_draft_review(tmp_path, client):
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: reviewed\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260516_manual\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+        "## Manual Posting Lessons\n\n"
+        "  - Lesson: Draft lesson needs Captain acceptance.\n"
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook" in resp.text
+    assert "Needs Captain" in resp.text
+    assert "Accept daily learning draft" in resp.text
+    assert "1 daily learning draft needs review." in resp.text
+    assert "Open learning desk" in resp.text
+    assert "/aurora/learning" in resp.text
+
+
+def test_learning_runbook_routes_to_apply_accepted_learning(tmp_path, client):
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: accepted\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260516_manual\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+        "## Manual Posting Lessons\n\n"
+        "  - Lesson: Accepted lesson is ready for planning.\n"
+    )
+
+    resp = client.get("/aurora", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Learning Runbook" in resp.text
+    assert "Apply learning to next mission" in resp.text
+    assert "Accepted learning is ready to apply to the next Daily Slate mission." in resp.text
+    assert "Open Daily Slate" in resp.text
+    assert "/aurora/daily-slate" in resp.text
+
+
+def test_learning_runbook_routes_to_unconfirmed_applied_mission(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_learning",
+        brief="applied learning mission",
+        video_package={
+            "ticket_id": "monday-short-video-1",
+            "accepted_learning": {
+                "status": "applied",
+                "source_artifacts": ["docs/learning/daily/2026-05-17-manual-posting-lessons.md"],
+                "source_job_ids": ["20260516_manual"],
+                "lessons": [{"category": "CTA", "note": "Short CTA got more saves."}],
+            },
+        },
+    )
+
+    resp = client.get("/", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Confirm learning before generation" in resp.text
+    assert "1 mission has applied learning waiting for planning confirmation." in resp.text
+    assert "Open mission" in resp.text
+    assert "/jobs/20260512_learning" in resp.text
 
 
 def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):

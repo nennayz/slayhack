@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 from routes.deps import templates, verify_auth, _root
 from routes._helpers import (
     _captain_action_console,
+    _captain_learning_runbook,
     _console_history,
     active_jobs,
     attention_jobs,
@@ -43,6 +44,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             "fleet_status": ships,
             "performance": performance,
             "captain_action_console": _captain_action_console(root, jobs),
+            "learning_runbook": _captain_learning_runbook(root, jobs),
             "captain_action_history": _console_history(
                 root,
                 station=request.query_params.get("history_station", "all"),

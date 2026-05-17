@@ -2385,6 +2385,98 @@ def _confirm_mission_learning(root: Path, job: ContentJob, *, actor: str) -> dic
     }
 
 
+def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) -> dict[str, object]:
+    jobs = jobs if jobs is not None else list_all_jobs(root)
+    manual_rows = _manual_posting_queue_rows(root)
+    closeout_rows = [row for row in manual_rows if row.get("can_closeout")]
+    registry = _daily_brief_draft_registry(root)
+    draft_rows = [
+        row
+        for row in registry["rows"]
+        if row.get("status") in {"draft", "reviewed", "legacy", "needs_edits"}
+    ]
+    accepted_intake = _accepted_learning_intake(root)
+    accepted_source_ids = set(str(item) for item in accepted_intake.get("source_job_ids", []))
+    applied_jobs = []
+    unconfirmed_jobs = []
+    for job in jobs:
+        learning = _accepted_learning_for_job(job)
+        if not learning.get("present"):
+            continue
+        source_ids = set(str(item) for item in learning.get("source_job_ids", []))
+        if not accepted_source_ids or source_ids & accepted_source_ids:
+            applied_jobs.append({"job_id": job.id, "brief": job.brief, "url": f"/jobs/{job.id}", "learning": learning})
+        if not learning.get("confirmed"):
+            unconfirmed_jobs.append({"job_id": job.id, "brief": job.brief, "url": f"/jobs/{job.id}", "learning": learning})
+
+    accepted_waiting_apply = bool(accepted_intake.get("artifacts")) and not applied_jobs
+    steps = [
+        {
+            "key": "capture_closeout",
+            "label": "Capture closeout lesson",
+            "status": "needs_action" if closeout_rows else "clear",
+            "count": len(closeout_rows),
+            "detail": (
+                f"{len(closeout_rows)} manual post needs closeout learning."
+                if closeout_rows
+                else "No tracking-complete manual post is waiting for closeout."
+            ),
+            "action_label": "Open manual closeout",
+            "action_url": "/aurora/manual-posting?lane=tracking_complete",
+        },
+        {
+            "key": "accept_draft",
+            "label": "Accept daily learning draft",
+            "status": "needs_action" if draft_rows else "clear",
+            "count": len(draft_rows),
+            "detail": (
+                f"{len(draft_rows)} daily learning draft needs review."
+                if draft_rows
+                else "No daily learning draft is waiting for Captain review."
+            ),
+            "action_label": "Open learning desk",
+            "action_url": "/aurora/learning",
+        },
+        {
+            "key": "apply_learning",
+            "label": "Apply learning to next mission",
+            "status": "needs_action" if accepted_waiting_apply else "clear",
+            "count": len(accepted_intake.get("artifacts", [])),
+            "detail": (
+                "Accepted learning is ready to apply to the next Daily Slate mission."
+                if accepted_waiting_apply
+                else "No accepted learning artifact is waiting for mission application."
+            ),
+            "action_label": "Open Daily Slate",
+            "action_url": "/aurora/daily-slate",
+        },
+        {
+            "key": "confirm_learning",
+            "label": "Confirm learning before generation",
+            "status": "needs_action" if unconfirmed_jobs else "clear",
+            "count": len(unconfirmed_jobs),
+            "detail": (
+                f"{len(unconfirmed_jobs)} mission has applied learning waiting for planning confirmation."
+                if len(unconfirmed_jobs) == 1
+                else f"{len(unconfirmed_jobs)} missions have applied learning waiting for planning confirmation."
+                if unconfirmed_jobs
+                else "No mission is blocked by unconfirmed learning."
+            ),
+            "action_label": "Open mission",
+            "action_url": unconfirmed_jobs[0]["url"] if unconfirmed_jobs else "/aurora/generation",
+        },
+    ]
+
+    next_step = next((step for step in steps if step["status"] == "needs_action"), None)
+    return {
+        "state": "Needs Captain" if next_step else "Learning loop clear",
+        "summary": next_step["detail"] if next_step else "Closeout, draft review, apply, and confirmation gates are clear.",
+        "next_step": next_step,
+        "steps": steps,
+        "applied_jobs": applied_jobs,
+    }
+
+
 def _build_voyage_steps(job) -> list[dict]:
     order = [step.stage for step in WORKFLOW_STEPS]
     current_index = order.index(job.stage) if job.stage in order else 0

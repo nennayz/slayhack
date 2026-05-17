@@ -1,0 +1,26 @@
+<section class="learning-runbook panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Learning Runbook</p>
+      <h2>{{ learning_runbook.state }}</h2>
+    </div>
+    <p>{{ learning_runbook.summary }}</p>
+  </div>
+  <div class="learning-runbook-steps">
+    {% for step in learning_runbook.steps %}
+    <article class="learning-runbook-step {{ step.status }}">
+      <span class="badge badge-ops-{{ 'missing' if step.status == 'needs_action' else 'ready' }}">{{ step.count }}</span>
+      <strong>{{ step.label }}</strong>
+      <small>{{ step.detail }}</small>
+      {% if step.status == "needs_action" %}
+      <a class="button button-small" href="{{ step.action_url }}">{{ step.action_label }}</a>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+  {% if learning_runbook.next_step %}
+  <div class="inline-actions">
+    <a class="button" href="{{ learning_runbook.next_step.action_url }}">{{ learning_runbook.next_step.action_label }}</a>
+  </div>
+  {% endif %}
+</section>

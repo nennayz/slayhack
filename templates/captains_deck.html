@@ -27,6 +27,8 @@
 
 {% include "_captain_action_console.html" %}
 
+{% include "_learning_runbook.html" %}
+
 <section class="ship-grid">
   {% for ship in fleet_status %}
   <a class="ship-card {{ ship.css_class }}" href="{{ ship.href }}">
