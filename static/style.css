@@ -406,6 +406,69 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   width: 78px;
 }
 
+.captain-action-console {
+  margin-bottom: 1.5rem;
+}
+.captain-action-console > .section-heading {
+  align-items: end;
+  margin-bottom: 0.85rem;
+}
+.captain-action-console > .section-heading > p {
+  color: var(--muted);
+  max-width: 460px;
+}
+.captain-action-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.captain-action-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.9), rgba(246,239,224,0.66));
+  border: 1px solid rgba(208,160,84,0.24);
+  border-radius: 16px;
+  box-shadow: 0 12px 26px rgba(16,35,63,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 232px;
+  padding: 0.9rem;
+}
+.captain-action-heading {
+  align-items: flex-start;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.captain-action-heading .badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.captain-action-card h3 {
+  font-size: 1rem;
+  line-height: 1.35;
+  margin: 0;
+}
+.captain-action-card p:not(.eyebrow) {
+  color: var(--muted);
+  flex: 1;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+.captain-action-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.captain-action-controls .button,
+.captain-action-controls button {
+  min-height: 38px;
+}
+.captain-action-controls .button-secondary {
+  background: rgba(16,35,63,0.04);
+}
+
 .button,
 button[type="submit"] {
   background: var(--navy);
@@ -2145,6 +2208,7 @@ a:hover { color: var(--navy-soft); }
   }
   .ship-grid,
   .daily-slate-grid,
+  .captain-action-grid,
   .next-action-panel,
   .approval-lane-board,
   .approval-lane-summary,
@@ -2185,6 +2249,7 @@ a:hover { color: var(--navy-soft); }
   .video-package-grid,
   .video-package-detail,
   .artifact-grid,
+  .captain-action-heading,
   .approval-queue-row,
   .slate-counts,
   .workflow-stats,

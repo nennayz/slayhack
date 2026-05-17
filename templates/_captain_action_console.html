@@ -1,0 +1,36 @@
+<section class="captain-action-console">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Captain Action Console</p>
+      <h2>Command bridge actions</h2>
+    </div>
+    <p>Safe next moves across planning, generation, approval, and learning.</p>
+  </div>
+  <div class="captain-action-grid">
+    {% for item in captain_action_console %}
+    <article class="captain-action-card station-{{ item.station_key }}">
+      <div class="captain-action-heading">
+        <span class="station-icon" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow">{{ item.station }}</p>
+          <h3>{{ item.title }}</h3>
+        </div>
+        <em class="badge badge-ops-{{ item.state }}">{{ item.risk_label }}</em>
+      </div>
+      <p>{{ item.detail }}</p>
+      <div class="captain-action-controls">
+        {% if item.action.method == "post" %}
+        <form class="inline-form compact-action-form" method="post" action="{{ item.action.url }}">
+          <button type="submit">{{ item.action.label }}</button>
+        </form>
+        {% else %}
+        <a class="button" href="{{ item.action.url }}">{{ item.action.label }}</a>
+        {% endif %}
+        {% if item.secondary_url %}
+        <a class="button button-secondary" href="{{ item.secondary_url }}">{{ item.secondary_label }}</a>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
