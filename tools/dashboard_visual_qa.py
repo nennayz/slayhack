@@ -142,11 +142,8 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
                     "Manual Post Kit",
                     "Download manual kit",
                     "Workflow stage",
-                    "Video Package",
-                    "Generation",
-                    "Roxy + Emma Package",
-                    "Captain Approval",
-                    "Publish Handoff",
+                    "Cargo checklist",
+                    "Output readiness",
                     "Artifacts",
                 ),
             )
