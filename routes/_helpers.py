@@ -1991,11 +1991,87 @@ def _manual_closeout_learning_brief_intake(rows: list[dict[str, object]]) -> str
         lines.extend(
             [
                 f"- {row['page_name']} / {platforms}: {row['brief']}",
+                f"  - Source job: {row['job_id']}",
                 f"  - Lesson: {row['learning_note']}",
                 f"  - Proof: post URL={row['proof_summary']['post_url_present']}, 24h={row['proof_summary']['snapshot_24h_present']}, 72h={row['proof_summary']['snapshot_72h_present']}",
             ]
         )
     return "\n".join(lines)
+
+
+def _manual_closeout_learning_draft_body(rows: list[dict[str, object]], today: date | None = None) -> str:
+    today = today or date.today()
+    intake = _manual_closeout_learning_brief_intake(rows)
+    source_ids = ", ".join(str(row["job_id"]) for row in rows) if rows else "none"
+    return "\n".join(
+        [
+            f"# Daily Learning Brief - {today.isoformat()}",
+            "",
+            "## Captain Intent",
+            "",
+            "- Main goal: Turn closed manual posting lessons into the next Aurora operating decisions.",
+            "- Active ship/page/project: NayzFreedom Fleet / Aurora / SlayHack",
+            "- Today's mode: learn",
+            "- Do not touch: live publish APIs or existing daily learning files.",
+            "",
+            "## What Nayz Asked For",
+            "",
+            "- Create a durable draft from manual posting closeout lessons.",
+            "",
+            intake,
+            "",
+            "## System Lessons",
+            "",
+            "- Manual posting closeout should preserve source job IDs, proof state, and the Captain learning note.",
+            "",
+            "## Operational Lessons",
+            "",
+            "- Source job IDs: " + source_ids,
+            "",
+            "## What Sage Should Store",
+            "",
+            "- Store the manual posting lesson notes only after Captain review.",
+            "",
+            "## What Iris Should Check Later",
+            "",
+            "- Compare future post performance against the closed manual lessons listed above.",
+            "",
+            "## What Should Stay Private Or Unstored",
+            "",
+            "- Do not store credentials, unpublished drafts, or platform tokens.",
+            "",
+            "## Tomorrow's Suggested Route",
+            "",
+            "1. Review the manual posting lessons.",
+            "2. Apply the strongest lesson to the next Daily Slate item.",
+            "3. Keep live publishing locked unless Captain Nayz explicitly opens it.",
+            "",
+        ]
+    )
+
+
+def _manual_closeout_learning_draft_path(root: Path, today: date | None = None) -> Path:
+    today = today or date.today()
+    daily_dir = root / "docs" / "learning" / "daily"
+    stem = f"{today.isoformat()}-manual-posting-lessons"
+    candidate = daily_dir / f"{stem}.md"
+    index = 2
+    while candidate.exists():
+        candidate = daily_dir / f"{stem}-{index}.md"
+        index += 1
+    return candidate
+
+
+def _write_manual_closeout_learning_draft(root: Path, rows: list[dict[str, object]]) -> dict[str, object]:
+    path = _manual_closeout_learning_draft_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = _manual_closeout_learning_draft_body(rows)
+    path.write_text(body, encoding="utf-8")
+    return {
+        "path": str(path.relative_to(root)),
+        "body": body,
+        "source_job_ids": [str(row["job_id"]) for row in rows],
+    }
 
 
 def _build_voyage_steps(job) -> list[dict]:

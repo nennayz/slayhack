@@ -1883,6 +1883,9 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
+.learning-draft-actions {
+  margin-bottom: 1rem;
+}
 .manual-learning-row {
   background: rgba(255,255,255,0.72);
   border: 1px solid var(--line);

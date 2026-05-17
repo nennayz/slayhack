@@ -4,6 +4,7 @@ import html
 import json
 import os
 import sys
+from datetime import date
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -1489,12 +1490,81 @@ def test_aurora_learning_page_surfaces_manual_closeout_lessons(tmp_path, client)
     assert "Daily Learning Brief intake" in resp.text
     assert "manual lesson mission" in resp.text
     assert "Short CTA got more saves." in resp.text
+    assert "Create daily brief draft" in resp.text
+    assert "Draft preview" in resp.text
     assert "Post URL" in resp.text
     assert "24h proof" in resp.text
     assert "72h proof" in resp.text
     assert "## Manual Posting Lessons" in resp.text
     assert "Slayhack / instagram: manual lesson mission" in resp.text
+    assert "Source job: 20260512_lesson" in resp.text
     assert "Proof: post URL=True, 24h=True, 72h=True" in resp.text
+
+
+def test_aurora_learning_daily_brief_draft_writes_unique_file(tmp_path, client):
+    today = date.today().isoformat()
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / f"{today}-manual-posting-lessons.md").write_text("existing draft")
+    _write_job(
+        tmp_path,
+        "20260512_lesson",
+        brief="manual lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "drive_synced": True,
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+        performance=[
+            {"platform": "instagram", "reach": 100, "recorded_at": "2026-05-18T14:00:00+00:00"},
+            {"platform": "instagram", "reach": 180, "recorded_at": "2026-05-20T14:00:00+00:00"},
+        ],
+    )
+
+    resp = client.post("/aurora/learning/daily-brief-draft", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/aurora/learning?created_draft=docs/learning/daily/{today}-manual-posting-lessons-2.md"
+    assert (daily_dir / f"{today}-manual-posting-lessons.md").read_text() == "existing draft"
+    draft = (daily_dir / f"{today}-manual-posting-lessons-2.md").read_text()
+    assert "# Daily Learning Brief" in draft
+    assert "## Manual Posting Lessons" in draft
+    assert "manual lesson mission" in draft
+    assert "Source job: 20260512_lesson" in draft
+    assert "Short CTA got more saves." in draft
+    assert "Proof: post URL=True, 24h=True, 72h=True" in draft
+    assert "Do not touch: live publish APIs or existing daily learning files." in draft
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Created manual posting daily learning draft" in work_activity
+
+    page = client.get(resp.headers["location"], headers=_auth())
+    assert page.status_code == 200
+    assert f"docs/learning/daily/{today}-manual-posting-lessons-2.md" in page.text
+
+
+def test_aurora_learning_daily_brief_draft_requires_lessons(tmp_path, client):
+    resp = client.post("/aurora/learning/daily-brief-draft", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 400
+    assert "No closed manual posting lessons are ready for a draft" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):
