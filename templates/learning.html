@@ -90,6 +90,57 @@
 
 <section class="panel spacious">
   <div class="section-heading">
+    <p class="eyebrow">Daily brief review gate</p>
+    <h2>Draft learning artifacts</h2>
+  </div>
+  <div class="approval-lane-board daily-brief-review-board">
+    {% for group in daily_brief_registry.groups %}
+    <article class="approval-lane">
+      <div class="approval-lane-heading">
+        <div>
+          <p class="eyebrow">{{ group.label }}</p>
+          <h3>{{ group.rows | length }} artifact{{ 's' if group.rows | length != 1 else '' }}</h3>
+        </div>
+        <strong>{{ group.rows | length }}</strong>
+      </div>
+      <div class="approval-queue-list">
+        {% for item in group.rows %}
+        <div class="approval-queue-row daily-brief-review-row">
+          <div class="approval-row-main">
+            <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
+            <strong>{{ item.path }}</strong>
+            <p>Source jobs: {{ item.source_job_ids | join(", ") if item.source_job_ids else "missing" }}</p>
+            <small>{{ item.source }} · updated {{ item.updated_at if item.updated_at else item.created_at }}</small>
+          </div>
+          <div class="approval-row-actions">
+            <form class="inline-form" method="post" action="/aurora/learning/daily-brief-draft/status">
+              <input name="draft_path" type="hidden" value="{{ item.path }}">
+              <input name="status" type="hidden" value="reviewed">
+              <button type="submit">Mark reviewed</button>
+            </form>
+            <form class="inline-form" method="post" action="/aurora/learning/daily-brief-draft/status">
+              <input name="draft_path" type="hidden" value="{{ item.path }}">
+              <input name="status" type="hidden" value="needs_edits">
+              <button type="submit">Needs edits</button>
+            </form>
+            <form class="inline-form" method="post" action="/aurora/learning/daily-brief-draft/status">
+              <input name="draft_path" type="hidden" value="{{ item.path }}">
+              <input name="status" type="hidden" value="accepted">
+              <button type="submit">Promote to accepted</button>
+            </form>
+          </div>
+        </div>
+        {% else %}
+        <p class="muted">No artifacts in this lane.</p>
+        {% endfor %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
     <p class="eyebrow">Production canon</p>
     <h2>Current crew asset provenance</h2>
   </div>

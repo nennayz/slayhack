@@ -1908,6 +1908,12 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border-radius: 12px;
   padding: 0.75rem;
 }
+.daily-brief-review-board {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.daily-brief-review-row {
+  grid-template-columns: minmax(0, 1fr);
+}
 .action-drawer {
   grid-column: 1 / -1;
   margin: 0;
@@ -2435,6 +2441,7 @@ a:hover { color: var(--navy-soft); }
   .captain-action-grid,
   .next-action-panel,
   .approval-lane-board,
+  .daily-brief-review-board,
   .approval-lane-summary,
   .workflow-rail,
   .command-brief,

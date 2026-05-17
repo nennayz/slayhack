@@ -2050,6 +2050,44 @@ def _manual_closeout_learning_draft_body(rows: list[dict[str, object]], today: d
     )
 
 
+def _manual_closeout_learning_draft_front_matter(
+    rows: list[dict[str, object]],
+    *,
+    status: str = "draft",
+    created_by: str = "dashboard",
+) -> dict[str, object]:
+    now = datetime.now(timezone.utc).isoformat()
+    return {
+        "status": status,
+        "source": "manual_posting_closeout",
+        "source_job_ids": [str(row["job_id"]) for row in rows],
+        "created_by": created_by,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _front_matter_text(data: dict[str, object]) -> str:
+    return "---\n" + yaml.safe_dump(data, sort_keys=False, allow_unicode=True).strip() + "\n---\n\n"
+
+
+def _split_front_matter(text: str) -> tuple[dict[str, object], str]:
+    if not text.startswith("---\n"):
+        return {}, text
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        return {}, text
+    raw = text[4:end]
+    try:
+        data = yaml.safe_load(raw) or {}
+    except yaml.YAMLError:
+        return {}, text
+    body = text[end + len("\n---\n"):]
+    if body.startswith("\n"):
+        body = body[1:]
+    return data if isinstance(data, dict) else {}, body
+
+
 def _manual_closeout_learning_draft_path(root: Path, today: date | None = None) -> Path:
     today = today or date.today()
     daily_dir = root / "docs" / "learning" / "daily"
@@ -2062,15 +2100,111 @@ def _manual_closeout_learning_draft_path(root: Path, today: date | None = None) 
     return candidate
 
 
-def _write_manual_closeout_learning_draft(root: Path, rows: list[dict[str, object]]) -> dict[str, object]:
+def _write_manual_closeout_learning_draft(
+    root: Path,
+    rows: list[dict[str, object]],
+    *,
+    created_by: str = "dashboard",
+) -> dict[str, object]:
     path = _manual_closeout_learning_draft_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = _manual_closeout_learning_draft_body(rows)
-    path.write_text(body, encoding="utf-8")
+    front_matter = _manual_closeout_learning_draft_front_matter(rows, created_by=created_by)
+    path.write_text(_front_matter_text(front_matter) + body, encoding="utf-8")
     return {
         "path": str(path.relative_to(root)),
         "body": body,
         "source_job_ids": [str(row["job_id"]) for row in rows],
+    }
+
+
+def _daily_brief_draft_registry(root: Path) -> dict[str, object]:
+    daily_dir = root / "docs" / "learning" / "daily"
+    rows: list[dict[str, object]] = []
+    if daily_dir.exists():
+        for path in sorted(daily_dir.glob("*manual-posting-lessons*.md"), reverse=True):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            front_matter, body = _split_front_matter(text)
+            source_job_ids = front_matter.get("source_job_ids")
+            if not isinstance(source_job_ids, list):
+                source_job_ids = []
+            status = str(front_matter.get("status") or "legacy")
+            rows.append(
+                {
+                    "path": str(path.relative_to(root)),
+                    "status": status,
+                    "state": "ready" if status == "accepted" else "failed" if status == "needs_edits" else "missing",
+                    "source": str(front_matter.get("source") or "unknown"),
+                    "source_job_ids": [str(item) for item in source_job_ids],
+                    "created_by": str(front_matter.get("created_by") or ""),
+                    "created_at": str(front_matter.get("created_at") or ""),
+                    "updated_at": str(front_matter.get("updated_at") or ""),
+                    "body_preview": body[:220],
+                }
+            )
+    groups = [
+        {
+            "key": "draft",
+            "label": "Drafts waiting review",
+            "rows": [row for row in rows if row["status"] in {"draft", "reviewed", "legacy"}],
+        },
+        {
+            "key": "accepted",
+            "label": "Accepted learning artifacts",
+            "rows": [row for row in rows if row["status"] == "accepted"],
+        },
+        {
+            "key": "needs_edits",
+            "label": "Needs edits",
+            "rows": [row for row in rows if row["status"] == "needs_edits"],
+        },
+    ]
+    return {"rows": rows, "groups": groups}
+
+
+def _update_daily_brief_draft_status(
+    root: Path,
+    relative_path: str,
+    status: str,
+    *,
+    actor: str,
+) -> dict[str, object]:
+    if status not in {"reviewed", "needs_edits", "accepted"}:
+        raise ValueError("Unsupported draft status")
+    path = (root / relative_path).resolve()
+    daily_dir = (root / "docs" / "learning" / "daily").resolve()
+    try:
+        path.relative_to(daily_dir)
+    except ValueError as exc:
+        raise ValueError("Draft path must stay under docs/learning/daily") from exc
+    if not path.name.endswith(".md") or "manual-posting-lessons" not in path.name:
+        raise ValueError("Draft path is not a manual posting lesson draft")
+    if not path.exists():
+        raise FileNotFoundError(relative_path)
+    text = path.read_text(encoding="utf-8")
+    front_matter, body = _split_front_matter(text)
+    source_job_ids = front_matter.get("source_job_ids")
+    if status == "accepted" and not (isinstance(source_job_ids, list) and source_job_ids):
+        raise ValueError("Source job IDs are required before accepting a draft")
+    if not front_matter:
+        front_matter = {
+            "source": "manual_posting_closeout",
+            "source_job_ids": source_job_ids if isinstance(source_job_ids, list) else [],
+            "created_by": actor,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+    front_matter["status"] = status
+    front_matter["reviewed_by"] = actor
+    front_matter["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+    front_matter["updated_at"] = front_matter["reviewed_at"]
+    path.write_text(_front_matter_text(front_matter) + body, encoding="utf-8")
+    return {
+        "path": str(path.relative_to(root)),
+        "status": status,
+        "source_job_ids": front_matter.get("source_job_ids", []),
     }
 
 
