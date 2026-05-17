@@ -61,6 +61,7 @@ def manual_kit_summary(job: ContentJob, root: Path) -> dict[str, object]:
     drive_root_id = os.getenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "").strip()
     existing = job.manual_post_kit or {}
     drive_sync = existing.get("drive_sync") if isinstance(existing, dict) else None
+    manual_post = existing.get("manual_post") if isinstance(existing, dict) else None
     folder_path = [MANUAL_KIT_ROOT_NAME, *drive_folder_path(job)]
     return {
         "label": "Manual Post Kit",
@@ -72,6 +73,7 @@ def manual_kit_summary(job: ContentJob, root: Path) -> dict[str, object]:
         "folder_path": " / ".join(folder_path),
         "drive_configured": bool(drive_root_id),
         "drive_sync": drive_sync if isinstance(drive_sync, dict) else None,
+        "manual_post": manual_post if isinstance(manual_post, dict) else None,
         "caption_ready": _caption_text(job) != "",
         "hashtags_ready": bool(_hashtags(job)),
         "prompt_pack_ready": bool(job.visual_prompt or _has_video_prompt_pack(job)),

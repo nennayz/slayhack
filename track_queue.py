@@ -54,11 +54,14 @@ def enqueue_track_snapshots(
     job: ContentJob,
     offsets_hours: list[int] | None = None,
     root: Path | None = None,
+    replace_existing: bool = False,
 ) -> None:
     if offsets_hours is None:
         offsets_hours = [24, 72]
     base = job.published_at if job.published_at is not None else datetime.now(timezone.utc)
     entries = read_queue(root)
+    if replace_existing:
+        entries = [entry for entry in entries if entry.get("job_id") != job.id]
     for offset in offsets_hours:
         track_at = base + timedelta(hours=offset)
         entries.append({

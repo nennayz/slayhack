@@ -122,6 +122,22 @@ def test_enqueue_appends_to_existing_queue(tmp_path, monkeypatch):
     assert len(read_queue()) == 4
 
 
+def test_enqueue_can_replace_existing_job_entries(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+    from track_queue import enqueue_track_snapshots, read_queue
+    first_time = datetime(2026, 5, 17, 14, 0, 0, tzinfo=timezone.utc)
+    second_time = datetime(2026, 5, 18, 16, 0, 0, tzinfo=timezone.utc)
+    job = _make_job(published_at=first_time)
+    enqueue_track_snapshots(job)
+    job.published_at = second_time
+    enqueue_track_snapshots(job, replace_existing=True)
+
+    entries = read_queue()
+    assert len(entries) == 2
+    assert [entry["track_at"] for entry in entries] == ["2026-05-19T16:00:00Z", "2026-05-21T16:00:00Z"]
+
+
 def test_summarize_track_queue_counts_due_overdue_and_retrying():
     from track_queue import summarize_track_queue
     now = datetime(2026, 5, 18, 14, 0, 0, tzinfo=timezone.utc)
