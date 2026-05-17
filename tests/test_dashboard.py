@@ -383,6 +383,54 @@ def test_approval_queue_advances_generation_actions(tmp_path, client):
     assert waiting_queue.status_code == 200
     assert "Waiting real video" in waiting_queue.text
     assert "Attach the final generated video before publish packaging." in waiting_queue.text
+    assert "Record real video" in waiting_queue.text
+    assert "output/Stadium Sweethearts/" in waiting_queue.text
+
+    recorded_generation = client.post(
+        f"/jobs/{job_id}/record-generation-result",
+        headers=_auth(),
+        data={
+            "video_path": f"output/Stadium Sweethearts/{job_id}/final-video.mp4",
+            "provider": "manual_upload",
+            "provider_request_id": "approval-queue",
+            "note": "Recorded from approval queue.",
+        },
+        follow_redirects=False,
+    )
+    packaging_queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert recorded_generation.status_code == 303
+    assert packaging_queue.status_code == 200
+    assert "Ready packaging" in packaging_queue.text
+    assert "Record publish package" in packaging_queue.text
+    assert "Fictional adult fan-cam replay" in packaging_queue.text
+
+    recorded_package = client.post(
+        f"/jobs/{job_id}/record-publish-package",
+        headers=_auth(),
+        data={
+            "caption": "Fictional adult fan-cam replay: best of the week.",
+            "hashtags": "#StadiumSweethearts, #AIFanCam",
+            "faq": "Q: Is this real?\nA: No, fictional AI-generated adults only.",
+            "publish_notes": "Do not schedule without Captain approval.",
+        },
+        follow_redirects=False,
+    )
+    package_queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert recorded_package.status_code == 303
+    assert package_queue.status_code == 200
+    assert "Package complete" in package_queue.text
+    assert "Create publish job" in package_queue.text
+
+    ready_publish = client.post(f"/jobs/{job_id}/create-publish-job", headers=_auth(), follow_redirects=False)
+    ready_queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert ready_publish.status_code == 303
+    assert ready_queue.status_code == 200
+    assert "Ready to publish" in ready_queue.text
+    assert "Captain approval required before schedule handoff" in ready_queue.text
+    assert f'action="/jobs/{job_id}/schedule-publish"' not in ready_queue.text
 
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):

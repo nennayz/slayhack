@@ -44,7 +44,27 @@
       </div>
       <div class="slate-actions">
         <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
-        {% if item.action_method == "post" %}
+        {% if item.action_method == "generation_result" %}
+        <form class="inline-form approval-inline-form" method="post" action="{{ item.action_url }}">
+          <label for="video_path_{{ item.job_id }}">Video path</label>
+          <input id="video_path_{{ item.job_id }}" name="video_path" type="text" value="{{ item.default_video_path }}" required>
+          <input name="provider" type="hidden" value="manual_upload">
+          <input name="provider_request_id" type="hidden" value="approval-queue">
+          <input name="note" type="hidden" value="Recorded from approval queue; no external generation API was called.">
+          <button type="submit">{{ item.action_label }}</button>
+        </form>
+        {% elif item.action_method == "publish_package" %}
+        <form class="inline-form approval-inline-form approval-package-form" method="post" action="{{ item.action_url }}">
+          <label for="caption_{{ item.job_id }}">Caption</label>
+          <textarea id="caption_{{ item.job_id }}" name="caption" rows="2" required>{{ item.default_caption }}</textarea>
+          <label for="hashtags_{{ item.job_id }}">Hashtags</label>
+          <input id="hashtags_{{ item.job_id }}" name="hashtags" type="text" value="{{ item.default_hashtags }}" required>
+          <label for="faq_{{ item.job_id }}">FAQ</label>
+          <textarea id="faq_{{ item.job_id }}" name="faq" rows="4" required>{{ item.default_faq }}</textarea>
+          <input name="publish_notes" type="hidden" value="{{ item.default_publish_notes }}">
+          <button type="submit">{{ item.action_label }}</button>
+        </form>
+        {% elif item.action_method == "post" %}
         <form class="inline-form" method="post" action="{{ item.action_url }}">
           <button type="submit">{{ item.action_label }}</button>
         </form>

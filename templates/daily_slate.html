@@ -108,7 +108,11 @@
       </div>
       <div class="slate-actions">
         <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
-        {% if item.action_method == "post" %}
+        {% if item.action_method == "generation_result" %}
+        <a class="button button-secondary button-small" href="/aurora/approval-queue">Record real video</a>
+        {% elif item.action_method == "publish_package" %}
+        <a class="button button-secondary button-small" href="/aurora/approval-queue">Record package</a>
+        {% elif item.action_method == "post" %}
         <form class="inline-form" method="post" action="{{ item.action_url }}">
           <button type="submit">{{ item.action_label }}</button>
         </form>

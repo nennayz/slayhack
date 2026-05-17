@@ -934,6 +934,27 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .approval-queue-row small {
   color: var(--muted);
 }
+.approval-inline-form {
+  display: grid;
+  gap: 0.45rem;
+  min-width: min(460px, 100%);
+}
+.approval-inline-form label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.approval-inline-form input,
+.approval-inline-form textarea {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  width: 100%;
+}
+.approval-package-form {
+  min-width: min(560px, 100%);
+}
 .slate-learning-note {
   max-height: 420px;
 }
