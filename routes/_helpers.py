@@ -1984,6 +1984,20 @@ def _manual_closeout_learning_rows(root: Path, limit: int = 8) -> list[dict[str,
     return sorted(rows, key=lambda item: (str(item["closed_at"]), str(item["job_id"])), reverse=True)[:limit]
 
 
+def _manual_closeout_undrafted_learning_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
+    registry = _daily_brief_draft_registry(root)
+    drafted_source_ids = {
+        str(source_id)
+        for draft in registry["rows"]
+        for source_id in (draft.get("source_job_ids") if isinstance(draft.get("source_job_ids"), list) else [])
+    }
+    return [
+        row
+        for row in _manual_closeout_learning_rows(root, limit=limit)
+        if str(row.get("job_id") or "") not in drafted_source_ids
+    ]
+
+
 def _manual_closeout_learning_brief_intake(rows: list[dict[str, object]]) -> str:
     if not rows:
         return "No closed manual posting lessons are ready for the daily brief yet."
@@ -2386,6 +2400,7 @@ def _confirm_mission_learning(root: Path, job: ContentJob, *, actor: str) -> dic
 
 
 _RUNBOOK_PROOF_EVENTS = (
+    ("Created manual posting daily learning draft from runbook", "create_draft", "Created draft"),
     ("Accepted daily learning draft from runbook", "accept", "Accepted draft"),
     ("Applied accepted learning from runbook", "apply", "Applied lesson"),
     ("Confirmed accepted learning from runbook", "confirm", "Confirmed mission"),
@@ -2440,6 +2455,7 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
     manual_rows = _manual_posting_queue_rows(root)
     closeout_rows = [row for row in manual_rows if row.get("can_closeout")]
     registry = _daily_brief_draft_registry(root)
+    undrafted_lessons = _manual_closeout_undrafted_learning_rows(root)
     draft_rows = [
         row
         for row in registry["rows"]
@@ -2480,6 +2496,23 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
             "action_label": "Open manual closeout",
             "action_url": "/aurora/manual-posting?lane=tracking_complete",
             "action_method": "get",
+            "action_payload": {},
+        },
+        {
+            "key": "create_draft",
+            "label": "Create daily learning draft",
+            "status": "needs_action" if undrafted_lessons else "clear",
+            "count": len(undrafted_lessons),
+            "detail": (
+                f"{len(undrafted_lessons)} closed manual lesson needs a daily learning draft."
+                if len(undrafted_lessons) == 1
+                else f"{len(undrafted_lessons)} closed manual lessons need a daily learning draft."
+                if undrafted_lessons
+                else "No closed manual posting lesson is waiting for draft creation."
+            ),
+            "action_label": "Create daily learning draft" if undrafted_lessons else "Open learning desk",
+            "action_url": "/learning-runbook/create-draft" if undrafted_lessons else "/aurora/learning",
+            "action_method": "post" if undrafted_lessons else "get",
             "action_payload": {},
         },
         {
