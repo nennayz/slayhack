@@ -2159,6 +2159,8 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "Review the publish result and record performance when results arrive." in resp.text
     assert "Return to island" in resp.text
     assert "Mission cargo" in resp.text
+    assert "/jobs/20260512_060000/download" in resp.text
+    assert "Download cargo" in resp.text
     assert "Cargo checklist" in resp.text
     assert "Output readiness" in resp.text
     assert "Bella output is available." in resp.text
@@ -2168,6 +2170,26 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "Publish result is recorded." in resp.text
     assert "Command the Brief" in resp.text
     assert "/aurora/crew/robin" in resp.text
+
+
+def test_job_detail_downloads_artifact_zip(tmp_path, client):
+    import zipfile
+    from io import BytesIO
+
+    _write_job(tmp_path, "20260512_060000", brief="downloadable mission")
+    job_dir = tmp_path / "output" / "Slayhack" / "20260512_060000"
+    (job_dir / "bella_output.md").write_text("script ready")
+    (job_dir / "video.mp4").write_bytes(b"MP4")
+
+    resp = client.get("/jobs/20260512_060000/download", headers=_auth())
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/zip"
+    assert "20260512_060000-artifacts.zip" in resp.headers["content-disposition"]
+    with zipfile.ZipFile(BytesIO(resp.content)) as archive:
+        assert sorted(archive.namelist()) == ["bella_output.md", "job.json", "video.mp4"]
+        assert archive.read("bella_output.md") == b"script ready"
+        assert archive.read("video.mp4") == b"MP4"
 
 
 def test_job_detail_shows_tracking_queue_status(tmp_path, client):

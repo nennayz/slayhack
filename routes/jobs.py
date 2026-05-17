@@ -3,10 +3,14 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
+import zipfile
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from starlette.background import BackgroundTask
 
 from routes.deps import templates, verify_auth, _root
 from track_queue import job_tracking_summary, read_queue
@@ -130,6 +134,35 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
             "tracking_summary": tracking_summary,
             "can_track_now": can_track_now,
         },
+    )
+
+
+@router.get("/jobs/{job_id}/download")
+def download_job_artifacts(job_id: str, request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+
+    output_root = (root / "output").resolve()
+    job_dir = (output_root / job.pm.page_name / job.id).resolve()
+    if not job_dir.exists() or not job_dir.is_dir() or output_root not in job_dir.parents:
+        raise HTTPException(status_code=404, detail="Job artifact folder not found")
+
+    tmp = tempfile.NamedTemporaryFile(prefix=f"{job.id}-", suffix=".zip", delete=False)
+    zip_path = Path(tmp.name)
+    tmp.close()
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(job_dir.rglob("*")):
+            if path.is_file():
+                archive.write(path, arcname=str(path.relative_to(job_dir)))
+
+    return FileResponse(
+        zip_path,
+        media_type="application/zip",
+        filename=f"{job.id}-artifacts.zip",
+        background=BackgroundTask(zip_path.unlink, missing_ok=True),
     )
 
 
