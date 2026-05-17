@@ -24,6 +24,7 @@ from routes._helpers import (
     _console_history,
     _create_slate_ticket_mission,
     _create_video_package_mission,
+    _daily_brief_draft_registry,
     _daily_slate_cards,
     _filter_jobs,
     _generation_filter_cards,
@@ -48,6 +49,7 @@ from routes._helpers import (
     _readiness_checks,
     _weekly_calendar,
     _write_work_event,
+    _update_daily_brief_draft_status,
     active_jobs,
     attention_jobs,
     command_brief,
@@ -481,6 +483,7 @@ def aurora_learning(request: Request, _: str = Depends(verify_auth)):
             "latest_brief": _latest_learning_brief(root),
             "manual_lessons": manual_lessons,
             "manual_learning_intake": _manual_closeout_learning_brief_intake(manual_lessons),
+            "daily_brief_registry": _daily_brief_draft_registry(root),
             "created_draft": created_draft,
             "review_note": _read_review_note(root),
             "asset_audit_note": _read_asset_audit_note(root),
@@ -495,7 +498,7 @@ def aurora_learning_daily_brief_draft(request: Request, user: str = Depends(veri
     manual_lessons = _manual_closeout_learning_rows(root)
     if not manual_lessons:
         raise HTTPException(status_code=400, detail="No closed manual posting lessons are ready for a draft")
-    draft = _write_manual_closeout_learning_draft(root, manual_lessons)
+    draft = _write_manual_closeout_learning_draft(root, manual_lessons, created_by=user)
     _write_work_event(
         root,
         "implementation_step",
@@ -506,6 +509,32 @@ def aurora_learning_daily_brief_draft(request: Request, user: str = Depends(veri
         metadata={"source_job_ids": draft["source_job_ids"]},
     )
     return RedirectResponse(f"/aurora/learning?created_draft={draft['path']}", status_code=303)
+
+
+@router.post("/aurora/learning/daily-brief-draft/status")
+def aurora_learning_daily_brief_draft_status(
+    request: Request,
+    draft_path: str = Form(...),
+    status: str = Form(...),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        result = _update_daily_brief_draft_status(root, draft_path, status, actor=user)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Draft {draft_path!r} not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Updated daily learning draft status: {status}",
+        actor=user,
+        result=str(result["path"]),
+        next_action="Use accepted learning artifacts in the next Aurora planning cycle.",
+        metadata={"source_job_ids": result["source_job_ids"]},
+    )
+    return RedirectResponse("/aurora/learning", status_code=303)
 
 
 @router.get("/aurora/crew/{slug}", response_class=HTMLResponse)

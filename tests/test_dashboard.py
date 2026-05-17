@@ -1446,6 +1446,8 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Manual Posting Lessons" in resp.text
     assert "Daily Learning Brief intake" in resp.text
     assert "No closed manual posting lessons are ready for the daily brief yet." in resp.text
+    assert "Daily brief review gate" in resp.text
+    assert "Draft learning artifacts" in resp.text
     assert "current manual crew portrait set is approved production canon and has a production asset audit" in resp.text
 
 
@@ -1492,6 +1494,7 @@ def test_aurora_learning_page_surfaces_manual_closeout_lessons(tmp_path, client)
     assert "Short CTA got more saves." in resp.text
     assert "Create daily brief draft" in resp.text
     assert "Draft preview" in resp.text
+    assert "Daily brief review gate" in resp.text
     assert "Post URL" in resp.text
     assert "24h proof" in resp.text
     assert "72h proof" in resp.text
@@ -1545,6 +1548,9 @@ def test_aurora_learning_daily_brief_draft_writes_unique_file(tmp_path, client):
     assert resp.headers["location"] == f"/aurora/learning?created_draft=docs/learning/daily/{today}-manual-posting-lessons-2.md"
     assert (daily_dir / f"{today}-manual-posting-lessons.md").read_text() == "existing draft"
     draft = (daily_dir / f"{today}-manual-posting-lessons-2.md").read_text()
+    assert "status: draft" in draft
+    assert "source: manual_posting_closeout" in draft
+    assert "source_job_ids:" in draft
     assert "# Daily Learning Brief" in draft
     assert "## Manual Posting Lessons" in draft
     assert "manual lesson mission" in draft
@@ -1558,6 +1564,8 @@ def test_aurora_learning_daily_brief_draft_writes_unique_file(tmp_path, client):
     page = client.get(resp.headers["location"], headers=_auth())
     assert page.status_code == 200
     assert f"docs/learning/daily/{today}-manual-posting-lessons-2.md" in page.text
+    assert "Drafts waiting review" in page.text
+    assert "Promote to accepted" in page.text
 
 
 def test_aurora_learning_daily_brief_draft_requires_lessons(tmp_path, client):
@@ -1565,6 +1573,80 @@ def test_aurora_learning_daily_brief_draft_requires_lessons(tmp_path, client):
 
     assert resp.status_code == 400
     assert "No closed manual posting lessons are ready for a draft" in resp.text
+
+
+def test_aurora_learning_daily_brief_status_updates_front_matter_only(tmp_path, client):
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    draft_path = daily_dir / "2026-05-17-manual-posting-lessons.md"
+    body = "# Daily Learning Brief\n\nBody must stay exactly here.\n"
+    draft_path.write_text(
+        "---\n"
+        "status: draft\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260512_lesson\n"
+        "created_by: admin\n"
+        "created_at: '2026-05-17T14:00:00+00:00'\n"
+        "---\n\n"
+        + body
+    )
+
+    resp = client.post(
+        "/aurora/learning/daily-brief-draft/status",
+        data={"draft_path": "docs/learning/daily/2026-05-17-manual-posting-lessons.md", "status": "accepted"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    updated = draft_path.read_text()
+    assert "status: accepted" in updated
+    assert "reviewed_by: admin" in updated
+    assert updated.endswith(body)
+    page = client.get("/aurora/learning", headers=_auth())
+    assert page.status_code == 200
+    assert "Accepted learning artifacts" in page.text
+    assert "20260512_lesson" in page.text
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Updated daily learning draft status: accepted" in work_activity
+
+
+def test_aurora_learning_daily_brief_accept_blocks_missing_source_ids(tmp_path, client):
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    draft_path = daily_dir / "2026-05-17-manual-posting-lessons.md"
+    draft_path.write_text(
+        "---\n"
+        "status: draft\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids: []\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\nNo source IDs.\n"
+    )
+
+    resp = client.post(
+        "/aurora/learning/daily-brief-draft/status",
+        data={"draft_path": "docs/learning/daily/2026-05-17-manual-posting-lessons.md", "status": "accepted"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 400
+    assert "Source job IDs are required before accepting a draft" in resp.text
+    assert "status: draft" in draft_path.read_text()
+
+
+def test_aurora_learning_daily_brief_status_rejects_path_escape(tmp_path, client):
+    resp = client.post(
+        "/aurora/learning/daily-brief-draft/status",
+        data={"draft_path": "docs/learning/../secrets.md", "status": "reviewed"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 400
+    assert "Draft path must stay under docs/learning/daily" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):
