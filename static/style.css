@@ -206,6 +206,11 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border: 1px solid var(--line);
   color: var(--navy);
 }
+.button-small {
+  font-size: 0.82rem;
+  min-height: 36px;
+  padding: 0.5rem 0.75rem;
+}
 
 .command-brief {
   align-items: stretch;
@@ -894,6 +899,41 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   color: inherit;
   text-decoration: none;
 }
+.slate-package-action {
+  display: grid;
+  gap: 0.7rem;
+}
+.slate-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+.approval-queue-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.approval-queue-row {
+  align-items: center;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.85rem;
+}
+.approval-queue-row strong,
+.approval-queue-row small {
+  display: block;
+  margin-top: 0.35rem;
+}
+.approval-queue-row p {
+  margin: 0.3rem 0 0;
+}
+.approval-queue-row small {
+  color: var(--muted);
+}
 .slate-learning-note {
   max-height: 420px;
 }
@@ -1286,6 +1326,7 @@ a:hover { color: var(--navy-soft); }
   .workflow-lane-grid,
   .video-package-grid,
   .video-package-detail,
+  .approval-queue-row,
   .slate-counts,
   .workflow-stats {
     grid-template-columns: 1fr;

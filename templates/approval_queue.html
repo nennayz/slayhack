@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header">
+  <div>
+    <p class="eyebrow">Approval queue</p>
+    <h1>Ready but Not Published</h1>
+    <p class="hero-copy">Mission packages waiting for Nora, generation, Roxy, Emma, or Captain approval before any publish handoff.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/daily-slate">Daily slate</a>
+    <a class="button button-secondary" href="/aurora/generation">Generation queue</a>
+    <a class="button" href="/aurora/new-mission">Launch mission</a>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Queue</span>
+    <strong>{{ approval_queue | length }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Nora review</span>
+    <strong>{{ needs_review_count }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Ready publish</span>
+    <strong>{{ ready_publish_count }}</strong>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Command actions</p>
+    <h2>Approval lane</h2>
+  </div>
+  <div class="approval-queue-list">
+    {% for item in approval_queue %}
+    <div class="approval-queue-row">
+      <div>
+        <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
+        <strong>{{ item.page_name }}</strong>
+        <p>{{ item.brief }}</p>
+        <small>{{ item.lane }} - {{ item.next_action }}</small>
+      </div>
+      <div class="slate-actions">
+        <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
+        {% if item.action_method == "post" %}
+        <form class="inline-form" method="post" action="{{ item.action_url }}">
+          <button type="submit">{{ item.action_label }}</button>
+        </form>
+        {% else %}
+        <a class="button button-secondary button-small" href="{{ item.action_url }}">{{ item.action_label }}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">No missions are waiting for approval.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

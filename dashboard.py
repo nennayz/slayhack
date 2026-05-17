@@ -1701,6 +1701,17 @@ def _video_package_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
     return packages
 
 
+def _daily_slate_video_package_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
+    packages = _video_package_rows(slate)
+    if slate is None:
+        return packages
+    for package in packages:
+        package["daily_create_mission_url"] = (
+            f"/aurora/daily-slate/{slate.project}/video-packages/{package['ticket_id']}/create-mission"
+        )
+    return packages
+
+
 def _find_video_ticket(slate: CalendarSlate | None, ticket_id: str) -> ProductionTicket | None:
     if slate is None:
         return None
@@ -2186,6 +2197,19 @@ def _video_package_job(root: Path, ticket: ProductionTicket, package: VideoProdu
     return job
 
 
+def _create_video_package_mission(root: Path, project_slug: str, ticket_id: str) -> ContentJob:
+    slate = _calendar_slate(root, project_slug)
+    ticket = _find_video_ticket(slate, ticket_id)
+    if ticket is None:
+        raise ValueError(f"Video package ticket {ticket_id!r} not found")
+    package = _video_package_for_ticket(ticket)
+    if package is None:
+        raise ValueError(f"Ticket {ticket_id!r} is not a video package")
+    job = _video_package_job(root, ticket, package)
+    _save_job_at_root(root, job)
+    return job
+
+
 def _weekly_calendar(root: Path, project_slug: str) -> dict[str, dict[str, str]]:
     resolved = resolve_project_slug(project_slug, root=root)
     path = root / "projects" / resolved / "weekly_calendar.yaml"
@@ -2370,11 +2394,116 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
                 "counts": _slate_counts(slate),
                 "ticket_count": len(tickets),
                 "tickets": tickets,
-                "video_packages": _video_package_rows(slate),
+                "video_packages": _daily_slate_video_package_rows(slate),
                 "qa_status": _qa_status(slate),
             }
         )
     return cards
+
+
+def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
+    rows = []
+    for job in list_all_jobs(root):
+        generation_request = getattr(job, "generation_request", None)
+        request_status = str(generation_request.get("status", "")) if isinstance(generation_request, dict) else ""
+        publish_status = _publish_execution_status(job)
+        row: dict[str, object] | None = None
+
+        if request_status == "nora_review":
+            row = {
+                "lane": "Nora review",
+                "state": "missing",
+                "status": "Needs review",
+                "next_action": "Nora can mark the package ready for generation.",
+                "action_label": "Mark ready",
+                "action_url": f"/jobs/{job.id}/ready-for-generation",
+                "action_method": "post",
+            }
+        elif _waiting_for_real_video(job):
+            row = {
+                "lane": "Generation",
+                "state": "missing",
+                "status": "Waiting real video",
+                "next_action": "Attach the final generated video before publish packaging.",
+                "action_label": "Open mission",
+                "action_url": f"/jobs/{job.id}",
+                "action_method": "get",
+            }
+        elif request_status in {"ready_for_generation", "dry_run_completed", "failed"}:
+            row = {
+                "lane": "Generation",
+                "state": "ready" if request_status != "failed" else "failed",
+                "status": _generation_status_label(request_status),
+                "next_action": "Run or rerun the safe generation dry-run before real video handoff.",
+                "action_label": "Run generation dry-run",
+                "action_url": f"/jobs/{job.id}/run-generation-dry-run",
+                "action_method": "post",
+            }
+        elif _real_generation_completed(job) and not _publish_package_completed(job):
+            row = {
+                "lane": "Roxy + Emma",
+                "state": "missing",
+                "status": "Ready packaging",
+                "next_action": "Record caption, hashtags, FAQ, and publish notes.",
+                "action_label": "Open package",
+                "action_url": f"/jobs/{job.id}",
+                "action_method": "get",
+            }
+        elif _publish_package_completed(job) and not publish_status:
+            row = {
+                "lane": "Captain approval",
+                "state": "missing",
+                "status": "Package complete",
+                "next_action": "Create a publish job for explicit scheduling approval.",
+                "action_label": "Create publish job",
+                "action_url": f"/jobs/{job.id}/create-publish-job",
+                "action_method": "post",
+            }
+        elif publish_status == "ready_to_publish":
+            row = {
+                "lane": "Captain approval",
+                "state": "missing",
+                "status": "Ready to publish",
+                "next_action": "Schedule the dashboard handoff only after Captain approval.",
+                "action_label": "Schedule handoff",
+                "action_url": f"/jobs/{job.id}/schedule-publish",
+                "action_method": "post",
+            }
+        elif publish_status == "scheduled":
+            row = {
+                "lane": "Scheduled",
+                "state": "ready",
+                "status": "Scheduled publish",
+                "next_action": "Waiting for platform publisher controls; no external API call was made by this handoff.",
+                "action_label": "Open mission",
+                "action_url": f"/jobs/{job.id}",
+                "action_method": "get",
+            }
+
+        if row is None:
+            continue
+        row.update(
+            {
+                "job_id": job.id,
+                "brief": job.brief,
+                "page_name": job.pm.page_name,
+                "stage": job.stage,
+                "detail_url": f"/jobs/{job.id}",
+            }
+        )
+        rows.append(row)
+
+    order = {
+        "Needs review": 0,
+        "Ready": 1,
+        "dry run completed": 2,
+        "Waiting real video": 3,
+        "Ready packaging": 4,
+        "Package complete": 5,
+        "Ready to publish": 6,
+        "Scheduled publish": 7,
+    }
+    return sorted(rows, key=lambda item: (order.get(str(item["status"]), 99), str(item["page_name"]), str(item["job_id"])))
 
 
 def _qa_status(slate: CalendarSlate | None) -> list[dict[str, str]]:
@@ -2542,14 +2671,32 @@ def aurora_workflow(request: Request, _: str = Depends(verify_auth)):
 def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
     slate_cards = _daily_slate_cards(root)
+    approval_queue = _approval_queue_rows(root)
     return templates.TemplateResponse(
         request,
         "daily_slate.html",
         {
             "slate_cards": slate_cards,
             "latest_brief": _latest_learning_brief(root),
+            "approval_queue": approval_queue[:8],
             "total_tickets": sum(int(card["ticket_count"]) for card in slate_cards),
             "ready_pages": sum(1 for card in slate_cards if card["minimum_met"]),
+            "approval_count": len(approval_queue),
+        },
+    )
+
+
+@app.get("/aurora/approval-queue", response_class=HTMLResponse)
+def aurora_approval_queue(request: Request, _: str = Depends(verify_auth)):
+    root = _root(request)
+    rows = _approval_queue_rows(root)
+    return templates.TemplateResponse(
+        request,
+        "approval_queue.html",
+        {
+            "approval_queue": rows,
+            "needs_review_count": sum(1 for row in rows if row["status"] == "Needs review"),
+            "ready_publish_count": sum(1 for row in rows if row["status"] == "Ready to publish"),
         },
     )
 
@@ -2583,15 +2730,10 @@ def aurora_generation(request: Request, _: str = Depends(verify_auth)):
 @app.post("/aurora/workflow/video-packages/{ticket_id}/create-mission")
 def create_video_package_mission(ticket_id: str, request: Request, user: str = Depends(verify_auth)):
     root = _root(request)
-    slate = _calendar_slate(root)
-    ticket = _find_video_ticket(slate, ticket_id)
-    if ticket is None:
-        raise HTTPException(status_code=404, detail=f"Video package ticket {ticket_id!r} not found")
-    package = _video_package_for_ticket(ticket)
-    if package is None:
-        raise HTTPException(status_code=400, detail=f"Ticket {ticket_id!r} is not a video package")
-    job = _video_package_job(root, ticket, package)
-    _save_job_at_root(root, job)
+    try:
+        job = _create_video_package_mission(root, "slay_hack", ticket_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
     _write_work_event(
         root,
         "implementation_step",
@@ -2600,6 +2742,31 @@ def create_video_package_mission(ticket_id: str, request: Request, user: str = D
         result=ticket_id,
         next_action="Mark ready for generation after Nora review.",
         metadata={"job_id": job.id, "ticket_id": ticket_id},
+    )
+    return RedirectResponse(f"/jobs/{job.id}", status_code=303)
+
+
+@app.post("/aurora/daily-slate/{project_slug}/video-packages/{ticket_id}/create-mission")
+def create_daily_slate_video_package_mission(
+    project_slug: str,
+    ticket_id: str,
+    request: Request,
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        project_slug = resolve_project_slug(project_slug, root=root)
+        job = _create_video_package_mission(root, project_slug, ticket_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Created daily slate mission {job.id}",
+        actor=user,
+        result=f"{project_slug}:{ticket_id}",
+        next_action="Mark ready for generation after Nora review.",
+        metadata={"job_id": job.id, "project": project_slug, "ticket_id": ticket_id},
     )
     return RedirectResponse(f"/jobs/{job.id}", status_code=303)
 

@@ -8,6 +8,7 @@
   </div>
   <div class="inline-actions">
     <a class="button button-secondary" href="/aurora">Back to Aurora</a>
+    <a class="button button-secondary" href="/aurora/approval-queue">Approval queue</a>
     <a class="button button-secondary" href="/aurora/workflow">Workflow</a>
     <a class="button" href="/aurora/new-mission">Launch mission</a>
   </div>
@@ -29,6 +30,10 @@
   <div class="stat-card">
     <span>Learning brief</span>
     <strong>{{ "Ready" if latest_brief else "Missing" }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Approval queue</span>
+    <strong>{{ approval_count }}</strong>
   </div>
 </section>
 
@@ -66,10 +71,16 @@
     <div class="slate-video-packages">
       <h3>Video packages</h3>
       {% for package in slate.video_packages %}
-      <a href="/aurora/workflow" class="slate-package-link">
+      <div class="slate-package-link slate-package-action">
         <strong>{{ package.title }}</strong>
         <small>{{ package.owner }} - {{ package.scene_count }} scenes - {{ package.total_duration_seconds }}s</small>
-      </a>
+        <div class="slate-actions">
+          <a class="button button-secondary button-small" href="/aurora/workflow">Open package</a>
+          <form class="inline-form" method="post" action="{{ package.daily_create_mission_url }}">
+            <button type="submit">Create mission</button>
+          </form>
+        </div>
+      </div>
       {% endfor %}
     </div>
     {% endif %}
@@ -79,6 +90,40 @@
     <p class="muted">No page slates found. Add a project weekly calendar to show planned work here.</p>
   </article>
   {% endfor %}
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Approval queue</p>
+    <h2>Ready but not published</h2>
+  </div>
+  <div class="approval-queue-list">
+    {% for item in approval_queue %}
+    <div class="approval-queue-row">
+      <div>
+        <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
+        <strong>{{ item.page_name }}</strong>
+        <p>{{ item.brief }}</p>
+        <small>{{ item.lane }} - {{ item.next_action }}</small>
+      </div>
+      <div class="slate-actions">
+        <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
+        {% if item.action_method == "post" %}
+        <form class="inline-form" method="post" action="{{ item.action_url }}">
+          <button type="submit">{{ item.action_label }}</button>
+        </form>
+        {% else %}
+        <a class="button button-secondary button-small" href="{{ item.action_url }}">{{ item.action_label }}</a>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <p class="muted">No missions are waiting in the approval queue.</p>
+    {% endfor %}
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/approval-queue">Open full queue</a>
+  </div>
 </section>
 
 <section class="content-grid">
