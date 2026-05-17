@@ -129,12 +129,12 @@ else
     echo "  Telegram bot not started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is empty."
 fi
 
-if grep -q '^ANTHROPIC_API_KEY=.\+' "$INSTALL_DIR/.env"; then
+if grep -q '^OPENAI_API_KEY=.\+' "$INSTALL_DIR/.env"; then
     systemctl enable --now nayzfreedom-scheduler.timer
     systemctl enable --now nayzfreedom-reporter.timer
 else
     systemctl disable --now nayzfreedom-scheduler.timer nayzfreedom-reporter.timer 2>/dev/null || true
-    echo "  Scheduler/reporter timers not started: ANTHROPIC_API_KEY is empty."
+    echo "  Scheduler/reporter timers not started: OPENAI_API_KEY is empty."
 fi
 
 systemctl enable --now nayzfreedom-backup.timer

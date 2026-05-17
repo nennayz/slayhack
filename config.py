@@ -9,9 +9,10 @@ class MissingAPIKeyError(Exception):
 
 @dataclass
 class Config:
-    anthropic_api_key: str
     brave_search_api_key: str
     openai_api_key: str
+    openai_robin_model: str = "gpt-4o"
+    openai_agent_model: str = "gpt-4o-mini"
     google_cloud_project: str = ""
     google_application_credentials: str = ""
     meta_access_token: str = ""
@@ -25,13 +26,14 @@ class Config:
 
     @classmethod
     def from_env(cls) -> Config:
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not anthropic_key:
-            raise MissingAPIKeyError("ANTHROPIC_API_KEY is required")
+        openai_key = os.getenv("OPENAI_API_KEY", "")
+        if not openai_key:
+            raise MissingAPIKeyError("OPENAI_API_KEY is required")
         return cls(
-            anthropic_api_key=anthropic_key,
             brave_search_api_key=os.getenv("BRAVE_SEARCH_API_KEY", ""),
-            openai_api_key=os.getenv("OPENAI_API_KEY", ""),
+            openai_api_key=openai_key,
+            openai_robin_model=os.getenv("OPENAI_ROBIN_MODEL", "gpt-4o"),
+            openai_agent_model=os.getenv("OPENAI_AGENT_MODEL", "gpt-4o-mini"),
             google_cloud_project=os.getenv("GOOGLE_CLOUD_PROJECT", ""),
             google_application_credentials=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", ""),
             meta_access_token=os.getenv("META_ACCESS_TOKEN", ""),

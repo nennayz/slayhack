@@ -28,7 +28,6 @@ def _write_pending_job(root: Path, due: int = 1) -> str:
 
 def test_instagram_queue_publishes_due_job(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
     monkeypatch.setenv("OPENAI_API_KEY", "o")
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "b")
     job_id = _write_pending_job(tmp_path)
@@ -73,7 +72,6 @@ def test_instagram_queue_skips_future_job(mocker, tmp_path, monkeypatch):
 
 def test_instagram_queue_marks_failure_for_retry(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
     monkeypatch.setenv("OPENAI_API_KEY", "o")
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "b")
     job_id = _write_pending_job(tmp_path)
@@ -108,7 +106,6 @@ def test_instagram_queue_marks_failure_for_retry(mocker, tmp_path, monkeypatch):
 
 def test_instagram_queue_fails_after_max_retries(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "a")
     monkeypatch.setenv("OPENAI_API_KEY", "o")
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "b")
     job_id = _write_pending_job(tmp_path)

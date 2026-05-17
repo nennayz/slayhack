@@ -54,7 +54,7 @@ def main() -> None:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Use mock agent/publish outputs; Robin orchestration still calls Anthropic",
+        help="Use mock agent/publish outputs; Robin orchestration still calls OpenAI",
     )
     parser.add_argument("--schedule", action="store_true",
                         help="Schedule post at Roxy's recommended time instead of immediately")

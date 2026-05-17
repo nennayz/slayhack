@@ -26,7 +26,7 @@ Full design spec: [`docs/superpowers/specs/2026-05-12-slay-hack-agency-design.md
 
 | Agent | File | Role |
 |---|---|---|
-| **Robin** | `orchestrator.py` | Claude tool-use orchestrator. Receives brief, loads PM, coordinates team. |
+| **Robin** | `orchestrator.py` | OpenAI tool-use orchestrator. Receives brief, loads PM, coordinates team. |
 | **Mia Trend** | `agents/mia.py` | Trend research via Brave Search API |
 | **Zoe Spark** | `agents/zoe.py` | Generates 5–10 content ideas from Mia's research |
 | **Bella Quill** | `agents/bella.py` | Script writer (Hook → Body → CTA). Style defined by PM brand profile, not hardcoded. |
@@ -82,8 +82,9 @@ To upgrade an existing venv: `rm -rf .venv && python3.12 -m venv .venv && source
 
 Required env vars:
 ```
-ANTHROPIC_API_KEY=
 OPENAI_API_KEY=
+OPENAI_ROBIN_MODEL=gpt-4o
+OPENAI_AGENT_MODEL=gpt-4o-mini
 BRAVE_SEARCH_API_KEY=
 GOOGLE_CLOUD_PROJECT=
 GOOGLE_APPLICATION_CREDENTIALS=
@@ -104,11 +105,11 @@ python main.py --project nayzfreedom_fleet --brief "your brief here"
 python main.py --resume 20260512_143022
 
 # Dry-run from an interactive terminal (pauses for checkpoints).
-# Still calls Anthropic for Robin orchestration; agents/publish use mock outputs.
+# Still calls OpenAI for Robin orchestration; agents/publish use mock outputs.
 python main.py --project nayzfreedom_fleet --brief "..." --dry-run
 
 # Dry-run from Claude/Codex/cron (auto-approves checkpoints, no stdin block)
-# Still calls Anthropic for Robin orchestration; agents/publish use mock outputs.
+# Still calls OpenAI for Robin orchestration; agents/publish use mock outputs.
 python main.py --project nayzfreedom_fleet --brief "..." --dry-run --unattended
 
 # Run scheduler manually with mock agent/publish outputs
@@ -182,9 +183,8 @@ The Freedom and Lyra should stay clearly marked as planned until their data mode
 
 ## Key Architecture Notes
 
-- **Robin uses `claude-opus-4-7`** with tool use. Each agent tool call = dispatching to one of the 7 agents.
-- **All agents use `claude-sonnet-4-6`** for writing/analysis tasks.
-- **System prompts are cached** (`cache_control: {"type": "ephemeral"}`) on Robin and PM persona to reduce latency across multi-step pipeline runs.
+- **Robin uses `OPENAI_ROBIN_MODEL`** with tool use. Each agent tool call = dispatching to one of the 7 agents.
+- **All agents use `OPENAI_AGENT_MODEL`** for writing/analysis tasks.
 - **`ContentJob`** (Pydantic model in `models/content_job.py`) is the single contract passed between all agents. Never pass raw dicts.
 - **Jobs persist to `output/<page_name>/<job_id>/job.json`** after every agent completes. Resume reads this file and skips completed stages.
 - **`job.dry_run: bool`** controls whether agents call real APIs or return mock data. Use `--dry-run` during development.

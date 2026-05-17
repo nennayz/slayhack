@@ -6,7 +6,7 @@ from models.content_job import ContentJob, PMProfile, BrandProfile, VisualIdenti
 
 
 def make_config():
-    return Config(anthropic_api_key="test", brave_search_api_key="brave", openai_api_key="oai")
+    return Config(brave_search_api_key="brave", openai_api_key="oai")
 
 
 def make_job(dry_run=True):

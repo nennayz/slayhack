@@ -2,7 +2,8 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import anthropic
+from dataclasses import dataclass
+from openai import OpenAI
 from activity_logger import log_action
 from agents.mia import MiaAgent
 from agents.zoe import ZoeAgent
@@ -17,6 +18,13 @@ from config import Config
 from job_store import save_job, load_recent_performance
 from models.content_job import ContentJob, JobStatus
 from tools.agent_tools import get_tool_definitions
+
+
+@dataclass
+class _ToolBlock:
+    id: str
+    name: str
+    input: dict
 
 _ROBIN_SYSTEM = """You are Robin, Chief of Staff at NayzFreedom.
 
@@ -49,10 +57,9 @@ def _compact_messages(messages: list[dict], keep_recent_pairs: int = 3) -> list[
     """Trim Robin's older assistant text blocks to prevent context bloat.
 
     Keeps the initial brief and the most recent round-trips in full.
-    Older assistant turns are compacted to tool_use blocks only (text
-    reasoning is dropped). Tool results are already minimal so left as-is.
+    Older assistant turns keep tool call metadata but drop text content.
+    Tool results are already minimal so left as-is.
     """
-    # Each round-trip = 2 messages: assistant turn + user turn (tool_results)
     if len(messages) < 1 + keep_recent_pairs * 2:
         return messages
 
@@ -62,24 +69,65 @@ def _compact_messages(messages: list[dict], keep_recent_pairs: int = 3) -> list[
 
     compacted: list[dict] = []
     for msg in old:
-        if msg["role"] == "assistant" and isinstance(msg["content"], list):
-            # Keep tool_use blocks; drop text blocks to save tokens
-            slim = [
-                {"type": "tool_use", "id": b.id, "name": b.name, "input": b.input}
-                for b in msg["content"]
-                if hasattr(b, "type") and b.type == "tool_use"
-            ]
-            compacted.append({"role": "assistant", "content": slim or msg["content"]})
+        if msg.get("role") == "assistant" and msg.get("tool_calls"):
+            slim = dict(msg)
+            slim["content"] = ""
+            compacted.append(slim)
         else:
             compacted.append(msg)
 
     return first + compacted + recent
 
 
+def _openai_tools() -> list[dict]:
+    tools = []
+    for tool in get_tool_definitions():
+        tools.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": tool["name"],
+                    "description": tool["description"],
+                    "parameters": tool["input_schema"],
+                },
+            }
+        )
+    return tools
+
+
+def _tool_blocks_from_openai(message) -> list[_ToolBlock]:
+    blocks = []
+    for call in message.tool_calls or []:
+        try:
+            tool_input = json.loads(call.function.arguments or "{}")
+        except json.JSONDecodeError:
+            tool_input = {}
+        blocks.append(_ToolBlock(id=call.id, name=call.function.name, input=tool_input))
+    return blocks
+
+
+def _assistant_message_from_openai(message) -> dict:
+    payload = {"role": "assistant", "content": message.content or ""}
+    if message.tool_calls:
+        payload["tool_calls"] = [
+            {
+                "id": call.id,
+                "type": "function",
+                "function": {
+                    "name": call.function.name,
+                    "arguments": call.function.arguments or "{}",
+                },
+            }
+            for call in message.tool_calls
+        ]
+    return payload
+
+
 class Orchestrator:
     def __init__(self, config: Config, safe_prep: bool = False):
         self.config = config
-        self.client = anthropic.Anthropic(api_key=config.anthropic_api_key)
+        self.client = OpenAI(api_key=config.openai_api_key)
+        self.model = config.openai_robin_model
         self.agents = {
             "mia": MiaAgent(config),
             "zoe": ZoeAgent(config),
@@ -108,15 +156,18 @@ class Orchestrator:
         messages: list[dict] = [{"role": "user", "content": first_message}]
 
         while True:
-            response = self.client.messages.create(
-                model="claude-opus-4-7",
+            response = self.client.chat.completions.create(
+                model=self.model,
                 max_tokens=4096,
-                system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
-                tools=get_tool_definitions(),
-                messages=messages,
+                tools=_openai_tools(),
+                tool_choice="auto",
+                messages=[{"role": "system", "content": system_prompt}, *messages],
             )
+            choice = response.choices[0]
+            message = choice.message
+            tool_blocks = _tool_blocks_from_openai(message)
 
-            if response.stop_reason == "end_turn":
+            if not tool_blocks and choice.finish_reason == "stop":
                 if has_publish_failures(job.publish_result):
                     job.status = JobStatus.FAILED
                 elif self.safe_prep and not (
@@ -130,12 +181,11 @@ class Orchestrator:
                 log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
                 return job
 
-            if response.stop_reason != "tool_use":
+            if not tool_blocks:
                 job.status = JobStatus.FAILED
                 save_job(job)
-                raise RuntimeError(f"Unexpected stop_reason: {response.stop_reason}")
+                raise RuntimeError(f"Unexpected finish_reason: {choice.finish_reason}")
 
-            tool_blocks = [b for b in response.content if b.type == "tool_use"]
             checkpoint_blocks = [b for b in tool_blocks if b.name == "request_checkpoint"]
             agent_blocks = [b for b in tool_blocks if b.name != "request_checkpoint"]
 
@@ -146,8 +196,8 @@ class Orchestrator:
                 result = self._dispatch(block.name, block.input, job)
                 save_job(job)
                 tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
+                    "role": "tool",
+                    "tool_call_id": block.id,
                     "content": json.dumps(result),
                 })
 
@@ -165,8 +215,8 @@ class Orchestrator:
                 save_job(job)
                 for block in agent_blocks:
                     tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
+                        "role": "tool",
+                        "tool_call_id": block.id,
                         "content": json.dumps(results_map[block.id]),
                     })
             else:
@@ -174,13 +224,13 @@ class Orchestrator:
                     result = self._dispatch(block.name, block.input, job)
                     save_job(job)
                     tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
+                        "role": "tool",
+                        "tool_call_id": block.id,
                         "content": json.dumps(result),
                     })
 
-            messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
+            messages.append(_assistant_message_from_openai(message))
+            messages.extend(tool_results)
             messages = _compact_messages(messages)
 
     def _dispatch(self, tool_name: str, tool_input: dict, job: ContentJob) -> dict:
