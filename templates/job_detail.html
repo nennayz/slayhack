@@ -85,6 +85,9 @@
       {% if manual_kit.drive_sync %}
       <div class="stage-brief">
         <p>Drive sync: {{ manual_kit.drive_sync.status }} · {{ manual_kit.drive_sync.synced_at }}</p>
+        {% if manual_kit.drive_sync.detail %}
+        <p>{{ manual_kit.drive_sync.detail }}</p>
+        {% endif %}
         {% if manual_kit.drive_sync.web_view_link %}
         <a href="{{ manual_kit.drive_sync.web_view_link }}" target="_blank" rel="noreferrer">Open Drive kit</a>
         {% endif %}

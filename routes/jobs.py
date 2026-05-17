@@ -61,6 +61,49 @@ import dashboard as _dashboard_mod  # noqa: E402
 router = APIRouter()
 
 
+def _manual_kit_job_state_path(root: Path, job) -> Path:
+    return root / "output" / job.pm.page_name / job.id / "job.json"
+
+
+def _manual_kit_state_write_issue(root: Path, job) -> str | None:
+    path = _manual_kit_job_state_path(root, job)
+    parent = path.parent
+    if parent.exists() and not os.access(parent, os.W_OK):
+        return f"Job folder is not writable: {parent}"
+    if path.exists() and not os.access(path, os.W_OK):
+        return f"Job state is not writable: {path}"
+    if not path.exists() and parent.exists() and not os.access(parent, os.W_OK):
+        return f"Job folder cannot create job state: {parent}"
+    return None
+
+
+def _drive_sync_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _record_manual_kit_drive_failure(root: Path, job, user: str, detail: str) -> None:
+    kit = dict(job.manual_post_kit or {})
+    kit["drive_sync"] = {
+        "status": "failed",
+        "synced_at": _drive_sync_timestamp(),
+        "synced_by": user,
+        "filename": manual_kit_filename(job),
+        "folder_path": drive_folder_path(job),
+        "detail": detail[:500],
+    }
+    job.manual_post_kit = kit
+    _save_job_at_root(root, job)
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Manual post kit Drive sync failed for {job.id}",
+        actor=user,
+        result=f"drive_sync failed: {detail[:180]}",
+        next_action="Check Google Drive credentials, target folder access, or job state ownership.",
+        metadata={"job_id": job.id},
+    )
+
+
 @router.get("/jobs", response_class=HTMLResponse)
 def jobs_redirect(_: str = Depends(verify_auth)):
     return RedirectResponse("/aurora/missions", status_code=307)
@@ -179,33 +222,42 @@ def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depe
     if not root_folder_id:
         raise HTTPException(status_code=400, detail="GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID is not configured")
 
+    write_issue = _manual_kit_state_write_issue(root, job)
+    if write_issue:
+        raise HTTPException(status_code=409, detail=f"Manual kit sync blocked before upload: {write_issue}")
+
     zip_path = create_manual_post_kit_archive(root, job)
     try:
         from google_drive import ensure_drive_folder_path, upload_file_to_drive
 
-        folder_result = ensure_drive_folder_path(
-            root_folder_id,
-            drive_folder_path(job),
-            credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
-            oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
-            token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
-        )
-        uploaded = upload_file_to_drive(
-            str(zip_path),
-            folder_id=folder_result["folder_id"],
-            dest_name=manual_kit_filename(job),
-            mime_type="application/zip",
-            credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
-            oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
-            token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
-        )
+        try:
+            folder_result = ensure_drive_folder_path(
+                root_folder_id,
+                drive_folder_path(job),
+                credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+                oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
+                token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
+            )
+            uploaded = upload_file_to_drive(
+                str(zip_path),
+                folder_id=folder_result["folder_id"],
+                dest_name=manual_kit_filename(job),
+                mime_type="application/zip",
+                credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
+                oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
+                token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
+                replace_existing=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            _record_manual_kit_drive_failure(root, job, user, str(exc))
+            return RedirectResponse(f"/jobs/{job_id}", status_code=303)
     finally:
         zip_path.unlink(missing_ok=True)
 
     kit = dict(job.manual_post_kit or {})
     kit["drive_sync"] = {
         "status": "synced",
-        "synced_at": datetime.now(timezone.utc).isoformat(),
+        "synced_at": _drive_sync_timestamp(),
         "synced_by": user,
         "filename": manual_kit_filename(job),
         "folder_path": drive_folder_path(job),
@@ -213,6 +265,7 @@ def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depe
         "file_id": uploaded.get("id"),
         "web_view_link": uploaded.get("webViewLink"),
         "web_content_link": uploaded.get("webContentLink"),
+        "sync_action": uploaded.get("syncAction", "created"),
     }
     job.manual_post_kit = kit
     _save_job_at_root(root, job)

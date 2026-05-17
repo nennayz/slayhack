@@ -1024,6 +1024,68 @@ def _ops_log_status(root: Path) -> dict[str, object]:
     }
 
 
+def _job_state_write_health(root: Path, limit: int = 8) -> dict[str, object]:
+    output_root = root / "output"
+    if not output_root.exists():
+        return {
+            "state": "Ready",
+            "detail": "No output directory yet.",
+            "attention_count": 0,
+            "scanned": 0,
+            "rows": [],
+        }
+
+    rows: list[dict[str, str]] = []
+    attention_count = 0
+    scanned = 0
+    try:
+        job_paths = sorted(output_root.rglob("job.json"))
+    except OSError as exc:
+        return {
+            "state": "Failed",
+            "detail": f"Cannot scan output job state: {exc}",
+            "attention_count": 1,
+            "scanned": 0,
+            "rows": [],
+        }
+
+    for path in job_paths:
+        scanned += 1
+        issues = []
+        try:
+            if not os.access(path, os.W_OK):
+                issues.append("job.json not writable")
+            if not os.access(path.parent, os.W_OK):
+                issues.append("job folder not writable")
+        except OSError as exc:
+            issues.append(str(exc))
+        if not issues:
+            continue
+        attention_count += 1
+        if len(rows) < limit:
+            rows.append({
+                "state": "Failed",
+                "name": str(path.relative_to(root)),
+                "detail": ", ".join(issues),
+            })
+
+    if attention_count:
+        return {
+            "state": "Failed",
+            "detail": f"{attention_count} job state files need ownership attention; scanned {scanned}.",
+            "attention_count": attention_count,
+            "scanned": scanned,
+            "rows": rows,
+        }
+    return {
+        "state": "Ready",
+        "detail": f"{scanned} job state files writable.",
+        "attention_count": 0,
+        "scanned": scanned,
+        "rows": [],
+    }
+
+
 def _systemctl_args(verb: str, unit: str) -> list[str]:
     return ["sudo", "-n", "systemctl", verb, unit]
 
@@ -1712,6 +1774,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
     ops_reports = _recent_ops_reports(root)
     publish_summary = _ops_publish_summary(jobs)
     track_summary = _track_queue_summary(root)
+    job_state_health = _job_state_write_health(root)
     performance_signals = _latest_performance_signals(jobs)
     tracking_readiness = _tracking_readiness_rows(root, jobs)
     return {
@@ -1739,6 +1802,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
         "ops_log": _ops_log_status(root),
         "work_activity": read_recent_work_activity(root),
         "work_activity_log": work_activity_status(root),
+        "job_state_health": job_state_health,
         "ops_incidents": _recent_ops_incidents(root),
         "ops_reports": ops_reports,
         "incident_summary": incident_summary,

@@ -1783,6 +1783,33 @@ def test_ops_page_shows_work_activity_log(tmp_path, client):
     assert "design decision" in resp.text
 
 
+def test_ops_page_shows_job_state_write_health(tmp_path, client, monkeypatch):
+    monkeypatch.setattr(
+        _dm,
+        "_job_state_write_health",
+        lambda root: {
+            "state": "Failed",
+            "detail": "1 job state files need ownership attention; scanned 1.",
+            "attention_count": 1,
+            "scanned": 1,
+            "rows": [
+                {
+                    "state": "Failed",
+                    "name": "output/Slayhack/20260512_060000/job.json",
+                    "detail": "job.json not writable",
+                }
+            ],
+        },
+    )
+
+    resp = client.get("/ops", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Job state ownership" in resp.text
+    assert "output/Slayhack/20260512_060000/job.json" in resp.text
+    assert "job.json not writable" in resp.text
+
+
 def test_ops_incident_note_saves_and_displays(tmp_path, client, monkeypatch):
     monkeypatch.setattr(
         _dm,
@@ -2271,10 +2298,41 @@ def test_job_detail_syncs_manual_kit_to_drive(tmp_path, client, monkeypatch, moc
     assert folder_mock.call_args.args[0] == "root-folder"
     assert folder_mock.call_args.args[1] == ["SlayHack", "05_Ready_To_Post"]
     upload_mock.assert_called_once()
+    assert upload_mock.call_args.kwargs["replace_existing"] is True
     saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text())
     assert saved["manual_post_kit"]["drive_sync"]["status"] == "synced"
     assert saved["manual_post_kit"]["drive_sync"]["file_id"] == "file-123"
     assert saved["manual_post_kit"]["drive_sync"]["web_view_link"] == "https://drive.google.com/file/d/file-123/view"
+
+
+def test_job_detail_sync_blocks_before_upload_when_job_state_unwritable(tmp_path, client, monkeypatch, mocker):
+    _write_job(tmp_path, "20260512_060000", brief="drive kit")
+    monkeypatch.setenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "root-folder")
+    monkeypatch.setattr("routes.jobs._manual_kit_state_write_issue", lambda root, job: "job.json not writable")
+    upload_mock = mocker.patch("google_drive.upload_file_to_drive")
+
+    resp = client.post("/jobs/20260512_060000/sync-drive", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 409
+    assert "blocked before upload" in resp.text
+    upload_mock.assert_not_called()
+
+
+def test_job_detail_sync_records_failed_drive_state(tmp_path, client, monkeypatch, mocker):
+    _write_job(tmp_path, "20260512_060000", brief="drive kit")
+    monkeypatch.setenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "root-folder")
+    mocker.patch(
+        "google_drive.ensure_drive_folder_path",
+        return_value={"folder_id": "type-folder", "folders": []},
+    )
+    mocker.patch("google_drive.upload_file_to_drive", side_effect=RuntimeError("Drive quota nope"))
+
+    resp = client.post("/jobs/20260512_060000/sync-drive", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 303
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text())
+    assert saved["manual_post_kit"]["drive_sync"]["status"] == "failed"
+    assert "Drive quota nope" in saved["manual_post_kit"]["drive_sync"]["detail"]
 
 
 def test_manual_kit_adds_video_prompts_for_legacy_video_job(tmp_path, client):

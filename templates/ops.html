@@ -533,6 +533,22 @@
       <h2>Latest state archive</h2>
     </div>
     <div class="ops-row">
+      <span class="badge badge-ops-{{ job_state_health.state | lower }}">{{ job_state_health.state }}</span>
+      <strong>Job state ownership</strong>
+      <small>{{ job_state_health.detail }}</small>
+    </div>
+    {% if job_state_health.rows %}
+    <div class="ops-list spacious">
+      {% for item in job_state_health.rows %}
+      <div class="ops-row">
+        <span class="badge badge-ops-{{ item.state | lower }}">{{ item.state }}</span>
+        <strong>{{ item.name }}</strong>
+        <small>{{ item.detail }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="ops-row">
       <span class="badge badge-ops-{{ backup.state | lower }}">{{ backup.state }}</span>
       <strong>Backup archive</strong>
       <small>{{ backup.detail }}</small>
