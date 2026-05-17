@@ -98,6 +98,12 @@ def _slay_hack_ticket_id(tmp_path: Path, suffix: str) -> str:
     return next(ticket.ticket_id for ticket in slate.tickets if ticket.ticket_id.endswith(suffix))
 
 
+def _project_ticket_id(tmp_path: Path, project_slug: str, suffix: str) -> str:
+    slate = _dm._calendar_slate(tmp_path, project_slug)
+    assert slate is not None
+    return next(ticket.ticket_id for ticket in slate.tickets if ticket.ticket_id.endswith(suffix))
+
+
 def test_healthz_does_not_require_auth(client):
     resp = client.get("/healthz")
     assert resp.status_code == 200
@@ -310,10 +316,73 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Quick hack" in resp.text
     assert "Touchdown Reaction" in resp.text
     assert "Video packages" in resp.text
+    assert "Approval queue" in resp.text
+    assert "Create mission" in resp.text
+    assert "/aurora/daily-slate/stadium_sweethearts/video-packages/" in resp.text
     assert "Latest learning" in resp.text
     assert "Keep PM decisions separate from central crew execution." in resp.text
     assert "Use this view for" in resp.text
     assert "Stadium checks fan-cam plays" in resp.text
+
+
+def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):
+    _write_stadium_project(tmp_path)
+    ticket_id = _project_ticket_id(tmp_path, "stadium_sweethearts", "short-video-1")
+
+    resp = client.post(
+        f"/aurora/daily-slate/stadium_sweethearts/video-packages/{ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith("/jobs/")
+    job_id = resp.headers["location"].split("/")[-1]
+    job_path = next((tmp_path / "output" / "Stadium Sweethearts").glob("*/job.json"))
+    data = json.loads(job_path.read_text())
+    assert data["id"] == job_id
+    assert data["project"] == "stadium_sweethearts"
+    assert data["pm"]["page_name"] == "Stadium Sweethearts"
+    assert data["video_package"]["ticket_id"] == ticket_id
+    assert data["stage"] == "video_package_ready"
+    assert data["generation_request"]["status"] == "nora_review"
+
+    queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert queue.status_code == 200
+    assert "Ready but Not Published" in queue.text
+    assert "Stadium Sweethearts" in queue.text
+    assert "Needs review" in queue.text
+    assert "Mark ready" in queue.text
+
+
+def test_approval_queue_advances_generation_actions(tmp_path, client):
+    _write_stadium_project(tmp_path)
+    ticket_id = _project_ticket_id(tmp_path, "stadium_sweethearts", "short-video-1")
+    created = client.post(
+        f"/aurora/daily-slate/stadium_sweethearts/video-packages/{ticket_id}/create-mission",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    job_id = created.headers["location"].split("/")[-1]
+
+    ready = client.post(f"/jobs/{job_id}/ready-for-generation", headers=_auth(), follow_redirects=False)
+    queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert ready.status_code == 303
+    assert queue.status_code == 200
+    assert "Generation" in queue.text
+    assert "Ready" in queue.text
+    assert "Run generation dry-run" in queue.text
+    assert f"/jobs/{job_id}/run-generation-dry-run" in queue.text
+
+    dry_run = client.post(f"/jobs/{job_id}/run-generation-dry-run", headers=_auth(), follow_redirects=False)
+    waiting_queue = client.get("/aurora/approval-queue", headers=_auth())
+
+    assert dry_run.status_code == 303
+    assert waiting_queue.status_code == 200
+    assert "Waiting real video" in waiting_queue.text
+    assert "Attach the final generated video before publish packaging." in waiting_queue.text
 
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):
