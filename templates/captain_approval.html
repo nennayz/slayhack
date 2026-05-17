@@ -31,6 +31,18 @@
   </div>
 </section>
 
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Live publish lock</p>
+    <h2>Locked until explicit approval</h2>
+  </div>
+  <div class="learning-gates">
+    <span>This page only records dashboard handoff approval.</span>
+    <span>No Meta, TikTok, YouTube, or Facebook live publisher API is called here.</span>
+    <span>Use a separate live-publish approval step before any real platform post.</span>
+  </div>
+</section>
+
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
@@ -79,6 +91,58 @@
   </article>
 </section>
 
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Audit</p>
+      <h2>Captain review history</h2>
+    </div>
+    {% if publish_execution and publish_execution.captain_review_history %}
+    <div class="approval-review-list">
+      {% for item in publish_execution.captain_review_history %}
+      <div>
+        <span>{{ item.reviewed_at }}</span>
+        <p>{{ item.decision.replace("_", " ").title() }}</p>
+        {% if item.note %}<small>{{ item.note }}</small>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No Captain review decisions recorded yet.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Handoff audit</p>
+      <h2>Platform handoff state</h2>
+    </div>
+    {% if publish_execution %}
+    <div class="approval-review-list">
+      <div>
+        <span>Handoff time</span>
+        <p>{{ publish_execution.scheduled_at if publish_execution.scheduled_at else "Not handed off yet" }}</p>
+      </div>
+      <div>
+        <span>Handoff reason</span>
+        <p>{{ publish_result_reason }}</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if job.publish_result %}
+    <div class="publish-history">
+      {% for item in publish_history_items(job) %}
+      <div>
+        <span class="badge badge-publish-{{ item.status }}">{{ item.label }}</span>
+        {% if item.detail %}<small>{{ item.detail }}</small>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No dashboard handoff result is recorded yet.</p>
+    {% endif %}
+  </article>
+</section>
+
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Decision</p>
@@ -92,7 +156,7 @@
   </div>
   {% endif %}
   {% if publish_execution_summary.status == "scheduled" %}
-  <p class="muted">This package already has a dashboard schedule handoff. Use platform publisher controls for any live posting decision.</p>
+  <p class="muted">This package already has a dashboard handoff. Live publishing remains locked until explicit approval.</p>
   {% else %}
   <form class="inline-form approval-decision-form" method="post" action="/jobs/{{ job.id }}/captain-review">
     <label for="captain_note_{{ job.id }}">Review note</label>

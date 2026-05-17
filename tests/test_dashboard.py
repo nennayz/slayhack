@@ -518,6 +518,17 @@ def test_captain_approval_gate_holds_edits_and_approves_schedule_handoff(tmp_pat
     assert data["publish_result"]["tiktok"]["reason"] == "Dashboard schedule handoff only; no external platform API was called."
     assert data["publish_execution"]["captain_review"]["decision"] == "approve_schedule_handoff"
 
+    approved_page = client.get(f"/jobs/{job_id}/captain-approval", headers=_auth())
+
+    assert approved_page.status_code == 200
+    assert "Scheduled handoff" in approved_page.text
+    assert "Live publish lock" in approved_page.text
+    assert "Live publishing remains locked" in approved_page.text
+    assert "Captain review history" in approved_page.text
+    assert "Handoff audit" in approved_page.text
+    assert "Dashboard schedule handoff only; no external platform API was called." in approved_page.text
+    assert "Tiktok handoff" in approved_page.text
+
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):
     _write_slay_hack_project(tmp_path)
@@ -864,7 +875,7 @@ def test_create_publish_job_and_schedule_publish_from_package(tmp_path, client):
     assert "Recorded real generation result" in work_activity
     assert "Recorded publish package" in work_activity
     assert "Created publish job" in work_activity
-    assert "Scheduled publish handoff" in work_activity
+    assert "Scheduled dashboard handoff" in work_activity
 
     scheduled_detail = client.get(f"/jobs/{job_id}", headers=_auth())
     scheduled_filter = client.get("/aurora/missions?filter=scheduled", headers=_auth())
@@ -873,12 +884,12 @@ def test_create_publish_job_and_schedule_publish_from_package(tmp_path, client):
     queue_ready = client.get("/aurora/generation?filter=ready_to_publish", headers=_auth())
 
     assert scheduled_detail.status_code == 200
-    assert "Scheduled publish" in scheduled_detail.text
+    assert "Scheduled handoff" in scheduled_detail.text
     assert "Create publish job" not in scheduled_detail.text
     assert scheduled_filter.status_code == 200
     assert "Video package mission: Quick hack" in scheduled_filter.text
     assert queue.status_code == 200
-    assert "Scheduled publish" in queue.text
+    assert "Scheduled handoff" in queue.text
     assert "Generation and publish state" in queue.text
     assert queue_scheduled.status_code == 200
     assert "Video package mission: Quick hack" in queue_scheduled.text
