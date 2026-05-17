@@ -1,19 +1,32 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="hero aurora-hero compact-hero">
-  <p class="eyebrow">The Aurora</p>
-  <h1>Crew</h1>
-  <p class="hero-copy">Core crew, SlayHack PM, and central specialists aboard The Aurora, arranged from page direction through production, publish support, and learning loop.</p>
+  <p class="eyebrow">The Aurora Voyage</p>
+  <h1>Crew Stations</h1>
+  <p class="hero-copy">Core crew, SlayHack PM, and central specialists aboard The Aurora, arranged as a route from page direction through production, publish support, and learning loop.</p>
+  <div class="hero-actions">
+    <a class="button button-secondary" href="/aurora">Aurora bridge</a>
+    <a class="button button-secondary" href="/aurora/workflow">Workflow route</a>
+    <a class="button button-secondary" href="/aurora/learning">Learning log</a>
+  </div>
 </section>
-<section class="panel crew-chain">
-  {% for member in crew %}
-  <a class="crew-chain-step" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
-    <span>{{ member.mission_phase }}</span>
-    <strong>{{ member.workflow_stage }}</strong>
-    <em>{{ member.name }}</em>
-  </a>
-  {% endfor %}
+
+<section class="panel route-panel">
+  <div class="section-heading">
+    <p class="eyebrow">Aurora route map</p>
+    <h2>Station order</h2>
+  </div>
+  <div class="crew-chain">
+    {% for member in crew %}
+    <a class="crew-chain-step" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
+      <span>{{ member.mission_phase }}</span>
+      <strong>{{ member.workflow_stage }}</strong>
+      <em>{{ member.name }}</em>
+    </a>
+    {% endfor %}
+  </div>
 </section>
+
 <section class="crew-grid">
   {% for member in crew %}
   <a class="crew-card" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">

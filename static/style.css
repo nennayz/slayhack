@@ -18,7 +18,9 @@
 
 body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: linear-gradient(180deg, #f7fbff 0%, var(--ivory) 42%, #f9f6ee 100%);
+  background:
+    linear-gradient(180deg, rgba(247,251,255,0.96) 0%, rgba(251,247,239,0.98) 46%, #f9f6ee 100%),
+    linear-gradient(120deg, rgba(125,226,209,0.18), rgba(122,168,255,0.1) 38%, rgba(185,131,255,0.12));
   color: var(--ink);
   margin: 0;
 }
@@ -59,7 +61,28 @@ body {
 nav {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.nav-group {
+  align-items: center;
+  display: flex;
   gap: 0.35rem;
+}
+
+.nav-group-label {
+  color: rgba(255,255,255,0.48);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.nav-group-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28rem;
 }
 
 nav a {
@@ -152,12 +175,11 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .hero::after {
   content: "";
   position: absolute;
-  inset: auto -10% -45% auto;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  filter: blur(4px);
-  opacity: 0.35;
+  inset: auto -9% -36% auto;
+  width: 440px;
+  height: 150px;
+  opacity: 0.2;
+  transform: rotate(-8deg);
 }
 
 .hero-fleet,
@@ -1135,18 +1157,24 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .crew-grid {
   grid-template-columns: repeat(4, 1fr);
 }
+.route-panel {
+  margin-bottom: 1rem;
+}
 .crew-chain {
   display: grid;
   gap: 0.65rem;
   grid-template-columns: repeat(4, 1fr);
-  margin-bottom: 1rem;
 }
 .crew-chain-step {
-  border-left: 4px solid var(--member-accent, var(--gold));
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--member-accent, var(--gold));
+  border-radius: 14px;
   color: inherit;
   display: grid;
   gap: 0.2rem;
-  padding: 0.35rem 0.7rem;
+  min-height: 92px;
+  padding: 0.75rem;
   text-decoration: none;
 }
 .crew-chain-step span,
@@ -1195,6 +1223,12 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   object-position: center top;
   width: 100%;
 }
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
 .character-hero {
   align-items: center;
   border-top: 5px solid var(--member-accent, var(--gold));
@@ -1224,6 +1258,26 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   color: var(--muted);
   font-size: 0.82rem;
   padding: 0.38rem 0.65rem;
+}
+.station-handoff {
+  margin-top: 1rem;
+}
+.handoff-columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+.handoff-columns h3 {
+  font-size: 0.92rem;
+  margin: 0 0 0.65rem;
+}
+.voyage-note {
+  background: rgba(16,35,63,0.05);
+  border-left: 4px solid var(--member-accent, var(--gold));
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 1rem 0 0;
+  padding: 0.85rem 1rem;
 }
 
 .timeline {
@@ -1394,6 +1448,15 @@ a:hover { color: var(--navy-soft); }
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
   }
+  .nav-group {
+    align-items: flex-start;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .nav-group-links {
+    flex-wrap: nowrap;
+  }
   nav a {
     flex: 0 0 auto;
     font-size: 0.9rem;
@@ -1448,7 +1511,8 @@ a:hover { color: var(--navy-soft); }
   .video-package-detail,
   .approval-queue-row,
   .slate-counts,
-  .workflow-stats {
+  .workflow-stats,
+  .handoff-columns {
     grid-template-columns: 1fr;
   }
   .character-hero {
@@ -1482,6 +1546,9 @@ a:hover { color: var(--navy-soft); }
   }
   .crew-grid {
     gap: 0.85rem;
+  }
+  .page-actions .button {
+    width: 100%;
   }
   .crew-portrait {
     height: 300px;

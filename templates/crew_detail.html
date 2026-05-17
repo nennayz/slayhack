@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="page-actions">
+  <a class="button button-secondary button-small" href="/aurora/crew">Back to crew deck</a>
+  <a class="button button-secondary button-small" href="/aurora">Aurora bridge</a>
+</div>
+
 <section class="character-hero panel" style="--member-accent: {{ member.accent_color }}">
   <img class="character-portrait" src="{{ member.image }}" alt="{{ member.name }}">
   <div>
@@ -18,7 +23,7 @@
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
-      <p class="eyebrow">Character sheet</p>
+      <p class="eyebrow">Station profile</p>
       <h2>{{ member.operational_role }}</h2>
     </div>
     <p><strong>Personality:</strong> {{ member.personality }}</p>
@@ -27,7 +32,7 @@
   </article>
   <article class="panel">
     <div class="section-heading">
-      <p class="eyebrow">Watch</p>
+      <p class="eyebrow">Review checks</p>
       <h2>Strengths & watch-outs</h2>
     </div>
     <p><strong>Strengths:</strong> {{ member.strengths | join(", ") }}</p>
@@ -35,28 +40,21 @@
   </article>
 </section>
 
-<section class="content-grid">
-  <article class="panel">
-    <div class="section-heading">
-      <p class="eyebrow">Inputs</p>
-      <h2>What this station needs</h2>
-    </div>
-    <div class="tag-list">{% for item in member.inputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
-  </article>
-  <article class="panel">
-    <div class="section-heading">
-      <p class="eyebrow">Outputs</p>
-      <h2>What this station returns</h2>
-    </div>
-    <div class="tag-list">{% for item in member.outputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
-  </article>
-</section>
-
-<section class="panel">
+<section class="panel station-handoff">
   <div class="section-heading">
-    <p class="eyebrow">Operational contract</p>
-    <h2>How to work with {{ member.name }}</h2>
+    <p class="eyebrow">Station handoff</p>
+    <h2>What moves through {{ member.name }}</h2>
   </div>
-  <p class="muted">Use {{ member.name }} when the mission reaches <strong>{{ member.workflow_stage }}</strong>. Feed this station the inputs above, expect the outputs above, and use the watch-outs as review checks before moving to the next crew station.</p>
+  <div class="handoff-columns">
+    <div>
+      <h3>Needs on arrival</h3>
+      <div class="tag-list">{% for item in member.inputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
+    </div>
+    <div>
+      <h3>Returns to the route</h3>
+      <div class="tag-list">{% for item in member.outputs %}<span class="tag">{{ item }}</span>{% endfor %}</div>
+    </div>
+  </div>
+  <p class="voyage-note">Use {{ member.name }} when the mission reaches <strong>{{ member.workflow_stage }}</strong>. The handoff above is the review gate before the mission moves to the next crew station.</p>
 </section>
 {% endblock %}
