@@ -117,7 +117,15 @@ class Orchestrator:
             )
 
             if response.stop_reason == "end_turn":
-                job.status = JobStatus.FAILED if has_publish_failures(job.publish_result) else JobStatus.COMPLETED
+                if has_publish_failures(job.publish_result):
+                    job.status = JobStatus.FAILED
+                elif self.safe_prep and not (
+                    isinstance(job.publish_execution, dict)
+                    and job.publish_execution.get("status") == "ready_to_publish"
+                ):
+                    job.status = JobStatus.AWAITING_APPROVAL
+                else:
+                    job.status = JobStatus.COMPLETED
                 save_job(job)
                 log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
                 return job
