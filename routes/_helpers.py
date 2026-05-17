@@ -2581,11 +2581,21 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
 def _captain_attention_lane(
     *,
     learning_runbook: dict[str, object],
+    manual_posting_rows: list[dict[str, object]] | None = None,
     attention_items: list[ContentJob],
     active_items: list[ContentJob],
 ) -> dict[str, object]:
     next_step = learning_runbook.get("next_step") if isinstance(learning_runbook.get("next_step"), dict) else None
     proof = learning_runbook.get("proof") if isinstance(learning_runbook.get("proof"), dict) else {}
+    manual_rows = manual_posting_rows or []
+    manual_priority = next(
+        (
+            row
+            for row in manual_rows
+            if str(row.get("lane")) in {"needs_attention", "kit_synced", "tracking_complete"}
+        ),
+        None,
+    )
     if next_step:
         action_method = str(next_step.get("action_method") or "get")
         do_now = {
@@ -2600,6 +2610,22 @@ def _captain_attention_lane(
         }
         lane_state = "Needs Captain"
         summary = str(next_step.get("detail") or "Learning Runbook has the next Captain action.")
+    elif manual_priority:
+        do_now = {
+            "state": str(manual_priority.get("state") or "missing"),
+            "label": "Do now",
+            "title": str(manual_priority.get("status") or "Manual posting"),
+            "detail": str(manual_priority.get("brief") or manual_priority.get("next_action") or ""),
+            "action_label": "Open manual queue",
+            "action_url": f"/aurora/manual-posting?lane={manual_priority.get('lane')}",
+        }
+        lane_state = "Needs Captain"
+        count = len(manual_rows)
+        summary = (
+            "1 manual posting handoff needs queue follow-through."
+            if count == 1
+            else f"{count} manual posting handoffs need queue follow-through."
+        )
     elif attention_items:
         job = attention_items[0]
         do_now = {
@@ -2656,12 +2682,24 @@ def _captain_attention_lane(
         }
 
     waiting = {
-        "state": "missing" if next_step else "ready",
+        "state": "missing" if next_step or manual_priority else "ready",
         "label": "Waiting on",
-        "title": str(next_step.get("label")) if next_step else "Nothing blocking closeout",
-        "detail": str(next_step.get("detail")) if next_step else "Learning loop and mission attention are clear.",
-        "action_label": "Open runbook" if next_step else "Open Ops",
-        "action_url": "#learning-runbook" if next_step else "/ops",
+        "title": (
+            str(next_step.get("label"))
+            if next_step
+            else str(manual_priority.get("status"))
+            if manual_priority
+            else "Nothing blocking closeout"
+        ),
+        "detail": (
+            str(next_step.get("detail"))
+            if next_step
+            else str(manual_priority.get("next_action"))
+            if manual_priority
+            else "Learning loop and mission attention are clear."
+        ),
+        "action_label": "Open runbook" if next_step else "Open manual queue" if manual_priority else "Open Ops",
+        "action_url": "#learning-runbook" if next_step else "/aurora/manual-posting" if manual_priority else "/ops",
     }
 
     return {
@@ -4395,13 +4433,99 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
     }
 
 
+def _manual_posting_learning_completion(
+    row: dict[str, object],
+    registry: dict[str, object],
+    jobs_by_id: dict[str, ContentJob],
+) -> dict[str, str]:
+    job_id = str(row.get("job_id") or "")
+    closeout = row.get("closeout") if isinstance(row.get("closeout"), dict) else {}
+    closeout_status = str(closeout.get("status") or "open")
+    lane = str(row.get("lane") or "")
+    if closeout_status != "closed":
+        if row.get("can_closeout"):
+            return {
+                "state": "missing",
+                "status": "Ready for closeout",
+                "detail": "Capture the learning note after reviewing the 24h and 72h proof.",
+            }
+        if lane == "kit_synced":
+            return {
+                "state": "missing",
+                "status": "Waiting manual post",
+                "detail": "Captain still needs to post from the synced Drive kit.",
+            }
+        if lane == "waiting_tracking":
+            return {
+                "state": "missing",
+                "status": "Waiting tracking proof",
+                "detail": "The 24h and 72h snapshots must land before learning closeout.",
+            }
+        return {
+            "state": str(row.get("state") or "missing"),
+            "status": "Learning not ready",
+            "detail": str(row.get("next_action") or "Resolve the manual posting lane before learning closeout."),
+        }
+
+    applied = closeout.get("learning_applied") if isinstance(closeout.get("learning_applied"), dict) else {}
+    if applied:
+        target_job_id = str(applied.get("applied_to_job_id") or "")
+        target_job = jobs_by_id.get(target_job_id)
+        learning = _accepted_learning_for_job(target_job) if target_job is not None else {}
+        if learning.get("confirmed"):
+            return {
+                "state": "ready",
+                "status": "Learning confirmed",
+                "detail": f"Applied to {target_job_id} and confirmed before generation.",
+            }
+        return {
+            "state": "missing",
+            "status": "Learning applied",
+            "detail": f"Applied to {target_job_id}; confirm accepted learning before generation.",
+        }
+
+    drafts = [
+        row
+        for row in registry.get("rows", [])
+        if job_id in [str(item) for item in row.get("source_job_ids", [])]
+    ]
+    if any(row.get("status") == "accepted" for row in drafts):
+        return {
+            "state": "missing",
+            "status": "Learning accepted",
+            "detail": "Accepted daily brief is ready to apply to the next Daily Slate mission.",
+        }
+    if any(row.get("status") == "needs_edits" for row in drafts):
+        return {
+            "state": "failed",
+            "status": "Draft needs edits",
+            "detail": "Revise the daily learning draft before it can be applied.",
+        }
+    if drafts:
+        return {
+            "state": "missing",
+            "status": "Draft waiting review",
+            "detail": "Captain review is needed before this lesson can feed the next mission.",
+        }
+    return {
+        "state": "missing",
+        "status": "Closeout captured",
+        "detail": "Create the daily learning draft from this closed manual lesson.",
+    }
+
+
 def _manual_posting_queue_rows(root: Path) -> list[dict[str, object]]:
     queue_entries = read_queue(root)
+    jobs = list_all_jobs(root)
+    registry = _daily_brief_draft_registry(root)
+    jobs_by_id = {job.id: job for job in jobs}
     rows = [
         row
-        for job in list_all_jobs(root)
+        for job in jobs
         if (row := _manual_posting_row(job, queue_entries)) is not None
     ]
+    for row in rows:
+        row["learning_completion"] = _manual_posting_learning_completion(row, registry, jobs_by_id)
     order = {key: index for index, (key, _, _) in enumerate(MANUAL_POSTING_LANES)}
     return sorted(rows, key=lambda item: (order.get(str(item["lane"]), 99), str(item["page_name"]), str(item["job_id"])))
 

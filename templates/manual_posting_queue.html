@@ -72,8 +72,11 @@
 
 <section class="panel spacious">
   <div class="section-heading">
-    <p class="eyebrow">Safe handoff board</p>
-    <h2>Manual posting status</h2>
+    <div>
+      <p class="eyebrow">Safe handoff board</p>
+      <h2>Manual posting status</h2>
+    </div>
+    <p>Learning completion shows whether each manual post has reached closeout, draft, apply, or confirmation.</p>
   </div>
   <div class="approval-lane-board manual-posting-board">
     {% for group in manual_posting_lane_groups %}
@@ -108,6 +111,11 @@
               <span class="{{ 'proof-ready' if item.proof_summary.snapshot_24h_present else 'proof-missing' }}">24h proof</span>
               <span class="{{ 'proof-ready' if item.proof_summary.snapshot_72h_present else 'proof-missing' }}">72h proof</span>
               <span class="{{ 'proof-ready' if item.proof_summary.learning_note_captured else 'proof-missing' }}">Learning note</span>
+            </div>
+            <div class="manual-learning-state">
+              <span class="badge badge-ops-{{ item.learning_completion.state }}">Learning completion</span>
+              <strong>{{ item.learning_completion.status }}</strong>
+              <small>{{ item.learning_completion.detail }}</small>
             </div>
             {% if item.posted_at %}
             <small>Posted at {{ item.posted_at }}</small>
