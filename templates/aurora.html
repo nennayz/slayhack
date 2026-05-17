@@ -34,11 +34,17 @@
     <h2>{{ pm_knowledge_status.state }}</h2>
   </div>
   <div class="learning-gates">
-    <span>{{ pm_knowledge_status.proof }}</span>
+    <span>{{ pm_knowledge_status.summary }}</span>
     <span>{{ pm_knowledge_status.next_action }}</span>
     <span>Live publish stays locked; Knowledge updates support planning, manual handoff, and learning only.</span>
   </div>
+  <div class="manual-proof-grid">
+    {% for item in pm_knowledge_status.rows %}
+    <span class="{{ item.class }}">{{ item.label }}: {{ item.status }}</span>
+    {% endfor %}
+  </div>
   <div class="inline-actions">
+    <a class="button button-small" href="/aurora/learning#pm-knowledge-certification">Run PM smoke checklist</a>
     {% for item in pm_knowledge_links %}
     <a class="button button-secondary button-small" href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.label }}</a>
     {% endfor %}
