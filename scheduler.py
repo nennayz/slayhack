@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 import yaml
@@ -28,6 +29,8 @@ _KEY_TO_CONTENT_TYPE: dict[str, str] = {
 }
 
 _BRIEF_KEYS = list(_KEY_TO_CONTENT_TYPE.keys())
+_LOCK_FILE = Path("/tmp/nayz_pipeline.lock")
+_SKIP_LOCK_ENV = "NAYZ_SKIP_PIPELINE_LOCK"
 
 
 def _today_name() -> str:
@@ -43,7 +46,53 @@ def _video_generation_available() -> bool:
     return (Path.home() / ".config/gcloud/application_default_credentials.json").exists()
 
 
-def run_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
+def _scheduler_lock_file(root: Path | None) -> Path:
+    if root is None:
+        return _LOCK_FILE
+    return root / "output" / "nayz_pipeline.lock"
+
+
+def _acquire_scheduler_lock(root: Path | None) -> tuple[Path, bool]:
+    lock_file = _scheduler_lock_file(root)
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+    if lock_file.exists():
+        try:
+            pid = int(lock_file.read_text().strip())
+        except (ValueError, OSError):
+            pid = None
+        pid_hint = f" (PID {pid})" if pid else ""
+        logger.error(
+            "another pipeline instance is already running%s; delete %s manually if stale",
+            pid_hint,
+            lock_file,
+        )
+        return lock_file, False
+    lock_file.write_text(str(os.getpid()))
+    return lock_file, True
+
+
+def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_type: str) -> dict:
+    """Run a single pipeline job subprocess and return a result dict."""
+    try:
+        env = os.environ.copy()
+        env[_SKIP_LOCK_ENV] = "1"
+        result = subprocess.run(cmd, cwd=cwd, timeout=1800, env=env)
+        if result.returncode != 0:
+            logger.error("FAILED: project=%s key=%s", project_slug, key)
+            return {"project": project_slug, "brief": key, "content_type": content_type,
+                    "exit_code": result.returncode, "failed": True}
+        logger.info("OK: project=%s key=%s", project_slug, key)
+        return {"project": project_slug, "brief": key, "content_type": content_type, "failed": False}
+    except subprocess.TimeoutExpired as exc:
+        if exc.process:
+            exc.process.kill()
+            exc.process.communicate()
+        logger.error("TIMEOUT: project=%s key=%s", project_slug, key)
+        return {"project": project_slug, "brief": key, "content_type": content_type,
+                "exit_code": None, "failed": True}
+
+
+def run_scheduler(dry_run: bool = False, root: Path | None = None, max_workers: int = 3) -> int:
     _root = root if root is not None else _ROOT
     calendars = sorted(_root.glob("projects/*/weekly_calendar.yaml"))
     if not calendars:
@@ -53,9 +102,11 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
     today = _today_name()
     run_date = datetime.now().strftime("%Y-%m-%d")
     failures: list[dict] = []
-    total = 0
 
     log_action("scheduler_start", {"run_date": run_date, "dry_run": dry_run})
+
+    # Collect all jobs to run today across all projects
+    pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)
     for calendar_path in calendars:
         project_slug = calendar_path.parent.name
         with open(calendar_path) as f:
@@ -81,7 +132,7 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
                     key,
                 )
                 continue
-            total += 1
+
             cmd = [
                 sys.executable, "main.py",
                 "--project", project_slug,
@@ -93,7 +144,6 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
             if dry_run:
                 cmd.append("--dry-run")
 
-            logger.info("Running: project=%s key=%s content_type=%s", project_slug, key, content_type)
             log_command("scheduler_run_command", {
                 "project": project_slug,
                 "key": key,
@@ -101,20 +151,26 @@ def run_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
                 "cmd": cmd,
                 "dry_run": dry_run,
             })
-            try:
-                result = subprocess.run(cmd, cwd=_root, timeout=1800)
-            except subprocess.TimeoutExpired as exc:
-                if exc.process:
-                    exc.process.kill()
-                    exc.process.communicate()
-                logger.error("TIMEOUT: project=%s key=%s", project_slug, key)
-                failures.append({"project": project_slug, "brief": key, "content_type": content_type, "exit_code": None})
-                continue
-            if result.returncode != 0:
-                logger.error("FAILED: project=%s key=%s brief=%r", project_slug, key, brief)
-                failures.append({"project": project_slug, "brief": key, "content_type": content_type, "exit_code": result.returncode})
-            else:
-                logger.info("OK: project=%s key=%s", project_slug, key)
+            pending.append((cmd, project_slug, key, content_type))
+
+    total = len(pending)
+    logger.info("Scheduler: %d jobs to run with max_workers=%d", total, max_workers)
+
+    lock_file, lock_acquired = _acquire_scheduler_lock(root)
+    if not lock_acquired:
+        return 1
+    try:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_meta = {
+                executor.submit(_run_job, cmd, _root, proj, key, ct): (proj, key)
+                for cmd, proj, key, ct in pending
+            }
+            for future in as_completed(future_to_meta):
+                job_result = future.result()
+                if job_result["failed"]:
+                    failures.append({k: v for k, v in job_result.items() if k != "failed"})
+    finally:
+        lock_file.unlink(missing_ok=True)
 
     if failures:
         send_slack_alert(failures, run_date, total, dry_run=dry_run)

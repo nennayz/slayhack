@@ -33,6 +33,7 @@ def test_instagram_queue_publishes_due_job(mocker, tmp_path, monkeypatch):
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "b")
     job_id = _write_pending_job(tmp_path)
     published_job = make_video_job(dry_run=False, video_path=str(tmp_path / "video.mp4"))
+    published_job.id = job_id  # must match so save_job writes to the right path
     published_job.publish_result = {"instagram": {"status": "published", "id": "ig-1"}}
     mocker.patch("instagram_queue.Config.from_env", return_value=make_publish_config())
     mock_run = mocker.patch("instagram_queue.PublishAgent.run", return_value=published_job)

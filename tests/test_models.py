@@ -35,7 +35,7 @@ def test_content_job_defaults():
 
 def test_content_job_id_is_timestamp_format():
     job = ContentJob(project="test", pm=make_pm(), brief="b", platforms=["instagram"])
-    assert len(job.id) == 15  # YYYYMMDD_HHMMSS
+    assert len(job.id) == 22  # YYYYMMDD_HHMMSS_%f (with microseconds)
 
 def test_idea_model():
     idea = Idea(number=1, title="Test Idea", hook="Test hook", angle="Tutorial",
@@ -175,3 +175,16 @@ def test_growth_strategy_editorial_guidance_custom():
         editorial_guidance={"instagram": "Hook within 3 seconds."},
     )
     assert g.editorial_guidance["instagram"] == "Hook within 3 seconds."
+
+def test_content_job_published_at_defaults_none():
+    job = ContentJob(project="test", pm=make_pm(), brief="b", platforms=["instagram"])
+    assert job.published_at is None
+
+def test_content_job_published_at_serializes():
+    from datetime import datetime, timezone
+    job = ContentJob(project="test", pm=make_pm(), brief="b", platforms=["instagram"])
+    job.published_at = datetime(2026, 5, 17, 14, 0, 0, tzinfo=timezone.utc)
+    data = job.model_dump_json()
+    assert "published_at" in data
+    job2 = ContentJob.model_validate_json(data)
+    assert job2.published_at == job.published_at

@@ -1,0 +1,12 @@
+[Unit]
+Description=Run NayzFreedom Track Scheduler every hour
+Requires=nayzfreedom-track-scheduler.service
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

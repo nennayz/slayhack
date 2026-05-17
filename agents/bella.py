@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from pydantic import TypeAdapter
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
+from job_store import load_recent_performance
 from models.content_job import (
     ContentJob, ContentType,
     Script, Article, ImageCaption, InfographicContent, BellaOutput,
@@ -96,7 +97,10 @@ class BellaAgent(BaseAgent):
             f"Tone: {job.pm.brand.tone}. "
             f"Audience: {job.pm.brand.target_audience}."
         )
+        perf_context = load_recent_performance(job.pm.page_name)
+        perf_section = f"Past performance data (use to calibrate tone and style):\n{perf_context}\n\n" if perf_context else ""
         user = (
+            f"{perf_section}"
             f"Brief: {job.brief}\nIdea: {idea.title}\nHook line: {idea.hook}\nAngle: {idea.angle}\n"
             f"Content type: {job.content_type.value}\nPlatforms: {', '.join(job.platforms)}\n\n"
             + _PROMPTS[job.content_type]

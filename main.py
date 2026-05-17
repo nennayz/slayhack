@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +18,25 @@ from project_loader import load_project, ProjectNotFoundError, resolve_project_s
 from tracker import track_job
 
 _LOCK_FILE = Path("/tmp/nayz_pipeline.lock")
+_SKIP_LOCK_ENV = "NAYZ_SKIP_PIPELINE_LOCK"
+
+
+def _acquire_lock() -> bool:
+    if os.getenv(_SKIP_LOCK_ENV) == "1":
+        return False
+    if _LOCK_FILE.exists():
+        try:
+            pid = int(_LOCK_FILE.read_text().strip())
+        except (ValueError, OSError):
+            pid = None
+        pid_hint = f" (PID {pid})" if pid else ""
+        print(
+            f"Error: another pipeline instance is already running{pid_hint}. "
+            f"If no pipeline is running, delete {_LOCK_FILE} manually."
+        )
+        sys.exit(1)
+    _LOCK_FILE.write_text(str(os.getpid()))
+    return True
 
 
 def main() -> None:
@@ -156,11 +176,13 @@ def main() -> None:
         if args.dry_run:
             print("[DRY-RUN MODE] No real API calls will be made.\n")
 
+    lock_acquired = _acquire_lock()
     orchestrator = Orchestrator(config)
     try:
         result = orchestrator.run(job, unattended=args.unattended)
     finally:
-        _LOCK_FILE.unlink(missing_ok=True)
+        if lock_acquired:
+            _LOCK_FILE.unlink(missing_ok=True)
 
     if result.status == JobStatus.COMPLETED:
         out_dir = f"output/{result.pm.page_name}/{result.id}"

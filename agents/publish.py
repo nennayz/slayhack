@@ -2,11 +2,13 @@ from __future__ import annotations
 import logging
 import re
 import time
+from datetime import datetime, timezone
 import requests
 from pathlib import Path
 from urllib.parse import quote
 from agents.base_agent import BaseAgent
 from models.content_job import ContentJob, ContentType
+from track_queue import enqueue_track_snapshots
 
 _META_GRAPH_BASE = "https://graph.facebook.com/v19.0"
 _TIKTOK_BASE = "https://open.tiktokapis.com/v2"
@@ -140,6 +142,19 @@ class PublishAgent(BaseAgent):
                 result[platform] = failure
         job.publish_result = result
         job.stage = "publish_done"
+
+        _published_statuses = {"published", "scheduled", "pending_queue"}
+        any_published = any(
+            isinstance(v, dict) and v.get("status") in _published_statuses
+            for v in result.values()
+        )
+        if any_published:
+            job.published_at = (
+                datetime.fromtimestamp(scheduled_time, tz=timezone.utc)
+                if scheduled_time else datetime.now(timezone.utc)
+            )
+            enqueue_track_snapshots(job)
+
         return job
 
     def _queue_instagram(self, job: ContentJob, caption: str, scheduled_time: int) -> dict:
@@ -182,6 +197,8 @@ class PublishAgent(BaseAgent):
         return {"Authorization": f"Bearer {token}"}
 
     def _post_tiktok(self, job: ContentJob, caption: str) -> dict:
+        if not self.config.tiktok_access_token:
+            return {"status": "skipped", "reason": "TIKTOK_ACCESS_TOKEN not configured"}
         if job.content_type != ContentType.VIDEO:
             return {"status": "skipped", "reason": "image carousel requires public URL hosting"}
         token = self.config.tiktok_access_token
@@ -253,6 +270,8 @@ class PublishAgent(BaseAgent):
         )
 
     def _post_youtube(self, job: ContentJob, caption: str, scheduled_time: int | None) -> dict:
+        if not self.config.youtube_client_id or not self.config.youtube_refresh_token:
+            return {"status": "skipped", "reason": "YouTube OAuth credentials not configured"}
         if job.content_type != ContentType.VIDEO:
             return {"status": "skipped", "reason": "YouTube only supports video uploads"}
         token = self._youtube_access_token(self.config)

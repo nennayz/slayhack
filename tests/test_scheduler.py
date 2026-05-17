@@ -32,6 +32,14 @@ def _make_fail_result():
     return r
 
 
+def test_run_job_skips_child_pipeline_lock(tmp_path):
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()) as mock_run:
+        result = sched_module._run_job([sys.executable, "main.py"], tmp_path, "proj", "article_1", "article")
+
+    assert result["failed"] is False
+    assert mock_run.call_args.kwargs["env"]["NAYZ_SKIP_PIPELINE_LOCK"] == "1"
+
+
 def test_scheduler_loads_todays_brief(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
@@ -185,6 +193,7 @@ def test_scheduler_skips_production_video_jobs_without_google_credentials(tmp_pa
         yaml.dump(MONDAY_CALENDAR)
     )
     monkeypatch.setattr(sched_module, "_ROOT", tmp_path)
+    monkeypatch.setattr(sched_module, "_LOCK_FILE", tmp_path / "scheduler.lock")
     monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
