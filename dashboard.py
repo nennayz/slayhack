@@ -2401,6 +2401,37 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
     return cards
 
 
+def _approval_default_video_path(job: ContentJob) -> str:
+    return f"output/{job.pm.page_name}/{job.id}/final-video.mp4"
+
+
+def _approval_default_caption(job: ContentJob) -> str:
+    package = getattr(job, "video_package", None)
+    title = str(package.get("title") if isinstance(package, dict) else job.brief)
+    if "Stadium Sweethearts" in job.pm.page_name:
+        return f"Fictional adult fan-cam replay: {title}. AI-generated, safe game-day energy, no real team marks."
+    return f"{title} - ready for review before publish handoff."
+
+
+def _approval_default_hashtags(job: ContentJob) -> str:
+    if "Stadium Sweethearts" in job.pm.page_name:
+        return "#StadiumSweethearts, #AIFanCam, #GameDay, #FictionalAdult"
+    if "Slay" in job.pm.page_name:
+        return "#SlayHack, #BeautyHack, #AIContent"
+    return "#NayzFreedom, #AIContent"
+
+
+def _approval_default_faq(job: ContentJob) -> str:
+    return (
+        "Q: Is this a real person?\n"
+        "A: No. This is fictional AI-generated content featuring adult characters only.\n\n"
+        "Q: Does this use real team marks or official footage?\n"
+        "A: No. The package should avoid real logos, official marks, and real-person likenesses.\n\n"
+        "Q: Who should review comments?\n"
+        "A: Emma handles normal replies. Nora or the PM reviews anything risky before response."
+    )
+
+
 def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
     rows = []
     for job in list_all_jobs(root):
@@ -2425,9 +2456,9 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "state": "missing",
                 "status": "Waiting real video",
                 "next_action": "Attach the final generated video before publish packaging.",
-                "action_label": "Open mission",
-                "action_url": f"/jobs/{job.id}",
-                "action_method": "get",
+                "action_label": "Record real video",
+                "action_url": f"/jobs/{job.id}/record-generation-result",
+                "action_method": "generation_result",
             }
         elif request_status in {"ready_for_generation", "dry_run_completed", "failed"}:
             row = {
@@ -2445,9 +2476,9 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "state": "missing",
                 "status": "Ready packaging",
                 "next_action": "Record caption, hashtags, FAQ, and publish notes.",
-                "action_label": "Open package",
-                "action_url": f"/jobs/{job.id}",
-                "action_method": "get",
+                "action_label": "Record publish package",
+                "action_url": f"/jobs/{job.id}/record-publish-package",
+                "action_method": "publish_package",
             }
         elif _publish_package_completed(job) and not publish_status:
             row = {
@@ -2464,10 +2495,10 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "lane": "Captain approval",
                 "state": "missing",
                 "status": "Ready to publish",
-                "next_action": "Schedule the dashboard handoff only after Captain approval.",
-                "action_label": "Schedule handoff",
-                "action_url": f"/jobs/{job.id}/schedule-publish",
-                "action_method": "post",
+                "next_action": "Captain approval required before schedule handoff. Dashboard scheduling is not a live post.",
+                "action_label": "Open mission",
+                "action_url": f"/jobs/{job.id}",
+                "action_method": "get",
             }
         elif publish_status == "scheduled":
             row = {
@@ -2489,6 +2520,11 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
                 "page_name": job.pm.page_name,
                 "stage": job.stage,
                 "detail_url": f"/jobs/{job.id}",
+                "default_video_path": _approval_default_video_path(job),
+                "default_caption": _approval_default_caption(job),
+                "default_hashtags": _approval_default_hashtags(job),
+                "default_faq": _approval_default_faq(job),
+                "default_publish_notes": "Dashboard package only. Do not schedule or post live until Captain Nayz approves.",
             }
         )
         rows.append(row)
