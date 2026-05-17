@@ -193,7 +193,7 @@ def test_captains_deck_empty(client):
     assert "Ready for first mission" in resp.text
     assert "Nami comes after privacy and memory boundaries are clear" in resp.text
     assert "Genie comes after the Fleet shell is stable" in resp.text
-    assert "Needs Captain" not in resp.text
+    assert "Filter log" in resp.text
     assert "Launch the first Aurora mission when the brief is ready." in resp.text
     assert "Next best action" in resp.text
     assert "Captain Action Console" in resp.text
@@ -311,14 +311,51 @@ def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
         actor="codex",
         result="console action history",
     )
+    write_work_activity(
+        tmp_path,
+        "implementation_step",
+        "Generation dry-run completed for console test",
+        actor="robin",
+        result="shipyard ready",
+    )
+    write_work_activity(
+        tmp_path,
+        "blocker",
+        "Captain approval needed for handoff mission",
+        actor="nora",
+        result="needs captain review",
+    )
+    write_work_activity(
+        tmp_path,
+        "test_result",
+        "Tracking proof captured for published mission",
+        actor="iris",
+        result="learning ready",
+    )
     deck = client.get("/", headers=_auth())
     aurora = client.get("/aurora", headers=_auth())
+    filtered = client.get(
+        "/?history_station=harbor-gate&history_actor=nora&history_mission=handoff&needs_captain=1",
+        headers=_auth(),
+    )
 
     assert deck.status_code == 200
     assert aurora.status_code == 200
+    assert filtered.status_code == 200
     assert "Captain Action Console" in deck.text
     assert "Command history" in deck.text
+    assert "Filtered ship log" in deck.text
+    assert "All stations" in deck.text
+    assert "All actors" in deck.text
+    assert "Needs Captain" in deck.text
     assert "Created daily slate mission for console test" in deck.text
+    assert "Generation dry-run completed for console test" in deck.text
+    assert "Captain approval needed for handoff mission" in deck.text
+    assert "Tracking proof captured for published mission" in deck.text
+    assert "Route Map" in deck.text
+    assert "Shipyard" in deck.text
+    assert "Harbor Gate" in deck.text
+    assert "Captain Log" in deck.text
     assert "Slay Hack next course" in deck.text
     assert "waiting" in deck.text
     assert "safe mission create" in deck.text
@@ -334,6 +371,14 @@ def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
     assert "live publish locked" in deck.text
     assert "Captain Action Console" in aurora.text
     assert "safe mission create" in aurora.text
+    assert "Filtered ship log" in aurora.text
+    assert "Captain approval needed for handoff mission" in filtered.text
+    assert 'value="harbor-gate" selected' in filtered.text
+    assert 'value="nora" selected' in filtered.text
+    assert "value=\"handoff\"" in filtered.text
+    assert "checked" in filtered.text
+    assert "Generation dry-run completed for console test" not in filtered.text
+    assert "Tracking proof captured for published mission" not in filtered.text
 
 
 def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):

@@ -37,23 +37,59 @@
     </article>
     {% endfor %}
   </div>
-  <div class="captain-action-history">
+  <div class="captain-action-history" id="command-history">
     <div class="section-heading compact">
-      <p class="eyebrow">Command history</p>
-      <h3>Recent console-relevant actions</h3>
+      <div>
+        <p class="eyebrow">Command history</p>
+        <h3>Filtered ship log</h3>
+      </div>
+      <p>{{ captain_action_history.filtered_count }} of {{ captain_action_history.total_count }} console actions</p>
     </div>
-    {% if captain_action_history %}
+    <form class="captain-history-filters" method="get" action="{{ request.url.path }}#command-history">
+      <label>
+        <span>Station</span>
+        <select name="history_station">
+          {% for option in captain_action_history.station_options %}
+          <option value="{{ option.key }}" {% if option.key == captain_action_history.filters.station %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Actor</span>
+        <select name="history_actor">
+          <option value="all" {% if captain_action_history.filters.actor == "all" %}selected{% endif %}>All actors</option>
+          {% for actor in captain_action_history.actor_options %}
+          <option value="{{ actor }}" {% if actor == captain_action_history.filters.actor %}selected{% endif %}>{{ actor }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Mission</span>
+        <input type="search" name="history_mission" value="{{ captain_action_history.filters.mission }}" placeholder="job, mission, package">
+      </label>
+      <label class="captain-history-check">
+        <input type="checkbox" name="needs_captain" value="1" {% if captain_action_history.filters.needs_captain %}checked{% endif %}>
+        <span>Needs Captain</span>
+      </label>
+      <button type="submit">Filter log</button>
+      <a class="button button-secondary" href="{{ request.url.path }}#command-history">Reset</a>
+    </form>
+    {% if captain_action_history.rows %}
     <div class="captain-history-list">
-      {% for item in captain_action_history %}
+      {% for item in captain_action_history.rows %}
       <div class="captain-history-row">
-        <span>{{ item.event_type }}</span>
+        <div class="captain-history-meta">
+          <span>{{ item.station }}</span>
+          <span>{{ item.actor }}</span>
+          {% if item.needs_captain %}<em>Needs Captain</em>{% endif %}
+        </div>
         <strong>{{ item.summary }}</strong>
         <small>{{ item.timestamp }}{% if item.result %} - {{ item.result }}{% endif %}</small>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <p class="muted">No console-relevant actions have been logged yet.</p>
+    <p class="muted">No console-relevant actions match these filters.</p>
     {% endif %}
   </div>
 </section>

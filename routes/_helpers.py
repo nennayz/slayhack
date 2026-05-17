@@ -629,38 +629,135 @@ def _station_count_label(count: int) -> str:
     return f"{count} waiting"
 
 
-def _console_history(root: Path, limit: int = 4) -> list[dict[str, object]]:
-    keywords = (
-        "captain",
-        "console",
-        "mission",
-        "generation",
-        "dry-run",
-        "publish",
-        "tracking",
-        "track",
-        "approval",
-        "handoff",
+CONSOLE_HISTORY_KEYWORDS = (
+    "captain",
+    "console",
+    "mission",
+    "generation",
+    "dry-run",
+    "publish",
+    "tracking",
+    "track",
+    "approval",
+    "handoff",
+    "slate",
+    "calendar",
+    "package",
+    "performance",
+)
+
+CONSOLE_HISTORY_STATIONS = (
+    ("route-map", "Route Map", ("slate", "calendar", "route", "ticket")),
+    ("shipyard", "Shipyard", ("generation", "dry-run", "nora", "video", "shipyard")),
+    ("harbor-gate", "Harbor Gate", ("publish", "package", "approval", "handoff", "live")),
+    ("captain-log", "Captain Log", ("tracking", "track", "performance", "learning", "smoke", "deploy")),
+)
+
+
+def _console_history_text(item: dict[str, object]) -> str:
+    return " ".join(
+        str(item.get(key, ""))
+        for key in ("summary", "result", "next_action", "command", "event_type", "actor")
+    ).lower()
+
+
+def _console_history_station(item: dict[str, object]) -> dict[str, str]:
+    haystack = _console_history_text(item)
+    if "approval" in haystack or "handoff" in haystack or "live publish" in haystack:
+        return {"key": "harbor-gate", "label": "Harbor Gate"}
+    for key, label, keywords in CONSOLE_HISTORY_STATIONS:
+        if any(keyword in haystack for keyword in keywords):
+            return {"key": key, "label": label}
+    return {"key": "captain-log", "label": "Captain Log"}
+
+
+def _console_history_needs_captain(item: dict[str, object]) -> bool:
+    haystack = _console_history_text(item)
+    return str(item.get("event_type", "")) in {"blocker", "next_recommendation"} or any(
+        phrase in haystack
+        for phrase in (
+            "captain",
+            "approval",
+            "handoff",
+            "blocked",
+            "failed",
+            "live publish",
+            "next action",
+            "waiting",
+            "needs",
+        )
     )
-    rows = []
-    for item in read_recent_work_activity(root, limit=30):
+
+
+def _console_history(
+    root: Path,
+    limit: int = 6,
+    *,
+    station: str = "all",
+    actor: str = "all",
+    mission: str = "",
+    needs_captain: bool = False,
+) -> dict[str, object]:
+    valid_stations = {"all", *(key for key, _, _ in CONSOLE_HISTORY_STATIONS)}
+    selected_station = station if station in valid_stations else "all"
+    selected_actor = str(actor or "all").strip() or "all"
+    mission_query = str(mission or "").strip()[:80].lower()
+    relevant_rows: list[dict[str, object]] = []
+
+    for item in read_recent_work_activity(root, limit=80):
         haystack = " ".join(
             str(item.get(key, ""))
             for key in ("summary", "result", "next_action", "command", "event_type")
         ).lower()
-        if not any(keyword in haystack for keyword in keywords):
+        if not any(keyword in haystack for keyword in CONSOLE_HISTORY_KEYWORDS):
             continue
-        rows.append(
+        station_detail = _console_history_station(item)
+        relevant_rows.append(
             {
                 "timestamp": item.get("timestamp", ""),
+                "actor": item.get("actor", ""),
                 "event_type": str(item.get("event_type", "")).replace("_", " "),
                 "summary": item.get("summary", ""),
                 "result": item.get("result", ""),
+                "station": station_detail["label"],
+                "station_key": station_detail["key"],
+                "needs_captain": _console_history_needs_captain(item),
+                "search_text": _console_history_text(item),
             }
         )
-        if len(rows) >= limit:
-            break
-    return rows
+
+    actor_options = sorted({str(row["actor"]) for row in relevant_rows if str(row.get("actor", "")).strip()})
+    if selected_actor != "all" and selected_actor not in actor_options:
+        selected_actor = "all"
+
+    filtered_rows = []
+    for row in relevant_rows:
+        if selected_station != "all" and row["station_key"] != selected_station:
+            continue
+        if selected_actor != "all" and row["actor"] != selected_actor:
+            continue
+        if mission_query and mission_query not in str(row["search_text"]):
+            continue
+        if needs_captain and not row["needs_captain"]:
+            continue
+        clean_row = dict(row)
+        clean_row.pop("search_text", None)
+        filtered_rows.append(clean_row)
+
+    return {
+        "rows": filtered_rows[:limit],
+        "total_count": len(relevant_rows),
+        "filtered_count": len(filtered_rows),
+        "filters": {
+            "station": selected_station,
+            "actor": selected_actor,
+            "mission": mission_query,
+            "needs_captain": needs_captain,
+        },
+        "station_options": [{"key": "all", "label": "All stations"}]
+        + [{"key": key, "label": label} for key, label, _ in CONSOLE_HISTORY_STATIONS],
+        "actor_options": actor_options,
+    }
 
 
 def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
