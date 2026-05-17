@@ -1087,6 +1087,46 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   flex-direction: column;
   gap: 1rem;
 }
+.pm-action-panel {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(31,143,154,0.14), rgba(210,168,79,0.1)),
+    rgba(255,255,255,0.82);
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--gold);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.9rem;
+}
+.pm-action-panel strong,
+.approval-next-action strong {
+  color: var(--ink);
+  display: block;
+  line-height: 1.35;
+}
+.pm-action-panel small {
+  color: var(--muted);
+  display: block;
+  line-height: 1.45;
+  margin-top: 0.3rem;
+}
+.pm-action-buttons,
+.approval-row-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+.compact-action-form {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+}
 .next-ticket-card {
   background:
     linear-gradient(135deg, rgba(125,226,209,0.16), rgba(185,131,255,0.1)),
@@ -1206,6 +1246,20 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 }
 .approval-row-main {
   min-width: 0;
+}
+.approval-next-action {
+  background: rgba(16,35,63,0.045);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 0.65rem;
+  padding: 0.7rem;
+}
+.approval-next-action span {
+  color: var(--navy-soft);
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 .approval-queue-row strong,
 .approval-queue-row small {
@@ -1747,6 +1801,7 @@ a:hover { color: var(--navy-soft); }
   .approval-lane-summary,
   .workflow-rail,
   .command-brief,
+  .pm-action-panel,
   .aurora-command,
   .island-command,
   .mission-command,
@@ -1814,9 +1869,23 @@ a:hover { color: var(--navy-soft); }
     grid-template-columns: 1fr;
   }
   .approval-lane-heading,
+  .approval-row-actions,
+  .pm-action-buttons,
   .slate-actions {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .approval-row-actions,
+  .pm-action-buttons {
+    width: 100%;
+  }
+  .approval-row-actions .button,
+  .approval-row-actions form,
+  .approval-row-actions button,
+  .pm-action-buttons .button,
+  .pm-action-buttons form,
+  .pm-action-buttons button {
+    width: 100%;
   }
   form {
     max-width: none;
