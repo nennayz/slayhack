@@ -114,9 +114,19 @@ def run_track_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
 
         cmd = [sys.executable, str(_root / "main.py"), "--track", job_id]
         success = False
+        failure_detail = ""
         try:
-            result = subprocess.run(cmd, cwd=_root, timeout=_SUBPROCESS_TIMEOUT)
+            result = subprocess.run(
+                cmd,
+                cwd=_root,
+                timeout=_SUBPROCESS_TIMEOUT,
+                capture_output=True,
+                text=True,
+            )
             success = result.returncode == 0
+            if not success:
+                output = getattr(result, "stderr", "") or getattr(result, "stdout", "") or f"exit={result.returncode}"
+                failure_detail = str(output).strip()[:300]
         except subprocess.TimeoutExpired as exc:
             try:
                 proc = getattr(exc, "process", None)
@@ -126,6 +136,7 @@ def run_track_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
             except Exception:
                 pass
             logger.error("TIMEOUT tracking job=%s", job_id)
+            failure_detail = f"timeout after {_SUBPROCESS_TIMEOUT}s"
 
         if success:
             logger.info("OK: tracked job=%s", job_id)
@@ -141,12 +152,12 @@ def run_track_scheduler(dry_run: bool = False, root: Path | None = None) -> int:
                 )
                 logger.error(msg)
                 send_healthcheck_alert(msg)
-                jobs.append({"job_id": job_id, "state": "failed", "attempt": attempt})
+                jobs.append({"job_id": job_id, "state": "failed", "attempt": attempt, "detail": failure_detail})
             else:
                 retrying += 1
                 logger.warning("FAILED: job=%s — attempt=%d, will retry next hour", job_id, attempt)
                 remaining.append({**entry, "attempt": attempt})
-                jobs.append({"job_id": job_id, "state": "retrying", "attempt": attempt})
+                jobs.append({"job_id": job_id, "state": "retrying", "attempt": attempt, "detail": failure_detail})
 
     write_queue(remaining, _root)
     state = "Failed" if failed else "Missing" if retrying else "Ready"
