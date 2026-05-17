@@ -825,6 +825,103 @@ def test_learning_runbook_proof_handles_missing_worklog(tmp_path, client):
     assert "Next missing step" in resp.text
 
 
+def test_learning_runbook_full_manual_learning_loop_reaches_clear_state(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    today = date.today().isoformat()
+    _write_job(
+        tmp_path,
+        "20260512_closed_lesson",
+        brief="closed lesson mission",
+        status="completed",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/lesson/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-20T15:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+    )
+
+    start = client.get("/", headers=_auth())
+    assert start.status_code == 200
+    assert "Create daily learning draft" in start.text
+    assert "1 closed manual lesson needs a daily learning draft." in start.text
+
+    created = client.post(
+        "/learning-runbook/create-draft",
+        data={"return_path": "/"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert created.status_code == 303
+    created_page = client.get(created.headers["location"], headers=_auth())
+    assert "Runbook action result" in created_page.text
+    assert f"Created draft: docs/learning/daily/{today}-manual-posting-lessons.md" in created_page.text
+    assert "Accept daily learning draft" in created_page.text
+    assert "Create daily learning draft</strong>" in created_page.text
+    assert "No closed manual posting lesson is waiting for draft creation." in created_page.text
+
+    accepted = client.post(
+        "/learning-runbook/accept-draft",
+        data={"draft_path": f"docs/learning/daily/{today}-manual-posting-lessons.md", "return_path": "/"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert accepted.status_code == 303
+    accepted_page = client.get(accepted.headers["location"], headers=_auth())
+    assert "Accepted artifact:" in accepted_page.text
+    assert "Apply learning to next mission" in accepted_page.text
+    assert "Accepted learning is ready to apply to the next Daily Slate mission." in accepted_page.text
+
+    applied = client.post(
+        "/learning-runbook/apply-learning",
+        data={"project_slug": "slay_hack", "return_path": "/aurora"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert applied.status_code == 303
+    created_jobs = [
+        json.loads(path.read_text())
+        for path in (tmp_path / "output").rglob("job.json")
+        if path.parent.name != "20260512_closed_lesson"
+    ]
+    mission = next(job for job in created_jobs if job.get("video_package", {}).get("accepted_learning"))
+    applied_page = client.get(applied.headers["location"], headers=_auth())
+    assert "Applied mission:" in applied_page.text
+    assert mission["id"] in applied_page.text
+    assert "Confirm learning before generation" in applied_page.text
+    assert "1 mission has applied learning waiting for planning confirmation." in applied_page.text
+
+    confirmed = client.post(
+        "/learning-runbook/confirm-learning",
+        data={"job_id": mission["id"], "return_path": "/"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert confirmed.status_code == 303
+    clear = client.get(confirmed.headers["location"], headers=_auth())
+    assert "Confirmed mission:" in clear.text
+    assert "Learning loop clear" in clear.text
+    assert "Closeout, draft review, apply, and confirmation gates are clear." in clear.text
+    assert "Loop clear after Confirmed mission" in clear.text
+    assert "Next missing step" in clear.text
+    assert "None" in clear.text
+
+
 def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
     from work_activity import write_work_activity
 
