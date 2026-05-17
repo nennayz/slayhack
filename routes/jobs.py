@@ -24,6 +24,8 @@ from routes._helpers import (
     MISSION_FILTER_KEYS,
     _build_voyage_steps,
     _caption_readiness,
+    _accepted_learning_for_job,
+    _confirm_mission_learning,
     _failed_publish_platforms,
     _filter_jobs,
     _find_job_at_root,
@@ -36,6 +38,7 @@ from routes._helpers import (
     _publish_execution_summary,
     _publish_result_reason,
     _real_generation_completed,
+    _learning_blocks_generation,
     _record_captain_review,
     _record_generation_result,
     _record_publish_package,
@@ -195,12 +198,36 @@ def job_detail(job_id: str, request: Request, _: str = Depends(verify_auth)):
             "publish_execution": publish_execution,
             "can_record_publish_package": _real_generation_completed(job),
             "publish_execution_summary": _publish_execution_summary(job),
+            "accepted_learning_gate": _accepted_learning_for_job(job),
             "snapshot_status": snapshot_status,
             "tracking_summary": tracking_summary,
             "can_track_now": can_track_now,
             "manual_kit": manual_kit,
         },
     )
+
+
+@router.post("/jobs/{job_id}/confirm-learning")
+def confirm_mission_learning(job_id: str, request: Request, user: str = Depends(verify_auth)):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    try:
+        result = _confirm_mission_learning(root, job, actor=user)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Confirmed accepted learning for {job_id}",
+        actor=user,
+        result="learning_confirmed",
+        next_action="Crew can use the confirmed learning in safe generation execution.",
+        metadata=result,
+    )
+    return RedirectResponse(f"/jobs/{job_id}", status_code=303)
 
 
 @router.get("/jobs/{job_id}/download")
@@ -421,6 +448,16 @@ def ready_for_generation(job_id: str, request: Request, user: str = Depends(veri
         raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
     if not getattr(job, "video_package", None):
         raise HTTPException(status_code=400, detail="No video package is attached to this mission")
+    if _learning_blocks_generation(job):
+        _write_work_event(
+            root,
+            "blocker",
+            f"Generation ready blocked by unconfirmed learning for {job_id}",
+            actor=user,
+            result="Needs planning confirmation",
+            metadata={"job_id": job_id},
+        )
+        raise HTTPException(status_code=400, detail="Confirm accepted learning before marking generation ready")
     generation_request = dict(job.generation_request or {})
     generation_request["status"] = "ready_for_generation"
     generation_request["next_action"] = "Ready for the video generation tool to consume this package."
@@ -455,6 +492,8 @@ def run_generation_dry_run(job_id: str, request: Request, user: str = Depends(ve
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
     try:
+        if _learning_blocks_generation(job):
+            raise ValueError("Confirm accepted learning before running generation dry-run")
         _run_generation_dry_run(root, job)
     except ValueError as exc:
         _write_work_event(root, "blocker", f"Generation dry-run blocked for {job_id}", actor=user, result=str(exc))

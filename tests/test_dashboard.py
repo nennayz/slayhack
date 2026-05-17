@@ -650,6 +650,13 @@ def test_daily_slate_applies_accepted_learning_to_next_mission(tmp_path, client)
     assert accepted_learning["next_action"] == "Use these accepted manual posting lessons while shaping this mission. Live publish stays locked."
     assert created["publish_result"] is None
     assert created["publish_execution"] is None
+    detail = client.get(f"/jobs/{mission_id}", headers=_auth())
+    assert detail.status_code == 200
+    assert "Accepted learning applied" in detail.text
+    assert "Needs planning confirmation" in detail.text
+    assert "Short CTA got more saves." in detail.text
+    assert "Confirm learning used in plan" in detail.text
+    assert "Mark ready for generation" not in detail.text
     source = json.loads((tmp_path / "output" / "Slayhack" / "20260516_manual" / "job.json").read_text())
     applied = source["manual_post_kit"]["closeout"]["learning_applied"]
     assert applied["status"] == "applied"
@@ -660,6 +667,71 @@ def test_daily_slate_applies_accepted_learning_to_next_mission(tmp_path, client)
     page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
     assert page.status_code == 200
     assert "Learning applied" in page.text
+
+
+def test_job_detail_confirm_learning_unlocks_generation_ready(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: accepted\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260516_manual\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+        "## Manual Posting Lessons\n\n"
+        "- Slayhack / instagram: closed manual mission\n"
+        "  - Source job: 20260516_manual\n"
+        "  - Lesson: Short CTA got more saves.\n"
+    )
+    apply_resp = client.post(
+        "/aurora/daily-slate/apply-learning",
+        data={"project_slug": "slay_hack"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    mission_id = apply_resp.headers["location"].removeprefix("/jobs/")
+
+    blocked = client.post(f"/jobs/{mission_id}/ready-for-generation", headers=_auth(), follow_redirects=False)
+    assert blocked.status_code == 400
+    assert "Confirm accepted learning before marking generation ready" in blocked.text
+
+    resp = client.post(f"/jobs/{mission_id}/confirm-learning", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == f"/jobs/{mission_id}"
+    saved = json.loads(next((tmp_path / "output").rglob(f"{mission_id}/job.json")).read_text())
+    learning = saved["video_package"]["accepted_learning"]
+    assert learning["status"] == "confirmed"
+    assert learning["learning_confirmed_by"] == "admin"
+    assert learning["learning_confirmed_at"]
+    assert saved["generation_result"] is None
+    assert saved["publish_result"] is None
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Generation ready blocked by unconfirmed learning" in work_activity
+    assert "Confirmed accepted learning" in work_activity
+
+    detail = client.get(f"/jobs/{mission_id}", headers=_auth())
+    assert detail.status_code == 200
+    assert "Learning ready for execution" in detail.text
+    assert "Confirmed by admin" in detail.text
+    assert "Mark ready for generation" in detail.text
+
+    ready = client.post(f"/jobs/{mission_id}/ready-for-generation", headers=_auth(), follow_redirects=False)
+    assert ready.status_code == 303
+    updated = json.loads(next((tmp_path / "output").rglob(f"{mission_id}/job.json")).read_text())
+    assert updated["generation_request"]["status"] == "ready_for_generation"
+
+
+def test_job_detail_confirm_learning_requires_attached_learning(tmp_path, client):
+    _write_job(tmp_path, "20260512_plain", brief="plain mission")
+
+    resp = client.post("/jobs/20260512_plain/confirm-learning", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 400
+    assert "No accepted learning is attached to this mission" in resp.text
 
 
 def test_daily_slate_apply_learning_requires_accepted_artifact(tmp_path, client):

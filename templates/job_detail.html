@@ -51,6 +51,41 @@
   </article>
 </section>
 
+{% if accepted_learning_gate.present %}
+<section class="panel mission-learning-gate">
+  <div class="section-heading">
+    <p class="eyebrow">Accepted learning applied</p>
+    <h2>{{ accepted_learning_gate.status }}</h2>
+  </div>
+  <div class="learning-execution-grid">
+    <article>
+      <span class="badge badge-ops-{{ accepted_learning_gate.state }}">{{ accepted_learning_gate.status }}</span>
+      <p>{{ accepted_learning_gate.next_action }}</p>
+      {% if accepted_learning_gate.source_artifacts %}
+      <small>Source artifacts: {{ accepted_learning_gate.source_artifacts | join(", ") }}</small>
+      {% endif %}
+      {% if accepted_learning_gate.source_job_ids %}
+      <small>Source jobs: {{ accepted_learning_gate.source_job_ids | join(", ") }}</small>
+      {% endif %}
+    </article>
+    <article>
+      <div class="learning-gates">
+        {% for lesson in accepted_learning_gate.lessons %}
+        <span><strong>{{ lesson.category }}</strong>: {{ lesson.note }}</span>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+  {% if accepted_learning_gate.confirmed %}
+  <p class="muted">Confirmed by {{ accepted_learning_gate.learning_confirmed_by }} at {{ accepted_learning_gate.learning_confirmed_at }}.</p>
+  {% else %}
+  <form class="inline-form compact-action-form" method="post" action="/jobs/{{ job.id }}/confirm-learning">
+    <button type="submit">Confirm learning used in plan</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="panel manual-kit-panel">
   <div class="section-heading">
     <p class="eyebrow">Manual posting · Captain handoff</p>
@@ -328,12 +363,17 @@
         {% endif %}
       </div>
       {% endif %}
-      {% if generation_request and generation_request.status == "nora_review" %}
+      {% if accepted_learning_gate.present and not accepted_learning_gate.confirmed %}
+      <div class="stage-brief">
+        <p><strong>Needs planning confirmation:</strong> confirm accepted learning before generation starts.</p>
+      </div>
+      {% endif %}
+      {% if generation_request and generation_request.status == "nora_review" and not (accepted_learning_gate.present and not accepted_learning_gate.confirmed) %}
       <form class="inline-form" method="post" action="/jobs/{{ job.id }}/ready-for-generation">
         <button type="submit">Mark ready for generation</button>
       </form>
       {% endif %}
-      {% if generation_request and generation_request.status in ["ready_for_generation", "failed", "dry_run_completed"] %}
+      {% if generation_request and generation_request.status in ["ready_for_generation", "failed", "dry_run_completed"] and not (accepted_learning_gate.present and not accepted_learning_gate.confirmed) %}
       <form class="inline-form" method="post" action="/jobs/{{ job.id }}/run-generation-dry-run">
         <button type="submit">{{ "Rerun generation dry-run" if generation_request.status == "dry_run_completed" else "Run generation dry-run" }}</button>
       </form>
