@@ -10,6 +10,11 @@ import os as _os
 import subprocess  # noqa: F401 – re-exported so tests can patch dashboard.subprocess.Popen
 import sys as _sys_top  # noqa: F401
 
+# Production starts this file as `python dashboard.py`, which makes the module
+# name `__main__`. Route modules import `dashboard` for test monkeypatch
+# compatibility, so alias the active script module before importing routes.
+_sys_top.modules.setdefault("dashboard", _sys_top.modules[__name__])
+
 # Guard: raise early if auth env vars are not set (tests expect this from `import dashboard`)
 if not _os.environ.get("DASHBOARD_USER") or not _os.environ.get("DASHBOARD_PASSWORD"):
     raise RuntimeError(
