@@ -2566,13 +2566,49 @@ def _slate_counts(slate: CalendarSlate | None) -> dict[str, int]:
     }
 
 
+def _mission_ticket_index(root: Path) -> dict[str, dict[str, str]]:
+    index: dict[str, dict[str, str]] = {}
+    for job in list_all_jobs(root):
+        package = getattr(job, "video_package", None)
+        if not isinstance(package, dict):
+            continue
+        ticket_id = str(package.get("ticket_id") or "")
+        if not ticket_id or ticket_id in index:
+            continue
+        index[ticket_id] = {
+            "job_id": job.id,
+            "mission_url": f"/jobs/{job.id}",
+            "mission_status": getattr(job.status, "value", str(job.status)).replace("_", " "),
+            "mission_stage": str(job.stage).replace("_", " "),
+        }
+    return index
+
+
+def _annotate_ticket_missions(tickets: list[dict[str, object]], mission_index: dict[str, dict[str, str]]) -> list[dict[str, object]]:
+    annotated = []
+    for ticket in tickets:
+        row = dict(ticket)
+        mission = mission_index.get(str(ticket.get("ticket_id") or ""))
+        row["has_mission"] = mission is not None
+        row["mission"] = mission
+        annotated.append(row)
+    return annotated
+
+
+def _next_slate_ticket(tickets: list[dict[str, object]]) -> dict[str, object] | None:
+    if not tickets:
+        return None
+    return next((ticket for ticket in tickets if not ticket.get("has_mission")), tickets[0])
+
+
 def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
     cards = []
+    mission_index = _mission_ticket_index(root)
     for project_slug in list_project_slugs(root):
         slate = _calendar_slate(root, project_slug)
         if slate is None:
             continue
-        tickets = _ticket_rows(slate)
+        tickets = _annotate_ticket_missions(_ticket_rows(slate), mission_index)
         cards.append(
             {
                 "project": slate.project,
@@ -2584,6 +2620,7 @@ def _daily_slate_cards(root: Path) -> list[dict[str, object]]:
                 "counts": _slate_counts(slate),
                 "ticket_count": len(tickets),
                 "tickets": tickets,
+                "next_ticket": _next_slate_ticket(tickets),
                 "video_packages": _daily_slate_video_package_rows(slate),
                 "qa_status": _qa_status(slate),
             }
@@ -2620,6 +2657,56 @@ def _approval_default_faq(job: ContentJob) -> str:
         "Q: Who should review comments?\n"
         "A: Emma handles normal replies. Nora or the PM reviews anything risky before response."
     )
+
+
+def _approval_risk_label(status: str, action_method: str) -> str:
+    if status in {"Ready", "Dry-run complete"} or "dry" in status.lower():
+        return "safe dry-run"
+    if status == "Waiting real video":
+        return "manual upload"
+    if status == "Ready packaging":
+        return "manual package"
+    if status in {"Ready to publish", "Package complete", "Captain hold", "Needs edits"}:
+        return "locked live publish"
+    if status == "Scheduled handoff":
+        return "handoff only"
+    if action_method == "post":
+        return "review gate"
+    return "read only"
+
+
+def _approval_lane_key(lane: str, status: str) -> str:
+    if lane == "Nora review":
+        return "nora"
+    if lane == "Generation":
+        return "generation"
+    if lane == "Roxy + Emma":
+        return "packaging"
+    if lane == "Captain approval":
+        return "captain"
+    if lane in {"Scheduled", "Handoff"} or status == "Scheduled handoff":
+        return "handoff"
+    return "revision"
+
+
+def _approval_lane_groups(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    lane_order = [
+        ("nora", "Nora", "QA gate before generation"),
+        ("generation", "Generation", "Safe dry-run and manual video intake"),
+        ("packaging", "Roxy + Emma", "Caption, hashtags, FAQ, and publish prep"),
+        ("captain", "Captain", "Captain approval before any schedule handoff"),
+        ("handoff", "Handoff", "Scheduled dashboard handoff, still not live publishing"),
+        ("revision", "Revision", "Hold or edit loop before approval"),
+    ]
+    return [
+        {
+            "key": key,
+            "label": label,
+            "detail": detail,
+            "rows": [row for row in rows if row.get("lane_key") == key],
+        }
+        for key, label, detail in lane_order
+    ]
 
 
 def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
@@ -2712,7 +2799,7 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
             }
         elif publish_status == "scheduled":
             row = {
-                "lane": "Scheduled",
+                "lane": "Handoff",
                 "state": "ready",
                 "status": "Scheduled handoff",
                 "next_action": "Dashboard handoff recorded only; live publishing remains locked.",
@@ -2723,12 +2810,15 @@ def _approval_queue_rows(root: Path) -> list[dict[str, object]]:
 
         if row is None:
             continue
+        lane_key = _approval_lane_key(str(row["lane"]), str(row["status"]))
         row.update(
             {
                 "job_id": job.id,
                 "brief": job.brief,
                 "page_name": job.pm.page_name,
                 "stage": job.stage,
+                "lane_key": lane_key,
+                "risk_label": _approval_risk_label(str(row["status"]), str(row["action_method"])),
                 "detail_url": f"/jobs/{job.id}",
                 "default_video_path": _approval_default_video_path(job),
                 "default_caption": _approval_default_caption(job),
@@ -2927,6 +3017,7 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
             "slate_cards": slate_cards,
             "latest_brief": _latest_learning_brief(root),
             "approval_queue": approval_queue[:8],
+            "approval_lane_groups": _approval_lane_groups(approval_queue),
             "total_tickets": sum(int(card["ticket_count"]) for card in slate_cards),
             "ready_pages": sum(1 for card in slate_cards if card["minimum_met"]),
             "approval_count": len(approval_queue),
@@ -2943,6 +3034,7 @@ def aurora_approval_queue(request: Request, _: str = Depends(verify_auth)):
         "approval_queue.html",
         {
             "approval_queue": rows,
+            "approval_lane_groups": _approval_lane_groups(rows),
             "needs_review_count": sum(1 for row in rows if row["status"] == "Needs review"),
             "ready_publish_count": sum(1 for row in rows if row["status"] == "Ready to publish"),
         },

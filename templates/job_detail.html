@@ -9,6 +9,23 @@
   </div>
 </section>
 
+<section class="panel next-action-panel">
+  <div>
+    <p class="eyebrow">Current next action</p>
+    <h2>{{ mission_command.action }}</h2>
+    <div class="action-meta">
+      <span>{{ mission_command.stage_label }}</span>
+      <span>{{ mission_command.owner }}</span>
+      <span>{{ mission_command.station }}</span>
+    </div>
+  </div>
+  <div class="live-lock-card">
+    <span class="badge badge-ops-missing">Live publish locked</span>
+    <strong>{{ publish_execution_summary.label }}</strong>
+    <small>No external platform publisher API is called from this workflow without explicit Captain approval.</small>
+  </div>
+</section>
+
 <section class="mission-command">
   <article>
     <p class="eyebrow">Mission command</p>
@@ -33,24 +50,13 @@
   </article>
 </section>
 
-<section class="panel">
+<section class="panel workflow-section">
   <div class="section-heading">
-    <p class="eyebrow">Mission cargo</p>
-    <h2>Output readiness</h2>
+    <p class="eyebrow">Workflow stage</p>
+    <h2>Mission control</h2>
   </div>
-  <div class="output-grid">
-    {% for item in mission_outputs %}
-    <div class="output-card">
-      <span>{{ item.label }}</span>
-      <strong>{{ item.state }}</strong>
-      <small>{{ item.detail }}</small>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-
-<section class="content-grid">
-  <article class="panel">
+  <div class="content-grid">
+  <article>
     <p><strong>Island:</strong> {{ job.pm.page_name }}</p>
     <p><strong>Platforms:</strong> {{ job.platforms | join(", ") }}</p>
     <p><strong>Content Type:</strong> {{ job.content_type.value if job.content_type else "—" }}</p>
@@ -64,7 +70,7 @@
     {% endif %}
   </article>
   {% if job.publish_result %}
-  <article class="panel">
+  <article>
     <div class="section-heading">
       <p class="eyebrow">Publish control</p>
       <h2>Platform status</h2>
@@ -96,7 +102,7 @@
     {% endif %}
   </article>
   {% endif %}
-  <article class="panel">
+  <article>
     <div class="section-heading">
       <p class="eyebrow">Voyage route</p>
       <h2>Workflow timeline</h2>
@@ -122,10 +128,27 @@
       {% endfor %}
     </div>
   </article>
+  </div>
+</section>
+
+<section class="panel workflow-section">
+  <div class="section-heading">
+    <p class="eyebrow">Mission cargo</p>
+    <h2>Output readiness</h2>
+  </div>
+  <div class="output-grid">
+    {% for item in mission_outputs %}
+    <div class="output-card">
+      <span>{{ item.label }}</span>
+      <strong>{{ item.state }}</strong>
+      <small>{{ item.detail }}</small>
+    </div>
+    {% endfor %}
+  </div>
 </section>
 
 {% if video_package %}
-<section class="panel">
+<section class="panel workflow-section">
   <div class="section-heading">
     <p class="eyebrow">Video Producer</p>
     <h2>{{ video_package.title }}</h2>

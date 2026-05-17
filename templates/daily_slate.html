@@ -54,6 +54,18 @@
       <span class="badge badge-ops-ready">{{ slate.slate_date }}</span>
     </div>
     <p class="muted">{{ slate.notes }}</p>
+    {% if slate.next_ticket %}
+    <div class="next-ticket-card">
+      <span class="badge badge-ops-{{ 'ready' if slate.next_ticket.has_mission else 'missing' }}">
+        {{ 'Mission exists' if slate.next_ticket.has_mission else 'Next best ticket' }}
+      </span>
+      <strong>{{ slate.next_ticket.title }}</strong>
+      <small>{{ slate.next_ticket.owner }} owns - {{ slate.next_ticket.decision_owner }} decides - {{ slate.next_ticket.platform_primary }}</small>
+      {% if slate.next_ticket.has_mission %}
+      <a class="button button-secondary button-small" href="{{ slate.next_ticket.mission.mission_url }}">Open mission</a>
+      {% endif %}
+    </div>
+    {% endif %}
     <div class="slate-counts">
       <span><strong>{{ slate.counts.short_videos }}</strong> short</span>
       <span><strong>{{ slate.counts.long_videos }}</strong> long</span>
@@ -66,6 +78,11 @@
         <span>{{ ticket.ticket_type }}</span>
         <strong>{{ ticket.title }}</strong>
         <small>{{ ticket.owner }} owns - {{ ticket.decision_owner }} decides - {{ ticket.platform_primary }}</small>
+        {% if ticket.has_mission %}
+        <a class="mission-chip" href="{{ ticket.mission.mission_url }}">Mission exists - {{ ticket.mission.job_id }} - {{ ticket.mission.mission_stage }}</a>
+        {% else %}
+        <small class="mission-chip muted">No mission yet</small>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -99,32 +116,12 @@
     <p class="eyebrow">Approval queue</p>
     <h2>Ready but not published</h2>
   </div>
-  <div class="approval-queue-list">
-    {% for item in approval_queue %}
-    <div class="approval-queue-row">
-      <div>
-        <span class="badge badge-ops-{{ item.state }}">{{ item.status }}</span>
-        <strong>{{ item.page_name }}</strong>
-        <p>{{ item.brief }}</p>
-        <small>{{ item.lane }} - {{ item.next_action }}</small>
-      </div>
-      <div class="slate-actions">
-        <a class="button button-secondary button-small" href="{{ item.detail_url }}">Open mission</a>
-        {% if item.action_method == "generation_result" %}
-        <a class="button button-secondary button-small" href="/aurora/approval-queue">Record real video</a>
-        {% elif item.action_method == "publish_package" %}
-        <a class="button button-secondary button-small" href="/aurora/approval-queue">Record package</a>
-        {% elif item.action_method == "post" %}
-        <form class="inline-form" method="post" action="{{ item.action_url }}">
-          <button type="submit">{{ item.action_label }}</button>
-        </form>
-        {% else %}
-        <a class="button button-secondary button-small" href="{{ item.action_url }}">{{ item.action_label }}</a>
-        {% endif %}
-      </div>
-    </div>
-    {% else %}
-    <p class="muted">No missions are waiting in the approval queue.</p>
+  <div class="approval-lane-summary">
+    {% for group in approval_lane_groups %}
+    <a class="approval-lane-chip" href="/aurora/approval-queue">
+      <span>{{ group.label }}</span>
+      <strong>{{ group.rows | length }}</strong>
+    </a>
     {% endfor %}
   </div>
   <div class="inline-actions">
