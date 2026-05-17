@@ -3456,6 +3456,25 @@ MANUAL_POSTING_LANES = [
 ]
 
 
+def _manual_posting_lane_filters(
+    groups: list[dict[str, object]],
+    selected: str,
+) -> list[dict[str, object]]:
+    total = sum(len(group["rows"]) for group in groups)
+    return [
+        {"key": "all", "label": "All", "count": total, "active": selected == "all"},
+        *[
+            {
+                "key": str(group["key"]),
+                "label": str(group["label"]),
+                "count": len(group["rows"]),
+                "active": selected == group["key"],
+            }
+            for group in groups
+        ],
+    ]
+
+
 def _manual_posting_job_posts(job: ContentJob) -> dict[str, dict]:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
     manual_post = kit.get("manual_post") if isinstance(kit, dict) else None
@@ -3495,9 +3514,29 @@ def _manual_posting_first_post(posts: dict[str, dict], publish_platforms: dict[s
     }
 
 
+def _manual_posting_proof_summary(
+    *,
+    drive_status: str,
+    post_url: object,
+    snapshots: int,
+    queued_count: int,
+    closeout: dict,
+) -> dict[str, object]:
+    learning_note = str(closeout.get("learning_note") or "").strip()
+    return {
+        "drive_synced": drive_status == "synced",
+        "post_url_present": bool(str(post_url or "").strip()),
+        "snapshot_24h_present": snapshots >= 1,
+        "snapshot_72h_present": snapshots >= 2,
+        "queued_tracking": queued_count,
+        "learning_note_captured": bool(learning_note),
+    }
+
+
 def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str, object] | None:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
     drive_sync = kit.get("drive_sync") if isinstance(kit, dict) else None
+    closeout = kit.get("closeout") if isinstance(kit.get("closeout"), dict) else {}
     drive_status = str(drive_sync.get("status", "")) if isinstance(drive_sync, dict) else ""
     posts = _manual_posting_job_posts(job)
     publish_platforms = _manual_posting_publish_platforms(job)
@@ -3510,13 +3549,26 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
     counts = queue_summary["counts"]
     snapshots = len(job.performance)
     first_post = _manual_posting_first_post(posts, publish_platforms)
+    proof_summary = _manual_posting_proof_summary(
+        drive_status=drive_status,
+        post_url=first_post.get("post_url", ""),
+        snapshots=snapshots,
+        queued_count=int(counts["total"]),
+        closeout=closeout,
+    )
+    closeout_status = str(closeout.get("status") or "open")
     next_entry = min(
         job_queue,
         key=lambda entry: parse_track_at(entry.get("track_at")) or datetime.max.replace(tzinfo=timezone.utc),
         default=None,
     )
 
-    if drive_status == "failed":
+    if closeout_status == "closed":
+        lane = "tracking_complete"
+        state = "ready"
+        status = "Manual post closed"
+        next_action = "No action required; proof and learning note are captured."
+    elif drive_status == "failed":
         lane = "needs_attention"
         state = "failed"
         status = "Drive sync failed"
@@ -3577,6 +3629,16 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
         "snapshot_count": snapshots,
         "queue_summary": queue_summary,
         "queued_count": int(counts["total"]),
+        "proof_summary": proof_summary,
+        "closeout": {
+            "status": closeout_status,
+            "closed_at": str(closeout.get("closed_at") or ""),
+            "closed_by": str(closeout.get("closed_by") or ""),
+            "learning_note": str(closeout.get("learning_note") or ""),
+            "proof_summary": closeout.get("proof_summary") if isinstance(closeout.get("proof_summary"), dict) else {},
+        },
+        "can_closeout": has_manual_post and snapshots >= 2 and closeout_status != "closed",
+        "can_requeue_tracking": has_manual_post and not job_queue and snapshots < 2,
     }
 
 

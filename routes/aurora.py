@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import yaml
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Form
@@ -9,6 +10,7 @@ from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from routes.deps import templates, verify_auth, _root
+from track_queue import enqueue_track_snapshots
 from routes._helpers import (
     CREW,
     GENERATION_FILTERS,
@@ -27,10 +29,13 @@ from routes._helpers import (
     _generation_filter_cards,
     _generation_queue,
     _generation_row_matches_filter,
+    _find_job_at_root,
     _latest_learning_brief,
     _latest_performance_signals,
+    _manual_posting_lane_filters,
     _manual_posting_lane_groups,
     _manual_posting_queue_rows,
+    _save_job_at_root,
     _tracking_readiness_rows,
     _mission_filters,
     _project_options,
@@ -68,6 +73,52 @@ CALENDAR_BRIEF_KEYS = [
     "infographic_1",
     "infographic_2",
 ]
+
+
+def _manual_posted_at(job) -> datetime | None:
+    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
+    candidates = []
+    for value in manual_post.values():
+        if isinstance(value, dict):
+            candidates.append(value.get("posted_at"))
+    publish_result = job.publish_result if isinstance(job.publish_result, dict) else {}
+    for value in publish_result.values():
+        if isinstance(value, dict) and value.get("manual") is True:
+            candidates.append(value.get("published_at"))
+    for value in candidates:
+        cleaned = str(value or "").strip()
+        if not cleaned:
+            continue
+        if cleaned.endswith("Z"):
+            cleaned = cleaned[:-1] + "+00:00"
+        try:
+            parsed = datetime.fromisoformat(cleaned)
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    return None
+
+
+def _manual_posting_closeout_proof(job) -> dict[str, object]:
+    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
+    drive_sync = kit.get("drive_sync") if isinstance(kit.get("drive_sync"), dict) else {}
+    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
+    publish_result = job.publish_result if isinstance(job.publish_result, dict) else {}
+    post_url_present = any(
+        isinstance(value, dict) and str(value.get("post_url") or "").strip()
+        for value in list(manual_post.values()) + list(publish_result.values())
+    )
+    snapshots = len(job.performance)
+    return {
+        "drive_synced": drive_sync.get("status") == "synced",
+        "post_url_present": post_url_present,
+        "snapshot_24h_present": snapshots >= 1,
+        "snapshot_72h_present": snapshots >= 2,
+        "learning_note_captured": True,
+    }
 
 
 @router.get("/aurora", response_class=HTMLResponse)
@@ -209,19 +260,99 @@ def aurora_generation(request: Request, _: str = Depends(verify_auth)):
 @router.get("/aurora/manual-posting", response_class=HTMLResponse)
 def aurora_manual_posting(request: Request, _: str = Depends(verify_auth)):
     rows = _manual_posting_queue_rows(_root(request))
-    lane_groups = _manual_posting_lane_groups(rows)
+    all_lane_groups = _manual_posting_lane_groups(rows)
+    selected_lane = request.query_params.get("lane", "needs_attention")
+    valid_lanes = {"all"} | {str(group["key"]) for group in all_lane_groups}
+    if selected_lane not in valid_lanes:
+        selected_lane = "needs_attention"
+    lane_groups = [
+        group for group in all_lane_groups if selected_lane == "all" or group["key"] == selected_lane
+    ]
     return templates.TemplateResponse(
         request,
         "manual_posting_queue.html",
         {
             "manual_posting_rows": rows,
             "manual_posting_lane_groups": lane_groups,
+            "manual_posting_lane_filters": _manual_posting_lane_filters(all_lane_groups, selected_lane),
+            "selected_lane": selected_lane,
             "kit_synced_count": sum(1 for row in rows if row["lane"] == "kit_synced"),
             "waiting_tracking_count": sum(1 for row in rows if row["lane"] == "waiting_tracking"),
             "tracking_complete_count": sum(1 for row in rows if row["lane"] == "tracking_complete"),
             "needs_attention_count": sum(1 for row in rows if row["lane"] == "needs_attention"),
         },
     )
+
+
+@router.post("/aurora/manual-posting/{job_id}/requeue-tracking")
+def aurora_manual_posting_requeue_tracking(
+    job_id: str,
+    request: Request,
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    posted_at = _manual_posted_at(job)
+    if posted_at is None:
+        raise HTTPException(status_code=400, detail="Manual post time is required before tracking can be requeued")
+    job.published_at = posted_at
+    _save_job_at_root(root, job)
+    enqueue_track_snapshots(job, root=root, replace_existing=True)
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Requeued manual tracking for {job_id}",
+        actor=user,
+        result="tracking queued from manual posted_at",
+        next_action="Let the tracking scheduler capture the 24h and 72h snapshots.",
+        metadata={"job_id": job_id},
+    )
+    return RedirectResponse("/aurora/manual-posting?lane=waiting_tracking", status_code=303)
+
+
+@router.post("/aurora/manual-posting/{job_id}/closeout")
+def aurora_manual_posting_closeout(
+    job_id: str,
+    request: Request,
+    learning_note: str = Form(...),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        job = _find_job_at_root(root, job_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Job {job_id!r} not found")
+    note = learning_note.strip()
+    if not note:
+        raise HTTPException(status_code=400, detail="Learning note is required before closeout")
+    proof = _manual_posting_closeout_proof(job)
+    if not proof["post_url_present"]:
+        raise HTTPException(status_code=400, detail="Manual post URL is required before closeout")
+    if not proof["snapshot_24h_present"] or not proof["snapshot_72h_present"]:
+        raise HTTPException(status_code=400, detail="24h and 72h tracking proof are required before closeout")
+    kit = dict(job.manual_post_kit or {})
+    kit["closeout"] = {
+        "status": "closed",
+        "closed_at": datetime.now(timezone.utc).isoformat(),
+        "closed_by": user,
+        "learning_note": note,
+        "proof_summary": proof,
+    }
+    job.manual_post_kit = kit
+    _save_job_at_root(root, job)
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Closed manual post for {job_id}",
+        actor=user,
+        result="manual_posting closeout recorded",
+        next_action="Use the captured learning note in the next daily learning brief.",
+        metadata={"job_id": job_id},
+    )
+    return RedirectResponse("/aurora/manual-posting?lane=tracking_complete", status_code=303)
 
 
 @router.post("/aurora/workflow/video-packages/{ticket_id}/create-mission")

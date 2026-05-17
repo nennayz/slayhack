@@ -34,6 +34,15 @@
   </div>
 </section>
 
+<nav class="filter-tabs" aria-label="Manual posting lane filters">
+  {% for item in manual_posting_lane_filters %}
+  <a class="filter-tab{% if item.active %} active{% endif %}" href="/aurora/manual-posting{{ '' if item.key == 'needs_attention' else '?lane=' ~ item.key }}">
+    <span>{{ item.label }}</span>
+    <strong>{{ item.count }}</strong>
+  </a>
+  {% endfor %}
+</nav>
+
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Safe handoff board</p>
@@ -61,9 +70,17 @@
               <span>Drive: {{ item.drive_status }}</span>
               <span>Queued: {{ item.queued_count }}</span>
               <span>Snapshots: {{ item.snapshot_count }}</span>
+              <span>Closeout: {{ item.closeout.status }}</span>
               {% if item.platforms %}
               <span>Platforms: {{ item.platforms | join(", ") }}</span>
               {% endif %}
+            </div>
+            <div class="manual-proof-grid">
+              <span class="{{ 'proof-ready' if item.proof_summary.drive_synced else 'proof-missing' }}">Drive kit</span>
+              <span class="{{ 'proof-ready' if item.proof_summary.post_url_present else 'proof-missing' }}">Post URL</span>
+              <span class="{{ 'proof-ready' if item.proof_summary.snapshot_24h_present else 'proof-missing' }}">24h proof</span>
+              <span class="{{ 'proof-ready' if item.proof_summary.snapshot_72h_present else 'proof-missing' }}">72h proof</span>
+              <span class="{{ 'proof-ready' if item.proof_summary.learning_note_captured else 'proof-missing' }}">Learning note</span>
             </div>
             {% if item.posted_at %}
             <small>Posted at {{ item.posted_at }}</small>
@@ -91,7 +108,53 @@
             {% if item.post_url %}
             <a class="button button-secondary button-small" href="{{ item.post_url }}" target="_blank" rel="noreferrer">Open manual post</a>
             {% endif %}
+            {% if item.status in ["Tracking overdue", "Tracking needs attention"] %}
+            <form class="inline-form" method="post" action="/ops/actions/track_scheduler">
+              <button type="submit">Run tracking queue now</button>
+            </form>
+            {% endif %}
+            {% if item.can_requeue_tracking %}
+            <form class="inline-form" method="post" action="/aurora/manual-posting/{{ item.job_id }}/requeue-tracking">
+              <button type="submit">Requeue tracking from posted time</button>
+            </form>
+            {% endif %}
           </div>
+          {% if item.lane == "kit_synced" %}
+          <details class="action-drawer">
+            <summary>Record manual post</summary>
+            <form class="inline-form approval-inline-form" method="post" action="/jobs/{{ item.job_id }}/manual-post">
+              <label for="manual_platform_{{ item.job_id }}">Platform</label>
+              <select id="manual_platform_{{ item.job_id }}" name="platform">
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="tiktok">TikTok</option>
+                <option value="youtube">YouTube</option>
+              </select>
+              <label for="manual_url_{{ item.job_id }}">Post URL</label>
+              <input id="manual_url_{{ item.job_id }}" name="post_url" type="url" placeholder="https://..." required>
+              <label for="manual_posted_at_{{ item.job_id }}">Posted at</label>
+              <input id="manual_posted_at_{{ item.job_id }}" name="posted_at" type="datetime-local">
+              <input name="note" type="hidden" value="Recorded from Manual Posting Queue.">
+              <button type="submit">Record manual post</button>
+            </form>
+          </details>
+          {% endif %}
+          {% if item.can_closeout %}
+          <details class="action-drawer">
+            <summary>Capture learning note</summary>
+            <form class="inline-form approval-inline-form" method="post" action="/aurora/manual-posting/{{ item.job_id }}/closeout">
+              <label for="learning_note_{{ item.job_id }}">Learning note</label>
+              <textarea id="learning_note_{{ item.job_id }}" name="learning_note" rows="3" required></textarea>
+              <button type="submit">Close manual post</button>
+            </form>
+          </details>
+          {% elif item.closeout.learning_note %}
+          <div class="action-drawer manual-closeout-note">
+            <strong>Learning note</strong>
+            <p>{{ item.closeout.learning_note }}</p>
+            <small>Closed by {{ item.closeout.closed_by }} at {{ item.closeout.closed_at }}</small>
+          </div>
+          {% endif %}
         </div>
         {% else %}
         <p class="muted">No missions in this lane.</p>

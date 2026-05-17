@@ -2509,22 +2509,31 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
         }
     ]))
 
-    resp = client.get("/aurora/manual-posting", headers=_auth())
+    resp = client.get("/aurora/manual-posting?lane=all", headers=_auth())
 
     assert resp.status_code == 200
     assert "Manual Post Command Lane" in resp.text
     assert "Manual posting status" in resp.text
     assert "Live publish locked" in resp.text
+    assert "All" in resp.text
     assert "Kit synced, not posted" in resp.text
     assert "Manual posted, waiting tracking" in resp.text
     assert "Tracking complete" in resp.text
     assert "Tracking queue missing" in resp.text
+    assert "Record manual post" in resp.text
+    assert "Requeue tracking from posted time" in resp.text
+    assert "Capture learning note" in resp.text
     assert "synced kit mission" in resp.text
     assert "waiting tracking mission" in resp.text
     assert "complete tracking mission" in resp.text
     assert "attention mission" in resp.text
     assert "Open Drive kit" in resp.text
     assert "Open manual post" in resp.text
+
+    default_resp = client.get("/aurora/manual-posting", headers=_auth())
+    assert default_resp.status_code == 200
+    assert "attention mission" in default_resp.text
+    assert "synced kit mission" not in default_resp.text
 
 
 def test_manual_posting_queue_ignores_unsynced_unposted_jobs(tmp_path, client):
@@ -2535,6 +2544,136 @@ def test_manual_posting_queue_ignores_unsynced_unposted_jobs(tmp_path, client):
     assert resp.status_code == 200
     assert "No manual kits have been synced or posted yet." in resp.text
     assert "plain mission" not in resp.text
+
+
+def test_manual_posting_queue_requeues_tracking_from_posted_time(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_attention",
+        brief="attention mission",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/attention/",
+                    "posted_at": "2026-05-17T11:00:00+00:00",
+                }
+            }
+        },
+        publish_result={
+            "instagram": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://www.instagram.com/p/attention/",
+            }
+        },
+    )
+
+    resp = client.post(
+        "/aurora/manual-posting/20260512_attention/requeue-tracking",
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/aurora/manual-posting?lane=waiting_tracking"
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_attention" / "job.json").read_text())
+    assert saved["published_at"] == "2026-05-17T11:00:00Z"
+    queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
+    assert [item["track_at"] for item in queue] == ["2026-05-18T11:00:00Z", "2026-05-20T11:00:00Z"]
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Requeued manual tracking for 20260512_attention" in work_activity
+
+
+def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_complete",
+        brief="complete tracking mission",
+        manual_post_kit={
+            "drive_sync": {"status": "synced"},
+            "manual_post": {
+                "facebook": {
+                    "status": "posted",
+                    "post_url": "https://facebook.com/manual-post",
+                    "posted_at": "2026-05-17T12:00:00+00:00",
+                }
+            },
+        },
+        publish_result={
+            "facebook": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://facebook.com/manual-post",
+            }
+        },
+        performance=[
+            {"platform": "facebook", "reach": 100, "recorded_at": "2026-05-18T12:00:00+00:00"},
+            {"platform": "facebook", "reach": 180, "recorded_at": "2026-05-20T12:00:00+00:00"},
+        ],
+        published_at="2026-05-17T12:00:00+00:00",
+    )
+
+    resp = client.post(
+        "/aurora/manual-posting/20260512_complete/closeout",
+        data={"learning_note": "Hook worked; keep the shorter CTA."},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/aurora/manual-posting?lane=tracking_complete"
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_complete" / "job.json").read_text())
+    closeout = saved["manual_post_kit"]["closeout"]
+    assert closeout["status"] == "closed"
+    assert closeout["learning_note"] == "Hook worked; keep the shorter CTA."
+    assert closeout["proof_summary"]["post_url_present"] is True
+    assert closeout["proof_summary"]["snapshot_24h_present"] is True
+    assert closeout["proof_summary"]["snapshot_72h_present"] is True
+
+    page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
+    assert page.status_code == 200
+    assert "Manual post closed" in page.text
+    assert "Hook worked; keep the shorter CTA." in page.text
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Closed manual post for 20260512_complete" in work_activity
+
+
+def test_manual_posting_queue_blocks_closeout_without_tracking_proof(tmp_path, client):
+    _write_job(
+        tmp_path,
+        "20260512_waiting",
+        brief="waiting tracking mission",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/waiting/",
+                    "posted_at": "2026-05-17T14:00:00+00:00",
+                }
+            }
+        },
+        publish_result={
+            "instagram": {
+                "status": "published",
+                "manual": True,
+                "post_url": "https://www.instagram.com/p/waiting/",
+            }
+        },
+        performance=[
+            {"platform": "instagram", "reach": 100, "recorded_at": "2026-05-18T14:00:00+00:00"},
+        ],
+    )
+
+    resp = client.post(
+        "/aurora/manual-posting/20260512_waiting/closeout",
+        data={"learning_note": "Needs second snapshot."},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 400
+    assert "24h and 72h tracking proof are required" in resp.text
 
 
 def test_manual_kit_adds_video_prompts_for_legacy_video_job(tmp_path, client):

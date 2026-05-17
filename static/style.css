@@ -1847,6 +1847,37 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   font-weight: 700;
   padding: 0.32rem 0.55rem;
 }
+.manual-proof-grid {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 0.7rem;
+}
+.manual-proof-grid span {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.45rem 0.5rem;
+  text-align: center;
+}
+.proof-ready {
+  background: #d9f2e4;
+  color: #17603e;
+}
+.proof-missing {
+  background: #fff0bf;
+  color: #7a5700;
+}
+.manual-closeout-note {
+  background: rgba(16,35,63,0.045);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+.manual-closeout-note p {
+  margin: 0.35rem 0;
+}
 .action-drawer {
   grid-column: 1 / -1;
   margin: 0;
@@ -2412,6 +2443,7 @@ a:hover { color: var(--navy-soft); }
   .video-package-grid,
   .video-package-detail,
   .manual-kit-layout,
+  .manual-proof-grid,
   .artifact-grid,
   .captain-history-filters,
   .captain-action-heading,
