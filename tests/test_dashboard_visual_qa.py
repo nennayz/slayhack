@@ -60,7 +60,56 @@ def _write_job(root: Path) -> None:
         "dry_run": True,
         "performance": [],
         "checkpoint_log": [],
-        "publish_execution": {"status": "scheduled", "next_action": "Dashboard handoff only."},
+        "video_package": {
+            "title": "Video package mission: Visual QA",
+            "owner": "Vera Reel",
+            "format_name": "Short reel",
+            "platform_primary": "instagram",
+            "total_duration_seconds": 30,
+            "asset_checklist": ["Hero portrait", "Caption file"],
+            "scenes": [
+                {
+                    "start_second": 0,
+                    "end_second": 15,
+                    "purpose": "Hook",
+                    "prompt": "Show the Aurora deck opening a mission.",
+                },
+                {
+                    "start_second": 15,
+                    "end_second": 30,
+                    "purpose": "Handoff",
+                    "prompt": "Show Roxy and Emma preparing the publish package.",
+                },
+            ],
+        },
+        "generation_request": {
+            "status": "completed",
+            "next_action": "Generated video is attached.",
+            "tool_hint": "veo3",
+        },
+        "generation_result": {
+            "status": "completed",
+            "message": "Real generated video is attached to this mission.",
+            "output_path": "output/Slay Hack/20260517_visual_qa/video.mp4",
+            "provider": "manual_upload",
+            "publish_packaging": {
+                "status": "ready",
+                "next_action": "Roxy and Emma can package caption, hashtags, FAQ, and publish prep.",
+            },
+        },
+        "video_path": "output/Slay Hack/20260517_visual_qa/video.mp4",
+        "publish_package": {
+            "status": "completed",
+            "caption": "Visual QA caption",
+            "hashtags": ["#slayhack"],
+            "faq_path": "output/Slay Hack/20260517_visual_qa/faq.md",
+            "publish_notes": "Captain approved handoff only.",
+        },
+        "publish_execution": {
+            "status": "scheduled",
+            "platforms": ["instagram", "facebook"],
+            "next_action": "Dashboard handoff only.",
+        },
         "publish_result": {"instagram": {"status": "scheduled", "dry_run": True}},
     }
     job_dir = root / "output" / "Slay Hack" / job_id

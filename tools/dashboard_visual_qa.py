@@ -126,7 +126,23 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
         PageCheck("ops", "/ops", ("Ops", "Production controls", "Ops summary")),
     ]
     if mission:
-        checks.append(PageCheck("mission_detail", mission, ("Current next action", "Live publish locked", "Workflow stage")))
+        checks.append(
+            PageCheck(
+                "mission_detail",
+                mission,
+                (
+                    "Current next action",
+                    "Live publish locked",
+                    "Workflow stage",
+                    "Video Package",
+                    "Generation",
+                    "Roxy + Emma Package",
+                    "Captain Approval",
+                    "Publish Handoff",
+                    "Artifacts",
+                ),
+            )
+        )
     return checks
 
 
@@ -160,6 +176,7 @@ def _css_checks(root: Path) -> dict[str, Any]:
         "daily_slate_mobile": r"\.daily-slate-grid",
         "approval_lane_mobile": r"\.approval-lane-board",
         "next_action_mobile": r"\.next-action-panel",
+        "workflow_blocks_mobile": r"\.workflow-block summary",
         "crew_mobile": r"\.crew-grid",
         "no_negative_tracking": r"letter-spacing:\s*-\d",
     }

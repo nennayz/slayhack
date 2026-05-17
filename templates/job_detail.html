@@ -147,19 +147,53 @@
   </div>
 </section>
 
-{% if video_package %}
-<section class="panel workflow-section">
-  <div class="section-heading">
-    <p class="eyebrow">Video Producer</p>
-    <h2>{{ video_package.title }}</h2>
-  </div>
-  <div class="video-package-detail">
-    <article>
-      <span class="badge badge-ops-ready">{{ video_package.format_name }}</span>
-      <p>{{ video_package.owner }} prepared {{ video_package.scenes | length }} scenes over {{ video_package.total_duration_seconds }} seconds for {{ video_package.platform_primary }}.</p>
+<section class="workflow-block-list" aria-label="Mission workflow blocks">
+  {% if video_package %}
+  <details class="workflow-block" open>
+    <summary>
+      <span>Video Package</span>
+      <strong>{{ video_package.title }}</strong>
+      <small>Video Producer · {{ video_package.owner }} · {{ video_package.scenes | length }} scenes</small>
+    </summary>
+    <div class="workflow-block-body video-package-detail">
+      <article>
+        <span class="badge badge-ops-ready">{{ video_package.format_name }}</span>
+        <p>{{ video_package.owner }} prepared {{ video_package.scenes | length }} scenes over {{ video_package.total_duration_seconds }} seconds for {{ video_package.platform_primary }}.</p>
+        <div class="scene-timeline">
+          {% for scene in video_package.scenes %}
+          <div class="scene-row">
+            <span>{{ scene.start_second }}-{{ scene.end_second }}s</span>
+            <strong>{{ scene.purpose }}</strong>
+            <small>{{ scene.prompt }}</small>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+      <article>
+        <h3>Asset checklist</h3>
+        <ul>
+          {% for asset in video_package.asset_checklist %}
+          <li>{{ asset }}</li>
+          {% endfor %}
+        </ul>
+      </article>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if generation_request or generation_result %}
+  <details class="workflow-block" open>
+    <summary>
+      <span>Generation</span>
+      <strong>{{ generation_request.status | replace("_", " ") if generation_request else generation_result.status | replace("_", " ") }}</strong>
+      <small>Lila handoff · Nora review · manual result capture</small>
+    </summary>
+    <div class="workflow-block-body">
       {% if generation_request %}
-      <p><strong>Generation status:</strong> {{ generation_request.status | replace("_", " ") }}</p>
-      <p>{{ generation_request.next_action }}</p>
+      <div class="stage-brief">
+        <p><strong>Generation status:</strong> {{ generation_request.status | replace("_", " ") }}</p>
+        <p>{{ generation_request.next_action }}</p>
+      </div>
       {% endif %}
       {% if generation_result %}
       <div class="generation-result">
@@ -199,7 +233,18 @@
         <button type="submit">Record real generation result</button>
       </form>
       {% endif %}
-      {% if can_record_publish_package %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if can_record_publish_package or publish_package %}
+  <details class="workflow-block" open>
+    <summary>
+      <span>Roxy + Emma Package</span>
+      <strong>{{ 'Publish package complete' if publish_package and publish_package.status == 'completed' else 'Ready for publish packaging' }}</strong>
+      <small>Caption, hashtags, FAQ, and handoff notes</small>
+    </summary>
+    <div class="workflow-block-body">
       <div class="generation-result publish-package-result">
         <span class="badge badge-ops-{{ 'ready' if publish_package and publish_package.status == 'completed' else 'missing' }}">
           {{ 'Publish package complete' if publish_package and publish_package.status == 'completed' else 'Ready for publish packaging' }}
@@ -211,6 +256,7 @@
         {% if publish_package.publish_notes %}<p>{{ publish_package.publish_notes }}</p>{% endif %}
         {% endif %}
       </div>
+      {% if can_record_publish_package %}
       <form class="inline-form generation-intake-form publish-package-form" method="post" action="/jobs/{{ job.id }}/record-publish-package">
         <label for="caption_{{ job.id }}">Roxy caption</label>
         <textarea id="caption_{{ job.id }}" name="caption" rows="3" required>{{ publish_package.caption if publish_package and publish_package.caption else '' }}</textarea>
@@ -223,7 +269,18 @@
         <button type="submit">{{ "Update publish package" if publish_package and publish_package.status == "completed" else "Record publish package" }}</button>
       </form>
       {% endif %}
-      {% if publish_package and publish_package.status == "completed" %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if publish_package and publish_package.status == "completed" %}
+  <details class="workflow-block" open>
+    <summary>
+      <span>Captain Approval</span>
+      <strong>{{ publish_execution_summary.label }}</strong>
+      <small>Captain gate before schedule handoff</small>
+    </summary>
+    <div class="workflow-block-body">
       <div class="generation-result publish-execution-result">
         <span class="badge badge-ops-{{ publish_execution_summary.state }}">{{ publish_execution_summary.label }}</span>
         {% if publish_execution %}
@@ -245,87 +302,114 @@
         </form>
         {% endif %}
       {% else %}
-        <a class="button button-secondary" href="/jobs/{{ job.id }}/live-publish-approval">Live publish approval</a>
+        <p class="stage-brief">Approved for schedule handoff. Live publish remains locked behind the final approval page.</p>
       {% endif %}
-      {% endif %}
-    </article>
-    <article>
-      <h3>Asset checklist</h3>
-      <ul>
-        {% for asset in video_package.asset_checklist %}
-        <li>{{ asset }}</li>
-        {% endfor %}
-      </ul>
-    </article>
-  </div>
-  <div class="scene-timeline">
-    {% for scene in video_package.scenes %}
-    <div class="scene-row">
-      <span>{{ scene.start_second }}-{{ scene.end_second }}s</span>
-      <strong>{{ scene.purpose }}</strong>
-      <small>{{ scene.prompt }}</small>
     </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
-{% if job.bella_output %}
-<details>
-  <summary>Script</summary>
-  {% if job.bella_output.type == "script" %}
-  <p><strong>Hook:</strong> {{ job.bella_output.hook }}</p>
-  <p><strong>Body:</strong> {{ job.bella_output.body }}</p>
-  <p><strong>CTA:</strong> {{ job.bella_output.cta }}</p>
-  {% elif job.bella_output.type == "article" %}
-  <p><strong>Heading:</strong> {{ job.bella_output.heading }}</p>
-  <p><strong>Body:</strong> {{ job.bella_output.body }}</p>
-  <p><strong>CTA:</strong> {{ job.bella_output.cta }}</p>
-  {% elif job.bella_output.type == "image" %}
-  <p><strong>Caption:</strong> {{ job.bella_output.caption }}</p>
-  {% elif job.bella_output.type == "infographic" %}
-  <p><strong>Title:</strong> {{ job.bella_output.title }}</p>
+  </details>
   {% endif %}
-</details>
-{% endif %}
 
-{% if job.growth_strategy %}
-<details>
-  <summary>Caption + Hashtags</summary>
-  <p>{{ job.growth_strategy.caption }}</p>
-  <p>{{ job.growth_strategy.hashtags | join(" ") }}</p>
-</details>
-{% endif %}
+  {% if publish_execution or job.publish_result %}
+  <details class="workflow-block" open>
+    <summary>
+      <span>Publish Handoff</span>
+      <strong>{{ publish_execution_summary.label }}</strong>
+      <small>Schedule state and platform result history</small>
+    </summary>
+    <div class="workflow-block-body">
+      {% if publish_execution %}
+      <div class="stage-brief">
+        <p>{{ publish_execution.next_action }}</p>
+        <small>
+          {{ publish_execution.platforms | join(", ") }}
+          {% if publish_execution.scheduled_at %} · scheduled {{ publish_execution.scheduled_at }}{% endif %}
+        </small>
+      </div>
+      {% endif %}
+      {% if publish_execution_summary.status == "scheduled" %}
+      <a class="button button-secondary" href="/jobs/{{ job.id }}/live-publish-approval">Live publish approval</a>
+      {% endif %}
+      {% if job.publish_result %}
+      <div class="publish-history">
+        {% for item in publish_history_items(job) %}
+        <div>
+          <span class="badge badge-publish-{{ item.status }}">{{ item.label }}</span>
+          {% if item.detail %}<small>{{ item.detail }}</small>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
 
-{% if faq_content %}
-<details>
-  <summary>FAQ</summary>
-  <pre>{{ faq_content }}</pre>
-</details>
-{% endif %}
+  {% if job.bella_output or job.growth_strategy or faq_content or job.visual_prompt or job.checkpoint_log or job.publish_result %}
+  <details class="workflow-block artifact-block">
+    <summary>
+      <span>Artifacts</span>
+      <strong>Script, caption, FAQ, prompts, logs</strong>
+      <small>Mission cargo for review and audit</small>
+    </summary>
+    <div class="workflow-block-body artifact-grid">
+      {% if job.bella_output %}
+      <article class="artifact-card">
+        <h3>Script</h3>
+        {% if job.bella_output.type == "script" %}
+        <p><strong>Hook:</strong> {{ job.bella_output.hook }}</p>
+        <p><strong>Body:</strong> {{ job.bella_output.body }}</p>
+        <p><strong>CTA:</strong> {{ job.bella_output.cta }}</p>
+        {% elif job.bella_output.type == "article" %}
+        <p><strong>Heading:</strong> {{ job.bella_output.heading }}</p>
+        <p><strong>Body:</strong> {{ job.bella_output.body }}</p>
+        <p><strong>CTA:</strong> {{ job.bella_output.cta }}</p>
+        {% elif job.bella_output.type == "image" %}
+        <p><strong>Caption:</strong> {{ job.bella_output.caption }}</p>
+        {% elif job.bella_output.type == "infographic" %}
+        <p><strong>Title:</strong> {{ job.bella_output.title }}</p>
+        {% endif %}
+      </article>
+      {% endif %}
 
-{% if job.visual_prompt %}
-<details>
-  <summary>Visual Prompt</summary>
-  <p>{{ job.visual_prompt }}</p>
-</details>
-{% endif %}
+      {% if job.growth_strategy %}
+      <article class="artifact-card">
+        <h3>Caption + Hashtags</h3>
+        <p>{{ job.growth_strategy.caption }}</p>
+        <p>{{ job.growth_strategy.hashtags | join(" ") }}</p>
+      </article>
+      {% endif %}
 
-{% if job.checkpoint_log %}
-<details>
-  <summary>Checkpoint Log</summary>
-  <ul>
-  {% for c in job.checkpoint_log %}
-    <li>{{ c.stage }}: {{ c.decision }} ({{ c.timestamp }})</li>
-  {% endfor %}
-  </ul>
-</details>
-{% endif %}
+      {% if faq_content %}
+      <article class="artifact-card">
+        <h3>FAQ</h3>
+        <pre>{{ faq_content }}</pre>
+      </article>
+      {% endif %}
 
-{% if job.publish_result %}
-<details>
-  <summary>Publish Result</summary>
-  <pre>{{ job.publish_result }}</pre>
-</details>
-{% endif %}
+      {% if job.visual_prompt %}
+      <article class="artifact-card">
+        <h3>Visual Prompt</h3>
+        <p>{{ job.visual_prompt }}</p>
+      </article>
+      {% endif %}
+
+      {% if job.checkpoint_log %}
+      <article class="artifact-card">
+        <h3>Checkpoint Log</h3>
+        <ul>
+        {% for c in job.checkpoint_log %}
+          <li>{{ c.stage }}: {{ c.decision }} ({{ c.timestamp }})</li>
+        {% endfor %}
+        </ul>
+      </article>
+      {% endif %}
+
+      {% if job.publish_result %}
+      <article class="artifact-card">
+        <h3>Publish Result</h3>
+        <pre>{{ job.publish_result }}</pre>
+      </article>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+</section>
 {% endblock %}
