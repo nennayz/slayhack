@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Voyage logbook with compass and ship route marks">
+  <defs>
+    <linearGradient id="page" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f5e5c6"/>
+      <stop offset="0.55" stop-color="#c99d58"/>
+      <stop offset="1" stop-color="#442714"/>
+    </linearGradient>
+    <pattern id="lines" width="160" height="52" patternUnits="userSpaceOnUse">
+      <path d="M0 51 H160" stroke="#4c2e1a" stroke-width="2" opacity="0.16"/>
+    </pattern>
+  </defs>
+  <rect width="1600" height="700" fill="#1a0f08"/>
+  <path d="M105 72 C430 28 702 74 800 118 C925 70 1190 28 1495 72 L1460 640 C1185 592 955 628 800 675 C645 628 415 592 140 640 Z" fill="url(#page)"/>
+  <path d="M105 72 C430 28 702 74 800 118 L800 675 C645 628 415 592 140 640 Z" fill="url(#lines)" opacity="0.65"/>
+  <path d="M800 118 C925 70 1190 28 1495 72 L1460 640 C1185 592 955 628 800 675 Z" fill="url(#lines)" opacity="0.55"/>
+  <path d="M800 118 V675" stroke="#5f351c" stroke-width="8" opacity="0.55"/>
+  <g transform="translate(1160 350)" opacity="0.9">
+    <circle cx="0" cy="0" r="104" fill="none" stroke="#4a2a16" stroke-width="8"/>
+    <path d="M0 -142 L30 -30 L142 0 L30 30 L0 142 L-30 30 L-142 0 L-30 -30 Z" fill="#4a2a16"/>
+    <circle cx="0" cy="0" r="22" fill="#e7c272"/>
+  </g>
+  <path d="M280 220 C420 180 500 300 640 250" fill="none" stroke="#123852" stroke-width="8" stroke-linecap="round" stroke-dasharray="18 22"/>
+  <path d="M260 400 C420 352 550 460 690 390" fill="none" stroke="#6a2c17" stroke-width="7" stroke-linecap="round" stroke-dasharray="14 20"/>
+  <circle cx="280" cy="220" r="16" fill="#123852"/>
+  <circle cx="640" cy="250" r="16" fill="#123852"/>
+  <circle cx="260" cy="400" r="16" fill="#6a2c17"/>
+  <circle cx="690" cy="390" r="16" fill="#6a2c17"/>
+  <g opacity="0.4" stroke="#4c2e1a" stroke-width="7" stroke-linecap="round">
+    <path d="M220 530 H620"/>
+    <path d="M230 570 H520"/>
+    <path d="M950 520 H1330"/>
+    <path d="M975 562 H1250"/>
+  </g>
+</svg>

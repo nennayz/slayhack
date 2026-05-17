@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Pirate command ship bridge with glowing route table">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#09213a"/>
+      <stop offset="0.55" stop-color="#173d55"/>
+      <stop offset="1" stop-color="#d29b53"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" x2="1">
+      <stop offset="0" stop-color="#2a170d"/>
+      <stop offset="0.55" stop-color="#6b3f20"/>
+      <stop offset="1" stop-color="#1a0f08"/>
+    </linearGradient>
+    <linearGradient id="table" x1="0" x2="1">
+      <stop offset="0" stop-color="#17334a"/>
+      <stop offset="1" stop-color="#2f9b83"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="700" fill="url(#sky)"/>
+  <path d="M0 410 C280 340 430 450 690 375 C950 300 1130 410 1600 330 L1600 700 L0 700 Z" fill="#071727" opacity="0.62"/>
+  <path d="M0 454 C260 405 470 485 760 430 C1030 378 1260 444 1600 390" fill="none" stroke="#78c6c1" stroke-width="4" opacity="0.35"/>
+  <path d="M185 168 L322 360 L48 360 Z" fill="#1a2233" opacity="0.9"/>
+  <path d="M1320 150 L1470 360 L1168 360 Z" fill="#1a2233" opacity="0.9"/>
+  <path d="M235 140 L235 412 M1372 124 L1372 412" stroke="#c79a4b" stroke-width="11" stroke-linecap="round"/>
+  <path d="M0 430 L1600 430 L1600 700 L0 700 Z" fill="url(#wood)"/>
+  <path d="M115 472 C420 425 1180 425 1488 472 L1398 650 C1042 690 560 690 206 650 Z" fill="#1f120b" opacity="0.84"/>
+  <ellipse cx="805" cy="540" rx="420" ry="92" fill="url(#table)" opacity="0.94"/>
+  <ellipse cx="805" cy="540" rx="450" ry="112" fill="none" stroke="#d3ab5d" stroke-width="10"/>
+  <ellipse cx="805" cy="540" rx="338" ry="66" fill="none" stroke="#9be4d6" stroke-width="3" opacity="0.7"/>
+  <path d="M480 542 C580 492 642 604 744 536 C850 465 948 608 1126 510" fill="none" stroke="#f4d58a" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="482" cy="542" r="10" fill="#f4d58a"/>
+  <circle cx="744" cy="536" r="10" fill="#f4d58a"/>
+  <circle cx="1126" cy="510" r="10" fill="#f4d58a"/>
+  <g opacity="0.45" stroke="#f8ead0" stroke-width="2">
+    <path d="M610 150 L760 246 L934 154 L1085 252"/>
+    <path d="M742 115 L746 305 M935 105 L929 308"/>
+    <path d="M676 192 L1016 194"/>
+  </g>
+  <g opacity="0.9">
+    <circle cx="620" cy="382" r="46" fill="#d3ab5d"/>
+    <circle cx="620" cy="382" r="30" fill="#122f45"/>
+    <path d="M620 333 L620 431 M571 382 L669 382 M586 348 L654 416 M654 348 L586 416" stroke="#f8ead0" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.82">
+    <rect x="960" y="330" width="250" height="80" rx="12" fill="#13283b" stroke="#d3ab5d" stroke-width="4"/>
+    <circle cx="1005" cy="370" r="15" fill="#61d5bd"/>
+    <circle cx="1060" cy="370" r="15" fill="#f4d58a"/>
+    <circle cx="1115" cy="370" r="15" fill="#d95f55"/>
+    <path d="M1160 352 L1198 388" stroke="#f8ead0" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="808" cy="542" rx="500" ry="122" fill="#75e7cf" opacity="0.13" filter="url(#soft)"/>
+</svg>

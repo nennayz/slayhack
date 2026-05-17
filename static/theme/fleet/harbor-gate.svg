@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Lantern-lit harbor gate with waiting mission ships">
+  <defs>
+    <linearGradient id="night" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#071424"/>
+      <stop offset="0.6" stop-color="#163a4d"/>
+      <stop offset="1" stop-color="#412310"/>
+    </linearGradient>
+    <radialGradient id="lamp" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffe6a0"/>
+      <stop offset="1" stop-color="#d08b31" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="700" fill="url(#night)"/>
+  <rect x="0" y="430" width="1600" height="270" fill="#071625" opacity="0.74"/>
+  <path d="M0 468 C220 412 400 510 620 462 C880 406 1005 506 1248 452 C1410 416 1510 442 1600 420" fill="none" stroke="#67c9c2" stroke-width="4" opacity="0.32"/>
+  <g opacity="0.96">
+    <rect x="320" y="190" width="92" height="360" rx="8" fill="#342015"/>
+    <rect x="1188" y="190" width="92" height="360" rx="8" fill="#342015"/>
+    <path d="M300 200 L430 200 L392 154 L338 154 Z" fill="#d0a054"/>
+    <path d="M1168 200 L1298 200 L1260 154 L1206 154 Z" fill="#d0a054"/>
+    <path d="M410 290 C620 350 850 350 1190 290" fill="none" stroke="#d0a054" stroke-width="12" stroke-linecap="round"/>
+    <path d="M450 342 C680 402 908 402 1150 342" fill="none" stroke="#d0a054" stroke-width="8" stroke-linecap="round" opacity="0.72"/>
+    <path d="M508 310 L508 540 M642 330 L642 540 M784 338 L784 540 M930 333 L930 540 M1070 312 L1070 540" stroke="#3b2416" stroke-width="18" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.9">
+    <circle cx="366" cy="258" r="86" fill="url(#lamp)"/>
+    <circle cx="1234" cy="258" r="86" fill="url(#lamp)"/>
+    <rect x="348" y="228" width="36" height="52" rx="10" fill="#ffcc66"/>
+    <rect x="1216" y="228" width="36" height="52" rx="10" fill="#ffcc66"/>
+  </g>
+  <g fill="#0d2233" stroke="#d0a054" stroke-width="5">
+    <path d="M140 506 L304 506 L270 555 L168 555 Z"/>
+    <path d="M1390 488 L1512 488 L1480 528 L1412 528 Z"/>
+  </g>
+  <path d="M190 440 L190 500 M1450 430 L1450 488" stroke="#f6e5b3" stroke-width="4"/>
+  <path d="M170 438 L210 438 L190 412 Z M1428 428 L1472 428 L1450 396 Z" fill="#f6e5b3"/>
+  <g opacity="0.3" stroke="#f8e3aa" stroke-width="2">
+    <path d="M110 134 L280 118 M1340 108 L1510 132 M700 98 L900 92"/>
+    <path d="M665 172 L720 144 L786 174 L846 142 L922 172"/>
+  </g>
+</svg>

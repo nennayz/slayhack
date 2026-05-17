@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 700" role="img" aria-label="Pirate ship engine room with gauges and signal lights">
+  <defs>
+    <linearGradient id="steel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0a1724"/>
+      <stop offset="0.55" stop-color="#1c3340"/>
+      <stop offset="1" stop-color="#5f3218"/>
+    </linearGradient>
+    <linearGradient id="pipe" x1="0" x2="1">
+      <stop offset="0" stop-color="#8b632e"/>
+      <stop offset="0.5" stop-color="#d1a454"/>
+      <stop offset="1" stop-color="#5b3518"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="700" fill="url(#steel)"/>
+  <g opacity="0.72" stroke="url(#pipe)" stroke-width="24" fill="none" stroke-linecap="round">
+    <path d="M90 132 H420 V266 H650"/>
+    <path d="M1510 152 H1180 V285 H940"/>
+    <path d="M210 610 H570 V500 H840 V610 H1320"/>
+  </g>
+  <g opacity="0.9">
+    <rect x="510" y="160" width="580" height="330" rx="24" fill="#132232" stroke="#d1a454" stroke-width="8"/>
+    <path d="M548 426 H1052" stroke="#d1a454" stroke-width="5" opacity="0.45"/>
+    <g transform="translate(650 290)">
+      <circle cx="0" cy="0" r="76" fill="#08131f" stroke="#d1a454" stroke-width="7"/>
+      <path d="M0 -52 A52 52 0 0 1 49 18" fill="none" stroke="#6de0c7" stroke-width="8"/>
+      <path d="M0 0 L36 -28" stroke="#f5d588" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="9" fill="#f5d588"/>
+    </g>
+    <g transform="translate(810 290)">
+      <circle cx="0" cy="0" r="76" fill="#08131f" stroke="#d1a454" stroke-width="7"/>
+      <path d="M-48 18 A52 52 0 0 1 38 -36" fill="none" stroke="#f0c45f" stroke-width="8"/>
+      <path d="M0 0 L-40 -18" stroke="#f5d588" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="9" fill="#f5d588"/>
+    </g>
+    <g transform="translate(970 290)">
+      <circle cx="0" cy="0" r="76" fill="#08131f" stroke="#d1a454" stroke-width="7"/>
+      <path d="M-50 -14 A52 52 0 0 1 51 -9" fill="none" stroke="#d95f55" stroke-width="8"/>
+      <path d="M0 0 L30 34" stroke="#f5d588" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="9" fill="#f5d588"/>
+    </g>
+  </g>
+  <g opacity="0.94">
+    <rect x="610" y="392" width="380" height="52" rx="10" fill="#07131f" stroke="#d1a454" stroke-width="4"/>
+    <circle cx="662" cy="418" r="16" fill="#5ed6ba"/>
+    <circle cx="734" cy="418" r="16" fill="#f4d06f"/>
+    <circle cx="806" cy="418" r="16" fill="#5ed6ba"/>
+    <rect x="860" y="405" width="88" height="26" rx="13" fill="#d95f55"/>
+  </g>
+  <path d="M0 536 C238 486 440 566 670 520 C924 470 1100 556 1330 512 C1460 488 1540 500 1600 478 L1600 700 L0 700 Z" fill="#07131f" opacity="0.68"/>
+  <g opacity="0.22" stroke="#f2d28a" stroke-width="3">
+    <path d="M110 250 H360 M1240 355 H1490 M120 402 H312"/>
+    <path d="M360 250 L400 290 M1240 355 L1200 395"/>
+  </g>
+</svg>
