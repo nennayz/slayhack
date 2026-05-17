@@ -148,6 +148,7 @@ class ContentJob(BaseModel):
     publish_package: Optional[dict] = None
     publish_execution: Optional[dict] = None
     publish_result: Optional[dict] = None
+    manual_post_kit: Optional[dict] = None
     checkpoint_log: list[CheckpointDecision] = Field(default_factory=list)
     performance: list[PostPerformance] = Field(default_factory=list)
     published_at: Optional[datetime] = None

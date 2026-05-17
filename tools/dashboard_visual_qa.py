@@ -139,6 +139,8 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
                 (
                     "Current next action",
                     "Live publish locked",
+                    "Manual Post Kit",
+                    "Download manual kit",
                     "Workflow stage",
                     "Video Package",
                     "Generation",

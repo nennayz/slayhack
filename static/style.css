@@ -1282,6 +1282,34 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .stage-brief p {
   margin: 0 0 0.3rem;
 }
+.manual-kit-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+}
+.manual-kit-card {
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+}
+.manual-kit-card strong {
+  color: var(--ink);
+  font-size: 1.05rem;
+}
+.manual-kit-card p,
+.manual-kit-card small {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+.manual-kit-readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
 .artifact-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -2363,6 +2391,7 @@ a:hover { color: var(--navy-soft); }
   .workflow-block summary,
   .video-package-grid,
   .video-package-detail,
+  .manual-kit-layout,
   .artifact-grid,
   .captain-history-filters,
   .captain-action-heading,

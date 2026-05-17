@@ -2160,7 +2160,10 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "Return to island" in resp.text
     assert "Mission cargo" in resp.text
     assert "/jobs/20260512_060000/download" in resp.text
-    assert "Download cargo" in resp.text
+    assert "Manual Post Kit" in resp.text
+    assert "Download manual kit" in resp.text
+    assert "SlayHack / 04_Video_PreProduction" in resp.text
+    assert "Drive sync not configured" in resp.text
     assert "Cargo checklist" in resp.text
     assert "Output readiness" in resp.text
     assert "Bella output is available." in resp.text
@@ -2175,9 +2178,48 @@ def test_job_detail_shows_brief(tmp_path, client):
 def test_job_detail_downloads_artifact_zip(tmp_path, client):
     import zipfile
     from io import BytesIO
+    from models.content_job import ContentJob, ContentType, GrowthStrategy, Script
 
     _write_job(tmp_path, "20260512_060000", brief="downloadable mission")
     job_dir = tmp_path / "output" / "Slayhack" / "20260512_060000"
+    job = ContentJob.model_validate_json((job_dir / "job.json").read_text())
+    job.content_type = ContentType.VIDEO
+    job.bella_output = Script(hook="hook", body="body", cta="cta", duration_seconds=24)
+    job.visual_prompt = "clean hero object on deck"
+    job.video_path = "output/Slayhack/20260512_060000/video.mp4"
+    job.growth_strategy = GrowthStrategy(
+        hashtags=["#slayhack", "#beautyhack"],
+        caption="manual caption",
+        best_post_time_utc="14:00",
+        best_post_time_thai="21:00",
+    )
+    job.video_package = {
+        "title": "Downloadable mission",
+        "format_name": "Veo3 storyboard package",
+        "total_duration_seconds": 16,
+        "asset_checklist": ["hero object"],
+        "scenes": [
+            {
+                "number": 1,
+                "start_second": 0,
+                "end_second": 8,
+                "purpose": "hook",
+                "visual_direction": "Open with the problem",
+                "prompt": "Open with the problem in a clean beauty setup.",
+                "tool_hint": "veo3",
+            },
+            {
+                "number": 2,
+                "start_second": 8,
+                "end_second": 16,
+                "purpose": "payoff",
+                "visual_direction": "Show the fix",
+                "prompt": "Show the fix with smooth hand motion.",
+                "tool_hint": "veo3",
+            },
+        ],
+    }
+    (job_dir / "job.json").write_text(job.model_dump_json(indent=2))
     (job_dir / "bella_output.md").write_text("script ready")
     (job_dir / "video.mp4").write_bytes(b"MP4")
 
@@ -2185,11 +2227,54 @@ def test_job_detail_downloads_artifact_zip(tmp_path, client):
 
     assert resp.status_code == 200
     assert resp.headers["content-type"] == "application/zip"
-    assert "20260512_060000-artifacts.zip" in resp.headers["content-disposition"]
+    assert "20260512_060000_downloadable-mission_manual-kit.zip" in resp.headers["content-disposition"]
     with zipfile.ZipFile(BytesIO(resp.content)) as archive:
-        assert sorted(archive.namelist()) == ["bella_output.md", "job.json", "video.mp4"]
-        assert archive.read("bella_output.md") == b"script ready"
-        assert archive.read("video.mp4") == b"MP4"
+        names = sorted(archive.namelist())
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/README_MANUAL_POST.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/caption.txt" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/hashtags.txt" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/script.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/storyboard.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/video_prompts/google_video_8s.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/video_prompts/kling_detailed.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/video_prompts/seedance2_detailed.md" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/assets/video.mp4" in names
+        assert "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/raw_output/bella_output.md" in names
+        assert archive.read("SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/caption.txt") == b"manual caption\n"
+        assert b"Google Video / Veo" in archive.read(
+            "SlayHack/04_Video_PreProduction/20260512_060000_downloadable-mission/video_prompts/google_video_8s.md"
+        )
+
+
+def test_job_detail_syncs_manual_kit_to_drive(tmp_path, client, monkeypatch, mocker):
+    _write_job(tmp_path, "20260512_060000", brief="drive kit")
+    monkeypatch.setenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "root-folder")
+    folder_mock = mocker.patch(
+        "google_drive.ensure_drive_folder_path",
+        return_value={"folder_id": "type-folder", "folders": []},
+    )
+    upload_mock = mocker.patch(
+        "google_drive.upload_file_to_drive",
+        return_value={
+            "id": "file-123",
+            "name": "kit.zip",
+            "webViewLink": "https://drive.google.com/file/d/file-123/view",
+            "webContentLink": "https://drive.google.com/uc?id=file-123",
+        },
+    )
+
+    resp = client.post("/jobs/20260512_060000/sync-drive", headers=_auth(), follow_redirects=False)
+
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/jobs/20260512_060000"
+    folder_mock.assert_called_once()
+    assert folder_mock.call_args.args[0] == "root-folder"
+    assert folder_mock.call_args.args[1] == ["SlayHack", "05_Ready_To_Post"]
+    upload_mock.assert_called_once()
+    saved = json.loads((tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text())
+    assert saved["manual_post_kit"]["drive_sync"]["status"] == "synced"
+    assert saved["manual_post_kit"]["drive_sync"]["file_id"] == "file-123"
+    assert saved["manual_post_kit"]["drive_sync"]["web_view_link"] == "https://drive.google.com/file/d/file-123/view"
 
 
 def test_job_detail_shows_tracking_queue_status(tmp_path, client):

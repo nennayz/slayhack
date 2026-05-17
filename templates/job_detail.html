@@ -33,7 +33,7 @@
     <p>{{ mission_command.action }}</p>
     <div class="inline-actions">
       <a href="/aurora">Return to island</a>
-      <a href="/jobs/{{ job.id }}/download">Download cargo</a>
+      <a href="/jobs/{{ job.id }}/download">Download manual kit</a>
       {% if generation_request %}
       <a href="/aurora/generation">Open generation queue</a>
       {% endif %}
@@ -49,6 +49,49 @@
     <strong>{{ mission_command.progress }}</strong>
     <small>{{ job.status.value | status_label }}</small>
   </article>
+</section>
+
+<section class="panel manual-kit-panel">
+  <div class="section-heading">
+    <p class="eyebrow">Manual posting · Captain handoff</p>
+    <h2>Manual Post Kit</h2>
+  </div>
+  <div class="manual-kit-layout">
+    <article class="manual-kit-card">
+      <span class="badge badge-ops-{{ manual_kit.state }}">{{ manual_kit.label }}</span>
+      <strong>{{ manual_kit.project_folder }} / {{ manual_kit.work_type_folder }}</strong>
+      <p>{{ manual_kit.detail }}</p>
+      <small>{{ manual_kit.folder_path }}</small>
+      <div class="manual-kit-readiness">
+        <span class="badge badge-ops-{{ 'ready' if manual_kit.caption_ready else 'missing' }}">Caption</span>
+        <span class="badge badge-ops-{{ 'ready' if manual_kit.hashtags_ready else 'missing' }}">Hashtags</span>
+        <span class="badge badge-ops-{{ 'ready' if manual_kit.prompt_pack_ready else 'missing' }}">Prompt pack</span>
+        <span class="badge badge-ops-{{ 'ready' if manual_kit.asset_ready else 'missing' }}">Assets</span>
+      </div>
+      <small>Posting time guidance uses {{ manual_kit.timezone }}.</small>
+    </article>
+    <article class="manual-kit-card">
+      <strong>{{ manual_kit.filename }}</strong>
+      <div class="inline-actions">
+        <a class="button" href="/jobs/{{ job.id }}/download">Download manual kit</a>
+        {% if manual_kit.drive_configured %}
+        <form class="inline-form" method="post" action="/jobs/{{ job.id }}/sync-drive">
+          <button type="submit">Sync to Google Drive</button>
+        </form>
+        {% else %}
+        <span class="badge badge-ops-missing">Drive sync not configured</span>
+        {% endif %}
+      </div>
+      {% if manual_kit.drive_sync %}
+      <div class="stage-brief">
+        <p>Drive sync: {{ manual_kit.drive_sync.status }} · {{ manual_kit.drive_sync.synced_at }}</p>
+        {% if manual_kit.drive_sync.web_view_link %}
+        <a href="{{ manual_kit.drive_sync.web_view_link }}" target="_blank" rel="noreferrer">Open Drive kit</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </article>
+  </div>
 </section>
 
 <section class="panel workflow-section">
@@ -229,6 +272,16 @@
       <div class="stage-brief">
         <p><strong>Generation status:</strong> {{ generation_request.status | replace("_", " ") }}</p>
         <p>{{ generation_request.next_action }}</p>
+      </div>
+      {% endif %}
+      {% if video_package %}
+      <div class="stage-brief">
+        <p><strong>Prompt package:</strong> choose the generated prompt file inside the manual kit.</p>
+        <div class="manual-kit-readiness">
+          <span class="badge badge-ops-ready">Google Video / 8s scenes</span>
+          <span class="badge badge-ops-ready">Kling detailed</span>
+          <span class="badge badge-ops-ready">Seedance 2.0 detailed</span>
+        </div>
       </div>
       {% endif %}
       {% if generation_result %}

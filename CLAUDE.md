@@ -88,6 +88,7 @@ OPENAI_AGENT_MODEL=gpt-4o-mini
 BRAVE_SEARCH_API_KEY=
 GOOGLE_CLOUD_PROJECT=
 GOOGLE_APPLICATION_CREDENTIALS=
+GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID=
 META_ACCESS_TOKEN=
 TIKTOK_ACCESS_TOKEN=
 YOUTUBE_API_KEY=
@@ -187,6 +188,7 @@ The Freedom and Lyra should stay clearly marked as planned until their data mode
 - **All agents use `OPENAI_AGENT_MODEL`** for writing/analysis tasks.
 - **`ContentJob`** (Pydantic model in `models/content_job.py`) is the single contract passed between all agents. Never pass raw dicts.
 - **Jobs persist to `output/<page_name>/<job_id>/job.json`** after every agent completes. Resume reads this file and skips completed stages.
+- **Manual Post Kits** are the default test-phase handoff: download or sync the structured kit to Google Drive, then Captain posts manually. Live publishing remains locked unless explicitly approved.
 - **`job.dry_run: bool`** controls whether agents call real APIs or return mock data. Use `--dry-run` during development.
 - **Bella has no hardcoded style** — `script_style` and `target_audience` in `brand.yaml` fully control her output.
 - **Nora can send work back** to Bella or Lila. `nora_max_retries` in `brand.yaml` controls the limit (default: 2).

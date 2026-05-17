@@ -8,11 +8,13 @@ def test_config_loads_from_env(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
     monkeypatch.setenv("OPENAI_ROBIN_MODEL", "gpt-robin")
     monkeypatch.setenv("OPENAI_AGENT_MODEL", "gpt-agent")
+    monkeypatch.setenv("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID", "drive-folder")
     cfg = Config.from_env()
     assert cfg.brave_search_api_key == "brave-key"
     assert cfg.openai_api_key == "openai-key"
     assert cfg.openai_robin_model == "gpt-robin"
     assert cfg.openai_agent_model == "gpt-agent"
+    assert cfg.google_drive_manual_kits_folder_id == "drive-folder"
 
 
 def test_config_raises_on_missing_openai_key(monkeypatch):
