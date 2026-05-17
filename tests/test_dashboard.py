@@ -503,6 +503,19 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     (daily_dir / "2026-05-16-character-art-learning-brief.md").write_text(
         "# Daily Learning Brief\n\nKeep PM decisions separate from central crew execution.\n"
     )
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: accepted\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260516_manual\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+        "## Manual Posting Lessons\n\n"
+        "- Slayhack / instagram: tested post\n"
+        "  - Source job: 20260516_manual\n"
+        "  - Lesson: Short CTA got more saves.\n"
+    )
     _write_job(
         tmp_path,
         "20260516_120000",
@@ -545,6 +558,10 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Create mission" in resp.text
     assert "/aurora/daily-slate/stadium_sweethearts/video-packages/" in resp.text
     assert "Latest learning" in resp.text
+    assert "Accepted learning intake" in resp.text
+    assert "Learning-to-planning gate" in resp.text
+    assert "Short CTA got more saves." in resp.text
+    assert "Apply learning to next mission" in resp.text
     assert "Performance signal" in resp.text
     assert "Latest learning from tracked posts" in resp.text
     assert "winning hook test" in resp.text
@@ -554,7 +571,7 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "fleet-header-map" in resp.text
     assert "learning ready" in resp.text
     assert "workflow-rail-step active" in resp.text
-    assert "Keep PM decisions separate from central crew execution." in resp.text
+    assert "docs/learning/daily/2026-05-17-manual-posting-lessons.md" in resp.text
     assert "Use this view for" in resp.text
     assert "Stadium checks fan-cam plays" in resp.text
 
@@ -569,6 +586,95 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert invalid_filter.status_code == 200
     assert "Slay Hack" in invalid_filter.text
     assert "Stadium Sweethearts" in invalid_filter.text
+
+
+def test_daily_slate_applies_accepted_learning_to_next_mission(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    _write_job(
+        tmp_path,
+        "20260516_manual",
+        brief="closed manual mission",
+        manual_post_kit={
+            "manual_post": {
+                "instagram": {
+                    "status": "posted",
+                    "post_url": "https://www.instagram.com/p/source/",
+                    "posted_at": "2026-05-17T12:00:00+00:00",
+                }
+            },
+            "closeout": {
+                "status": "closed",
+                "closed_at": "2026-05-17T13:00:00+00:00",
+                "closed_by": "admin",
+                "learning_note": "Short CTA got more saves.",
+                "proof_summary": {
+                    "post_url_present": True,
+                    "snapshot_24h_present": True,
+                    "snapshot_72h_present": True,
+                    "learning_note_captured": True,
+                },
+            },
+        },
+    )
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-17-manual-posting-lessons.md").write_text(
+        "---\n"
+        "status: accepted\n"
+        "source: manual_posting_closeout\n"
+        "source_job_ids:\n"
+        "  - 20260516_manual\n"
+        "---\n\n"
+        "# Daily Learning Brief\n\n"
+        "## Manual Posting Lessons\n\n"
+        "- Slayhack / instagram: closed manual mission\n"
+        "  - Source job: 20260516_manual\n"
+        "  - Lesson: Short CTA got more saves.\n"
+    )
+
+    resp = client.post(
+        "/aurora/daily-slate/apply-learning",
+        data={"project_slug": "slay_hack"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith("/jobs/")
+    mission_id = resp.headers["location"].removeprefix("/jobs/")
+    created = json.loads(next((tmp_path / "output").rglob(f"{mission_id}/job.json")).read_text())
+    accepted_learning = created["video_package"]["accepted_learning"]
+    assert accepted_learning["status"] == "applied"
+    assert accepted_learning["source_job_ids"] == ["20260516_manual"]
+    assert accepted_learning["lessons"][0]["note"] == "Short CTA got more saves."
+    assert accepted_learning["next_action"] == "Use these accepted manual posting lessons while shaping this mission. Live publish stays locked."
+    assert created["publish_result"] is None
+    assert created["publish_execution"] is None
+    source = json.loads((tmp_path / "output" / "Slayhack" / "20260516_manual" / "job.json").read_text())
+    applied = source["manual_post_kit"]["closeout"]["learning_applied"]
+    assert applied["status"] == "applied"
+    assert applied["applied_to_job_id"] == mission_id
+    work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
+    assert "Applied accepted learning to daily slate mission" in work_activity
+
+    page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
+    assert page.status_code == 200
+    assert "Learning applied" in page.text
+
+
+def test_daily_slate_apply_learning_requires_accepted_artifact(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+
+    resp = client.post(
+        "/aurora/daily-slate/apply-learning",
+        data={"project_slug": "slay_hack"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 400
+    assert "No accepted learning artifacts are ready to apply" in resp.text
+    assert not list((tmp_path / "output").rglob("job.json"))
 
 
 def test_daily_slate_creates_project_specific_video_mission(tmp_path, client):
@@ -2898,7 +3004,7 @@ def test_manual_posting_queue_closeout_records_learning_note(tmp_path, client):
 
     page = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())
     assert page.status_code == 200
-    assert "Manual post closed" in page.text
+    assert "Needs Captain learning review" in page.text
     assert "Hook worked; keep the shorter CTA." in page.text
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Closed manual post for 20260512_complete" in work_activity

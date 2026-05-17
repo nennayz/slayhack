@@ -51,6 +51,40 @@
   </div>
 </section>
 
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Accepted learning intake</p>
+    <h2>Learning-to-planning gate</h2>
+  </div>
+  <div class="learning-planning-grid">
+    <div class="learning-planning-main">
+      {% if accepted_learning_intake.lessons %}
+      <div class="learning-gates">
+        {% for lesson in accepted_learning_intake.lessons[:6] %}
+        <span><strong>{{ lesson.category }}</strong>: {{ lesson.note }}</span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="muted">No accepted manual posting lessons are ready for planning yet.</p>
+      {% endif %}
+      {% if accepted_learning_intake.artifacts %}
+      <p class="muted">Source artifacts: {{ accepted_learning_intake.artifacts | map(attribute="path") | join(", ") }}</p>
+      {% endif %}
+    </div>
+    <div class="learning-planning-actions">
+      {% for slate in slate_cards %}
+      <form class="inline-form compact-action-form" method="post" action="/aurora/daily-slate/apply-learning">
+        <input name="project_slug" type="hidden" value="{{ slate.project }}">
+        <button type="submit" {{ "disabled" if not accepted_learning_intake.artifacts else "" }}>Apply learning to next mission</button>
+        <small>{{ slate.page_name }} · {{ slate.next_ticket.title if slate.next_ticket else "no ticket ready" }}</small>
+      </form>
+      {% else %}
+      <p class="muted">No Daily Slate project is ready for learning application.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
 <section class="daily-slate-grid">
   {% for slate in slate_cards %}
   <article class="panel daily-slate-card">
