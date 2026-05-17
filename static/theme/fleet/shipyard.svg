@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Aurora shipyard engine and build dock">
+  <defs>
+    <linearGradient id="yard" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#061c31"/>
+      <stop offset="0.5" stop-color="#14384e"/>
+      <stop offset="1" stop-color="#4d2918"/>
+    </linearGradient>
+    <radialGradient id="forge" cx="78%" cy="43%" r="44%">
+      <stop offset="0" stop-color="#f3a747" stop-opacity="0.65"/>
+      <stop offset="1" stop-color="#f3a747" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#yard)"/>
+  <rect width="1200" height="420" fill="url(#forge)"/>
+  <g fill="none" stroke="#f7cc7d" stroke-width="5" opacity="0.78">
+    <path d="M120 330 H1030 L1110 250 H986 L928 298 H202 L144 250 H40z"/>
+    <path d="M220 230 h620 l92 68 H172z"/>
+    <path d="M290 230 V104 h94 v126"/>
+    <path d="M456 230 V78 h92 v152"/>
+    <path d="M620 230 V116 h92 v114"/>
+    <path d="M824 110 l92 44v118"/>
+  </g>
+  <g fill="none" stroke="#8fe3d3" stroke-width="4" opacity="0.62">
+    <circle cx="322" cy="298" r="26"/>
+    <circle cx="462" cy="298" r="26"/>
+    <circle cx="602" cy="298" r="26"/>
+    <circle cx="742" cy="298" r="26"/>
+    <path d="M176 360 H1070"/>
+    <path d="M104 86 h228 M104 126 h168 M104 166 h204"/>
+  </g>
+  <g fill="#fff2c9" opacity="0.75">
+    <circle cx="930" cy="92" r="6"/>
+    <circle cx="970" cy="122" r="4"/>
+    <circle cx="884" cy="138" r="5"/>
+  </g>
+</svg>

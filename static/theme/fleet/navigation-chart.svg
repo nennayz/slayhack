@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Navigation chart table with compass routes">
+  <defs>
+    <linearGradient id="sea" x1="0" x2="1">
+      <stop offset="0" stop-color="#09243b"/>
+      <stop offset="0.5" stop-color="#1b4d65"/>
+      <stop offset="1" stop-color="#3d2b1c"/>
+    </linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
+      <path d="M56 0H0v56" fill="none" stroke="#f4cc81" stroke-opacity="0.16" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="420" fill="url(#sea)"/>
+  <rect width="1200" height="420" fill="url(#grid)"/>
+  <g transform="translate(710 72)" fill="none" stroke="#f8d591" stroke-width="5" opacity="0.82">
+    <circle cx="140" cy="140" r="112"/>
+    <circle cx="140" cy="140" r="62"/>
+    <path d="M140 0v280M0 140h280M65 65l150 150M215 65L65 215"/>
+    <path d="M140 38l28 102l-28 102l-28 -102z" fill="#f8d591" fill-opacity="0.22"/>
+  </g>
+  <g fill="none" stroke="#8fe3d3" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 304 C246 138 370 322 512 176 S772 198 934 98"/>
+    <path d="M182 280 l-44 20 l18 -46"/>
+    <path d="M512 176 l-28 50 l60 -8"/>
+    <path d="M934 98 l-52 -2 l34 44"/>
+  </g>
+  <g fill="#f8d591" opacity="0.72">
+    <circle cx="96" cy="304" r="9"/>
+    <circle cx="512" cy="176" r="9"/>
+    <circle cx="934" cy="98" r="9"/>
+  </g>
+</svg>

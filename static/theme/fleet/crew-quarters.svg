@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" role="img" aria-label="Fleet crew quarters with station frames">
+  <defs>
+    <linearGradient id="deck" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#0b263f"/>
+      <stop offset="0.58" stop-color="#17445c"/>
+      <stop offset="1" stop-color="#4a2e1a"/>
+    </linearGradient>
+    <radialGradient id="lamp" cx="50%" cy="28%" r="52%">
+      <stop offset="0" stop-color="#ffd98b" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#ffd98b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="420" fill="url(#deck)"/>
+  <rect width="1200" height="420" fill="url(#lamp)"/>
+  <g opacity="0.35" fill="none" stroke="#d7a85e" stroke-width="3">
+    <path d="M0 330 C240 280 380 370 610 318 S980 282 1200 328"/>
+    <path d="M0 374 C250 324 390 414 610 362 S980 326 1200 372"/>
+  </g>
+  <g transform="translate(112 84)" fill="none" stroke="#f5d08d" stroke-width="4">
+    <rect x="0" y="0" width="170" height="220" rx="16"/>
+    <rect x="230" y="0" width="170" height="220" rx="16"/>
+    <rect x="460" y="0" width="170" height="220" rx="16"/>
+    <rect x="690" y="0" width="170" height="220" rx="16"/>
+    <path d="M85 36 v148 M42 112 h86"/>
+    <path d="M315 40 c42 36 42 104 0 140 c-42 -36 -42 -104 0 -140z"/>
+    <path d="M545 54 l48 58 l-48 58 l-48 -58z"/>
+    <path d="M750 46 h80 v132 h-80z M750 86 h80 M790 46 v132"/>
+  </g>
+  <g opacity="0.25" stroke="#ffffff" stroke-width="2">
+    <path d="M60 58 H1130"/>
+    <path d="M100 390 H1160"/>
+    <path d="M94 58 L160 390"/>
+    <path d="M1100 58 L1028 390"/>
+  </g>
+</svg>

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" role="img" aria-label="Aurora command bridge with map table and ocean windows">
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#061a31"/>
+      <stop offset="0.5" stop-color="#0b4460"/>
+      <stop offset="1" stop-color="#321c17"/>
+    </linearGradient>
+    <radialGradient id="aurora" cx="58%" cy="12%" r="78%">
+      <stop offset="0" stop-color="#8ff4d3" stop-opacity="0.72"/>
+      <stop offset="0.35" stop-color="#789cff" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#789cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="brass" cx="50%" cy="78%" r="50%">
+      <stop offset="0" stop-color="#f0b961" stop-opacity="0.56"/>
+      <stop offset="1" stop-color="#f0b961" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="720" fill="url(#sky)"/>
+  <rect width="1600" height="720" fill="url(#aurora)"/>
+  <rect width="1600" height="720" fill="url(#brass)"/>
+  <g fill="none" stroke="#f4ca7e" stroke-width="6" opacity="0.7">
+    <path d="M130 110 h1340 v300 H130z"/>
+    <path d="M355 110 v300M610 110 v300M865 110 v300M1120 110 v300"/>
+    <path d="M130 410 C390 334 548 478 800 402 S1214 338 1470 410"/>
+  </g>
+  <g transform="translate(360 430)" fill="none" stroke="#f8d591" stroke-width="7" opacity="0.82">
+    <path d="M0 160 L118 22 h650 l118 138z"/>
+    <path d="M118 22 l94 138M768 22 l-94 138"/>
+    <path d="M246 92 C348 42 466 142 572 86 S720 88 786 44"/>
+  </g>
+  <g fill="#8fe3d3" opacity="0.75">
+    <circle cx="760" cy="522" r="10"/>
+    <circle cx="864" cy="492" r="8"/>
+    <circle cx="1012" cy="522" r="9"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="4" opacity="0.28">
+    <path d="M206 246 C356 196 484 296 642 242 S930 192 1114 242 S1380 288 1510 228"/>
+    <path d="M210 312 C360 262 488 362 646 308 S934 258 1118 308 S1384 354 1514 294"/>
+  </g>
+  <g fill="none" stroke="#f8d591" stroke-width="5" opacity="0.74">
+    <circle cx="202" cy="560" r="70"/>
+    <path d="M202 490 v140M132 560 h140M166 524 l72 72M238 524 l-72 72"/>
+  </g>
+</svg>

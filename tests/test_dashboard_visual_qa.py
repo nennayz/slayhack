@@ -155,11 +155,19 @@ def test_fleet_theme_assets_and_css_exist():
     root = Path(__file__).resolve().parents[1]
     asset_dir = root / "static" / "theme" / "fleet"
     expected = {
+        "aurora-command-bridge.svg",
+        "captain-log.svg",
         "command-bridge.svg",
+        "crew-quarters.svg",
+        "island-map.svg",
+        "navigation-chart.svg",
+        "preflight-dock.svg",
         "route-map.svg",
         "harbor-gate.svg",
         "engine-room.svg",
+        "shipyard.svg",
         "voyage-log.svg",
+        "voyage-board.svg",
     }
     assert expected <= {path.name for path in asset_dir.glob("*.svg")}
     css = (root / "static" / "style.css").read_text()
