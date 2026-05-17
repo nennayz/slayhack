@@ -27,6 +27,7 @@ from routes._helpers import (
     _generation_row_matches_filter,
     _latest_learning_brief,
     _latest_performance_signals,
+    _tracking_readiness_rows,
     _mission_filters,
     _project_options,
     _read_asset_audit_note,
@@ -120,6 +121,7 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
     approval_queue = _approval_queue_rows(root)
     jobs = list_all_jobs(root)
     performance_signals = _latest_performance_signals(jobs)
+    tracking_readiness = _tracking_readiness_rows(root, jobs, limit=4)
     return templates.TemplateResponse(
         request,
         "daily_slate.html",
@@ -130,6 +132,7 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
             "selected_project_label": selected_project_label,
             "latest_brief": _latest_learning_brief(root),
             "performance_signals": performance_signals,
+            "tracking_readiness": tracking_readiness,
             "approval_queue": approval_queue[:8],
             "approval_lane_groups": _approval_lane_groups(approval_queue),
             "total_tickets": sum(int(card["ticket_count"]) for card in all_slate_cards),
