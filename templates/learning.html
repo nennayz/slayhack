@@ -10,6 +10,8 @@
   </div>
 </section>
 
+{% include "_aurora_flow.html" %}
+
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Daily brief</span>
@@ -53,10 +55,10 @@
       <tbody>
         {% for item in crew_asset_audit.rows %}
         <tr>
-          <td><code>{{ item.path }}</code></td>
-          <td>{{ item.dimensions }}</td>
-          <td>{{ item.status }}</td>
-          <td>{{ item.source }}</td>
+          <td data-label="Asset"><code>{{ item.path }}</code></td>
+          <td data-label="Dimensions">{{ item.dimensions }}</td>
+          <td data-label="Status">{{ item.status }}</td>
+          <td data-label="Source">{{ item.source }}</td>
         </tr>
         {% endfor %}
       </tbody>

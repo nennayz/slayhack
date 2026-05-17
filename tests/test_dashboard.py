@@ -185,6 +185,8 @@ def test_dashboard_wrong_credentials(client):
 def test_captains_deck_empty(client):
     resp = client.get("/", headers=_auth())
     assert resp.status_code == 200
+    assert "NayzFreedom Fleet" in resp.text
+    assert "Aurora / SlayHack" in resp.text
     assert "Captain's Deck" in resp.text
     assert "Ready for first mission" in resp.text
     assert "Nami comes after privacy and memory boundaries are clear" in resp.text
@@ -250,6 +252,9 @@ def test_aurora_overview_shows_projects(tmp_path, client):
     assert "test" in resp.text
     assert "/aurora/islands/nayzfreedom_fleet" in resp.text
     assert "Operating workflow" in resp.text
+    assert "Daily Slate" in resp.text
+    assert "Approvals" in resp.text
+    assert "Generation" in resp.text
 
 
 def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
@@ -320,6 +325,7 @@ def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client
     assert "Create mission" in resp.text
     assert "/aurora/daily-slate/stadium_sweethearts/video-packages/" in resp.text
     assert "Latest learning" in resp.text
+    assert "workflow-rail-step active" in resp.text
     assert "Keep PM decisions separate from central crew execution." in resp.text
     assert "Use this view for" in resp.text
     assert "Stadium checks fan-cam plays" in resp.text
@@ -1066,6 +1072,7 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Mia keeps the blue signal-scout direction." in resp.text
     assert "Crew art" in resp.text
     assert "Production canon" in resp.text
+    assert "workflow-rail-step active" in resp.text
     assert "Current crew asset provenance" in resp.text
     assert "2 PNG production assets; 1 match the v7 review folder by hash." in resp.text
     assert "static/crew/mia.png" in resp.text
