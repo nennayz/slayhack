@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 from pathlib import Path
+import json
 import shutil
 from orchestrator import Orchestrator
 from project_loader import load_project
@@ -10,11 +11,35 @@ from tests.test_mia import make_config
 
 def _tool_block(name, tool_id, input_data=None):
     b = MagicMock()
-    b.type = "tool_use"
     b.name = name
     b.id = tool_id
     b.input = input_data or {}
     return b
+
+
+def _tool_call_response(blocks):
+    calls = []
+    for block in blocks:
+        call = MagicMock()
+        call.id = block.id
+        call.function.name = block.name
+        call.function.arguments = json.dumps(block.input)
+        calls.append(call)
+    message = MagicMock()
+    message.content = ""
+    message.tool_calls = calls
+    resp = MagicMock()
+    resp.choices = [MagicMock(finish_reason="tool_calls", message=message)]
+    return resp
+
+
+def _end_turn_response():
+    message = MagicMock()
+    message.content = "Job complete!"
+    message.tool_calls = None
+    resp = MagicMock()
+    resp.choices = [MagicMock(finish_reason="stop", message=message)]
+    return resp
 
 
 def test_full_dry_run_pipeline(tmp_path, monkeypatch):
@@ -24,7 +49,6 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
     # Copy projects/ into tmp_path so project_loader can find it
     shutil.copytree(Path(__file__).parent.parent / "projects", tmp_path / "projects")
 
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test")
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave")
     monkeypatch.setenv("OPENAI_API_KEY", "oai")
 
@@ -51,18 +75,12 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
         i = call_count[0]
         call_count[0] += 1
         if i < len(sequence):
-            resp = MagicMock()
-            resp.stop_reason = "tool_use"
-            resp.content = sequence[i]
-            return resp
-        resp = MagicMock()
-        resp.stop_reason = "end_turn"
-        resp.content = [MagicMock(type="text", text="Job complete!")]
-        return resp
+            return _tool_call_response(sequence[i])
+        return _end_turn_response()
 
-    with patch("orchestrator.anthropic.Anthropic") as mock_anthropic, \
+    with patch("orchestrator.OpenAI") as mock_openai, \
          patch("builtins.input", return_value="1"):
-        mock_anthropic.return_value.messages.create.side_effect = mock_create
+        mock_openai.return_value.chat.completions.create.side_effect = mock_create
 
         pm = load_project("nayzfreedom_fleet")
         job = ContentJob(

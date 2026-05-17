@@ -7,7 +7,6 @@ from models.content_job import ContentType, Idea, JobStatus
 
 def _make_tool_use_block(name, tool_id="t1", input_data=None):
     block = MagicMock()
-    block.type = "tool_use"
     block.name = name
     block.id = tool_id
     block.input = input_data or {}
@@ -16,8 +15,26 @@ def _make_tool_use_block(name, tool_id="t1", input_data=None):
 
 def _make_end_turn_response():
     resp = MagicMock()
-    resp.stop_reason = "end_turn"
-    resp.content = [MagicMock(type="text", text="All done!")]
+    message = MagicMock()
+    message.content = "All done!"
+    message.tool_calls = None
+    resp.choices = [MagicMock(finish_reason="stop", message=message)]
+    return resp
+
+
+def _make_tool_call_response(blocks):
+    calls = []
+    for block in blocks:
+        call = MagicMock()
+        call.id = block.id
+        call.function.name = block.name
+        call.function.arguments = json.dumps(block.input)
+        calls.append(call)
+    message = MagicMock()
+    message.content = ""
+    message.tool_calls = calls
+    resp = MagicMock()
+    resp.choices = [MagicMock(finish_reason="tool_calls", message=message)]
     return resp
 
 
@@ -49,13 +66,10 @@ def test_orchestrator_dry_run_completes(mocker, tmp_path, monkeypatch):
         i = call_count[0]
         call_count[0] += 1
         if i < len(tool_sequence):
-            resp = MagicMock()
-            resp.stop_reason = "tool_use"
-            resp.content = tool_sequence[i]
-            return resp
+            return _make_tool_call_response(tool_sequence[i])
         return _make_end_turn_response()
 
-    mocker.patch("orchestrator.anthropic.Anthropic").return_value.messages.create.side_effect = mock_create
+    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.side_effect = mock_create
     mocker.patch("builtins.input", return_value="1")
 
     orch = Orchestrator(make_config())
@@ -122,14 +136,16 @@ def test_orchestrator_raises_on_unexpected_stop_reason(mocker, tmp_path, monkeyp
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
 
+    message = MagicMock()
+    message.content = ""
+    message.tool_calls = None
     resp = MagicMock()
-    resp.stop_reason = "max_tokens"
-    resp.content = []
-    mocker.patch("orchestrator.anthropic.Anthropic").return_value.messages.create.return_value = resp
+    resp.choices = [MagicMock(finish_reason="length", message=message)]
+    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = resp
 
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
-    with pytest.raises(RuntimeError, match="max_tokens"):
+    with pytest.raises(RuntimeError, match="length"):
         orch.run(job)
     assert job.status == JobStatus.FAILED
 
@@ -138,7 +154,7 @@ def test_orchestrator_marks_publish_failures_failed(mocker, tmp_path, monkeypatc
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
 
-    mocker.patch("orchestrator.anthropic.Anthropic").return_value.messages.create.return_value = _make_end_turn_response()
+    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = _make_end_turn_response()
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
     job.publish_result = {"facebook": {"status": "failed", "error": "blocked"}}
@@ -151,7 +167,7 @@ def test_orchestrator_safe_prep_end_turn_without_handoff_awaits_approval(mocker,
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
 
-    mocker.patch("orchestrator.anthropic.Anthropic").return_value.messages.create.return_value = _make_end_turn_response()
+    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = _make_end_turn_response()
     orch = Orchestrator(make_config(), safe_prep=True)
     job = make_job(dry_run=False)
     job.stage = "zoe_done"

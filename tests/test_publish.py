@@ -5,7 +5,6 @@ from models.content_job import ContentType, ImageCaption, Article, Script, Growt
 
 def make_publish_config():
     return Config(
-        anthropic_api_key="test",
         brave_search_api_key="brave",
         openai_api_key="oai",
         meta_access_token="meta-token",
@@ -245,7 +244,7 @@ def test_publish_tool_registered_in_agent_tools():
 def test_publish_agent_registered_in_orchestrator():
     from orchestrator import Orchestrator
     from config import Config
-    cfg = Config(anthropic_api_key="k", brave_search_api_key="b", openai_api_key="o")
+    cfg = Config(brave_search_api_key="b", openai_api_key="o")
     orch = Orchestrator(cfg)
     assert "publish" in orch.agents
 

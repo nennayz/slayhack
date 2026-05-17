@@ -7,7 +7,6 @@ from config import Config
 
 def _make_config():
     return Config(
-        anthropic_api_key="test",
         brave_search_api_key="brave",
         openai_api_key="oai",
         meta_access_token="meta-token",
