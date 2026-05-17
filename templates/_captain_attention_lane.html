@@ -1,0 +1,19 @@
+<section class="captain-attention-lane panel">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Captain Attention Lane</p>
+      <h2>{{ captain_attention_lane.state }}</h2>
+    </div>
+    <p>{{ captain_attention_lane.summary }}</p>
+  </div>
+  <div class="captain-attention-grid">
+    {% for item in captain_attention_lane.cards %}
+    <article class="captain-attention-card {{ item.state }}">
+      <span class="badge badge-ops-{{ item.state }}">{{ item.label }}</span>
+      <strong>{{ item.title }}</strong>
+      <small>{{ item.detail }}</small>
+      <a class="button button-secondary button-small" href="{{ item.action_url }}">{{ item.action_label }}</a>
+    </article>
+    {% endfor %}
+  </div>
+</section>

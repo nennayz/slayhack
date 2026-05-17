@@ -2578,6 +2578,99 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
     return runbook
 
 
+def _captain_attention_lane(
+    *,
+    learning_runbook: dict[str, object],
+    attention_items: list[ContentJob],
+    active_items: list[ContentJob],
+) -> dict[str, object]:
+    next_step = learning_runbook.get("next_step") if isinstance(learning_runbook.get("next_step"), dict) else None
+    proof = learning_runbook.get("proof") if isinstance(learning_runbook.get("proof"), dict) else {}
+    if next_step:
+        action_method = str(next_step.get("action_method") or "get")
+        do_now = {
+            "state": "missing",
+            "label": "Do now",
+            "title": str(next_step.get("label") or "Learning Runbook"),
+            "detail": str(next_step.get("detail") or ""),
+            "action_label": str(next_step.get("action_label") or "Open runbook"),
+            "action_url": str(next_step.get("action_url") or "#learning-runbook")
+            if action_method == "get"
+            else "#learning-runbook",
+        }
+        lane_state = "Needs Captain"
+        summary = str(next_step.get("detail") or "Learning Runbook has the next Captain action.")
+    elif attention_items:
+        job = attention_items[0]
+        do_now = {
+            "state": "missing",
+            "label": "Do now",
+            "title": "Open priority mission",
+            "detail": job.brief,
+            "action_label": "Open mission",
+            "action_url": f"/jobs/{job.id}",
+        }
+        lane_state = "Needs Captain"
+        summary = f"{len(attention_items)} mission needs Captain attention."
+    elif active_items:
+        job = active_items[0]
+        do_now = {
+            "state": "ready",
+            "label": "Do now",
+            "title": "Monitor active mission",
+            "detail": job.brief,
+            "action_label": "Open mission",
+            "action_url": f"/jobs/{job.id}",
+        }
+        lane_state = "Monitoring"
+        summary = "No Captain block; monitor the active mission."
+    else:
+        do_now = {
+            "state": "ready",
+            "label": "Do now",
+            "title": "Captain lane clear",
+            "detail": "No blocked mission or learning runbook step is waiting.",
+            "action_label": "Open Daily Slate",
+            "action_url": "/aurora/daily-slate",
+        }
+        lane_state = "Clear"
+        summary = "No immediate Captain action is waiting."
+
+    if proof.get("present"):
+        system_did = {
+            "state": "ready",
+            "label": "System did",
+            "title": str(proof.get("action_label") or "Runbook action recorded"),
+            "detail": str(proof.get("source_artifact") or proof.get("next_action") or "Runbook proof recorded."),
+            "action_label": "View proof",
+            "action_url": "#learning-runbook",
+        }
+    else:
+        system_did = {
+            "state": "ready",
+            "label": "System did",
+            "title": "No runbook action recorded yet",
+            "detail": "The proof panel will fill in after Captain runs a learning action.",
+            "action_label": "View proof",
+            "action_url": "#learning-runbook",
+        }
+
+    waiting = {
+        "state": "missing" if next_step else "ready",
+        "label": "Waiting on",
+        "title": str(next_step.get("label")) if next_step else "Nothing blocking closeout",
+        "detail": str(next_step.get("detail")) if next_step else "Learning loop and mission attention are clear.",
+        "action_label": "Open runbook" if next_step else "Open Ops",
+        "action_url": "#learning-runbook" if next_step else "/ops",
+    }
+
+    return {
+        "state": lane_state,
+        "summary": summary,
+        "cards": [do_now, system_did, waiting],
+    }
+
+
 def _build_voyage_steps(job) -> list[dict]:
     order = [step.stage for step in WORKFLOW_STEPS]
     current_index = order.index(job.stage) if job.stage in order else 0

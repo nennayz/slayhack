@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from routes.deps import templates, verify_auth, _root
 from routes._helpers import (
     _captain_action_console,
+    _captain_attention_lane,
     _captain_learning_runbook,
     _apply_accepted_learning_to_next_mission,
     _confirm_mission_learning,
@@ -51,6 +52,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
     active = active_jobs(jobs)
     brief = command_brief(jobs)
     ships = fleet_status(jobs)
+    learning_runbook = _captain_learning_runbook(root, jobs)
     return templates.TemplateResponse(
         request,
         "captains_deck.html",
@@ -63,7 +65,12 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
             "fleet_status": ships,
             "performance": performance,
             "captain_action_console": _captain_action_console(root, jobs),
-            "learning_runbook": _captain_learning_runbook(root, jobs),
+            "captain_attention_lane": _captain_attention_lane(
+                learning_runbook=learning_runbook,
+                attention_items=signals,
+                active_items=active,
+            ),
+            "learning_runbook": learning_runbook,
             "runbook_result": request.query_params.get("runbook_result", ""),
             "captain_action_history": _console_history(
                 root,

@@ -118,8 +118,8 @@ def _mission_detail_path(root: Path) -> str | None:
 def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]:
     mission = mission_path or _mission_detail_path(root)
     checks = [
-        PageCheck("captain_deck", "/", ("NayzFreedom Fleet", "Next best action", "Fleet", "Captain Action Console", "Command history", "Learning Runbook Proof")),
-        PageCheck("aurora", "/aurora", ("The Aurora", "Approval queue", "Generation queue", "Captain Action Console", "Command history", "Learning Runbook Proof")),
+        PageCheck("captain_deck", "/", ("NayzFreedom Fleet", "Next best action", "Fleet", "Captain Attention Lane", "Captain Action Console", "Command history", "Learning Runbook Proof")),
+        PageCheck("aurora", "/aurora", ("The Aurora", "Approval queue", "Generation queue", "Captain Attention Lane", "Captain Action Console", "Command history", "Learning Runbook Proof")),
         PageCheck("daily_slate", "/aurora/daily-slate", ("PM Command Slate", "Project filters", "All pages", "Ticket drawer", "Video package drawer", "PM action plan", "Approval queue")),
         PageCheck("approval_queue", "/aurora/approval-queue", ("Ready but Not Published", "Command lanes", "Approval route", "Next action")),
         PageCheck("manual_posting", "/aurora/manual-posting", ("Manual Post Command Lane", "Manual posting status", "Live publish locked", "Needs Captain")),
@@ -188,6 +188,7 @@ def _css_checks(root: Path) -> dict[str, Any]:
         "slate_drawer_mobile": r"\.slate-drawer summary",
         "approval_lane_mobile": r"\.approval-lane-board",
         "approval_next_action_mobile": r"\.approval-next-action",
+        "captain_attention_mobile": r"\.captain-attention-grid",
         "captain_action_mobile": r"\.captain-action-grid",
         "next_action_mobile": r"\.next-action-panel",
         "workflow_blocks_mobile": r"\.workflow-block summary",
