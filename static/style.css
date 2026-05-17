@@ -1830,6 +1830,41 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .manual-posting-board {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.manual-posting-overview {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.manual-posting-overview-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.manual-posting-overview-card {
+  background: rgba(255,255,255,0.76);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.9rem;
+}
+.manual-posting-overview-card.active {
+  border-color: rgba(32,86,164,0.38);
+  box-shadow: inset 0 3px 0 var(--navy-soft);
+}
+.manual-posting-overview-card p {
+  margin: 0;
+}
+.manual-posting-overview-card small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.manual-posting-overview-head {
+  align-items: center;
+  display: flex;
+  gap: 0.55rem;
+}
 .manual-posting-meta,
 .manual-tracking-list {
   display: flex;
@@ -2599,6 +2634,7 @@ a:hover { color: var(--navy-soft); }
   .video-package-grid,
   .video-package-detail,
   .manual-kit-layout,
+  .manual-posting-overview-grid,
   .manual-proof-grid,
   .artifact-grid,
   .captain-history-filters,

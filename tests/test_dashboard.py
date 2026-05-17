@@ -3617,9 +3617,15 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
 
     assert resp.status_code == 200
     assert "Manual Post Command Lane" in resp.text
+    assert "Manual Posting Queue Overview" in resp.text
+    assert "Queue direction" in resp.text
     assert "Manual posting status" in resp.text
     assert "Live publish locked" in resp.text
     assert "All" in resp.text
+    assert "Captain posts from the Drive kit, then records the platform URL." in resp.text
+    assert "Wait for queued tracking snapshot at 2026-05-18T14:00:00Z." in resp.text
+    assert "Review the performance proof and capture the learning note." in resp.text
+    assert "Manual post is recorded, but no snapshot checks are queued." in resp.text
     assert "Kit synced, not posted" in resp.text
     assert "Manual posted, waiting tracking" in resp.text
     assert "Tracking complete" in resp.text
@@ -3637,7 +3643,9 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     default_resp = client.get("/aurora/manual-posting", headers=_auth())
     assert default_resp.status_code == 200
     assert "attention mission" in default_resp.text
-    assert "synced kit mission" not in default_resp.text
+    default_board = _section_after_eyebrow(default_resp.text, "Safe handoff board")
+    assert "attention mission" in default_board
+    assert "synced kit mission" not in default_board
 
 
 def test_manual_posting_queue_ignores_unsynced_unposted_jobs(tmp_path, client):
@@ -3646,6 +3654,8 @@ def test_manual_posting_queue_ignores_unsynced_unposted_jobs(tmp_path, client):
     resp = client.get("/aurora/manual-posting", headers=_auth())
 
     assert resp.status_code == 200
+    assert "Manual Posting Queue Overview" in resp.text
+    assert "No missions in this lane." in resp.text
     assert "No manual kits have been synced or posted yet." in resp.text
     assert "plain mission" not in resp.text
 
