@@ -1339,6 +1339,25 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
         "failed": 0,
         "dry_run": False,
     }) + "\n")
+    (tmp_path / "output").mkdir(exist_ok=True)
+    (tmp_path / "output" / "track_queue.json").write_text(json.dumps([
+        {
+            "job_id": "20260512_060000",
+            "page_name": "Slayhack",
+            "track_at": "2026-05-16T06:00:00Z",
+            "attempt": 1,
+        }
+    ]))
+    (logs / "track_scheduler_history.jsonl").write_text(json.dumps({
+        "timestamp": "2026-05-16T06:30:00Z",
+        "state": "Missing",
+        "processed": 1,
+        "succeeded": 0,
+        "retrying": 1,
+        "failed": 0,
+        "remaining": 1,
+        "dry_run": False,
+    }) + "\n")
     monkeypatch.setattr(
         _dm,
         "_ops_unit_status",
@@ -1358,6 +1377,7 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
     assert "Run smoke test" in resp.text
     assert "Run backup now" in resp.text
     assert "Run due Instagram queue now" in resp.text
+    assert "Run tracking queue now" in resp.text
     assert "Run production summary now" in resp.text
     assert "Restart dashboard" in resp.text
     assert "Recent Ops actions" in resp.text
@@ -1373,6 +1393,11 @@ def test_ops_page_renders_status_and_errors(tmp_path, client, monkeypatch):
     assert "Queue state" in resp.text
     assert "Instagram queue history" in resp.text
     assert "processed 2 - published 1 - retrying 1 - failed 0" in resp.text
+    assert "Tracking queue" in resp.text
+    assert "Scheduler history" in resp.text
+    assert "Queued 1" in resp.text
+    assert "Retrying 1" in resp.text
+    assert "processed 1" in resp.text
     assert "Failure triage" in resp.text
     assert "Retry lane" in resp.text
     assert "Safe IG 0" in resp.text
@@ -1887,6 +1912,23 @@ def test_dashboard_refuses_start_without_env():
         import dashboard  # noqa: F401  # re-import cleanly for subsequent tests
 
 
+def test_dashboard_script_mode_help_imports_routes_without_circular_error():
+    env = os.environ.copy()
+    env["DASHBOARD_USER"] = "admin"
+    env["DASHBOARD_PASSWORD"] = "8888"
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, "dashboard.py", "--help"],
+        cwd=Path(__file__).resolve().parents[1],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    assert "--host" in result.stdout
+
+
 def test_job_detail_404(client):
     with patch.object(_dm, "find_job", side_effect=FileNotFoundError("not found")):
         resp = client.get("/jobs/nonexistent_id", headers=_auth())
@@ -1929,6 +1971,30 @@ def test_job_detail_shows_brief(tmp_path, client):
     assert "Publish result is recorded." in resp.text
     assert "Command the Brief" in resp.text
     assert "/aurora/crew/robin" in resp.text
+
+
+def test_job_detail_shows_tracking_queue_status(tmp_path, client):
+    _write_job(tmp_path, "20260512_060000", brief="tracking mission")
+    (tmp_path / "output" / "track_queue.json").write_text(json.dumps([
+        {
+            "job_id": "20260512_060000",
+            "page_name": "Slayhack",
+            "track_at": "2026-05-18T14:00:00Z",
+            "attempt": 1,
+        }
+    ]))
+    from models.content_job import ContentJob
+    job = ContentJob.model_validate_json(
+        (tmp_path / "output" / "Slayhack" / "20260512_060000" / "job.json").read_text()
+    )
+    with patch.object(_dm, "find_job", return_value=job):
+        resp = client.get("/jobs/20260512_060000", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Performance snapshots:" in resp.text
+    assert "Queued" in resp.text
+    assert "1 queued snapshot checks" in resp.text
+    assert "attempt 1" in resp.text
 
 
 def test_job_detail_shows_publish_controls(tmp_path, client):

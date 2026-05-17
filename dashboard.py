@@ -62,6 +62,8 @@ from routes._helpers import (  # noqa: F401
     _recent_ops_incidents,
     _recent_ops_reports,
     _recent_instagram_queue_history,
+    _track_queue_summary,
+    _recent_track_queue_history,
     _sanitize_ops_report_summary,
     _incident_summary,
     _update_ops_incident_status,
@@ -201,6 +203,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
     incident_summary = _incident_summary(root)
     ops_reports = _recent_ops_reports(root)
     publish_summary = _ops_publish_summary(jobs)
+    track_summary = _track_queue_summary(root)
     return {
         "units": units,
         "backup": backup,
@@ -214,6 +217,8 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
         "publish_failure_triage": _ops_publish_failure_triage(root, jobs),
         "publish_summary": publish_summary,
         "instagram_queue_history": _recent_instagram_queue_history(root),
+        "track_summary": track_summary,
+        "track_scheduler_history": _recent_track_queue_history(root),
         "smoke_results": smoke_results,
         "action_buttons": _ops_action_buttons(),
         "action_result": None,
@@ -225,7 +230,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
         "ops_reports": ops_reports,
         "incident_summary": incident_summary,
         "incident_result": None,
-        "ops_daily_summary": _ops_daily_summary(jobs, units, backup, incident_summary, publish_summary, ops_reports),
+        "ops_daily_summary": _ops_daily_summary(jobs, units, backup, incident_summary, publish_summary, track_summary, ops_reports),
         "workflow_owners": _workflow_owner_summary(jobs),
         "security_hygiene": _security_hygiene_checks(root),
     }

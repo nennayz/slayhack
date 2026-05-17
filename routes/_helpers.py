@@ -49,6 +49,8 @@ from project_loader import (
     resolve_project_slug,
 )
 from work_activity import read_recent_work_activity, work_activity_status, write_work_activity
+from track_queue import read_queue, summarize_track_queue
+from track_scheduler import recent_track_scheduler_history
 
 
 OPS_PUBLIC_BASE_URL = os.environ.get("OPS_PUBLIC_BASE_URL", "https://fleet.nayzfreedom.cloud").rstrip("/")
@@ -63,6 +65,7 @@ OPS_UNITS = [
     "nayzfreedom-production-summary.timer",
     "nayzfreedom-log-retention.timer",
     "nayzfreedom-ops-report.timer",
+    "nayzfreedom-track-scheduler.timer",
 ]
 OPS_ACTIONS = {
     "backup": {
@@ -83,6 +86,11 @@ OPS_ACTIONS = {
     "ops_report": {
         "label": "Send Ops report now",
         "unit": "nayzfreedom-ops-report.service",
+        "verb": "start",
+    },
+    "track_scheduler": {
+        "label": "Run tracking queue now",
+        "unit": "nayzfreedom-track-scheduler.service",
         "verb": "start",
     },
     "restart_dashboard": {
@@ -407,6 +415,14 @@ def _recent_instagram_queue_history(root: Path, limit: int = 5) -> list[dict[str
             "jobs": item.get("jobs", []) if isinstance(item.get("jobs"), list) else [],
         })
     return list(reversed(rows))
+
+
+def _track_queue_summary(root: Path) -> dict[str, object]:
+    return summarize_track_queue(read_queue(root))
+
+
+def _recent_track_queue_history(root: Path, limit: int = 5) -> list[dict[str, object]]:
+    return recent_track_scheduler_history(root, limit=limit)
 
 
 def _sanitize_ops_report_summary(report: object) -> str:
@@ -1062,18 +1078,21 @@ def _ops_daily_summary(
     backup: dict[str, str],
     incident_summary: dict[str, int],
     publish_summary: dict[str, object],
+    track_summary: dict[str, object],
     ops_reports: list[dict[str, str]],
 ) -> list[dict[str, str]]:
     summary = summarize_jobs(jobs)
     unit_failures = sum(item["state"] != "Ready" for item in units)
     publish_counts = publish_summary["counts"]
+    track_counts = track_summary["counts"]
     ig_attention = publish_counts["instagram_failed"] + publish_counts["instagram_retrying"]
-    if summary["failed"] or incident_summary["open"] or unit_failures or backup["state"] == "Failed" or publish_counts["instagram_failed"]:
+    track_attention = track_counts["overdue"] + track_counts["invalid"]
+    if summary["failed"] or incident_summary["open"] or unit_failures or backup["state"] == "Failed" or publish_counts["instagram_failed"] or track_attention:
         state = "Failed"
-        action = "Review failed missions, open incidents, service state, or publish failures."
-    elif backup["state"] != "Ready" or publish_counts["instagram_retrying"]:
+        action = "Review failed missions, open incidents, service state, publish failures, or overdue tracking."
+    elif backup["state"] != "Ready" or publish_counts["instagram_retrying"] or track_counts["retrying"] or track_counts["due_now"]:
         state = "Missing"
-        action = "Check stale backup or queued Instagram retry before launching more work."
+        action = "Check stale backup, queued Instagram retry, or due tracking before launching more work."
     else:
         state = "Ready"
         action = "Production is clear for the next mission."
@@ -1089,6 +1108,11 @@ def _ops_daily_summary(
             "state": "Failed" if ig_attention else "Ready",
             "name": "Publish queue",
             "detail": f"IG pending={publish_counts['instagram_pending']} retrying={publish_counts['instagram_retrying']} failed={publish_counts['instagram_failed']}",
+        },
+        {
+            "state": "Failed" if track_attention else "Missing" if track_counts["due_now"] or track_counts["retrying"] else "Ready",
+            "name": "Tracking queue",
+            "detail": f"queued={track_counts['total']} due={track_counts['due_now']} overdue={track_counts['overdue']} retrying={track_counts['retrying']}",
         },
         {"state": str(backup["state"]), "name": "Backup", "detail": str(backup["detail"])},
         {"state": "Ready" if latest_report != "none" else "Missing", "name": "Latest Ops report", "detail": latest_report},
@@ -1155,6 +1179,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
     incident_summary = _incident_summary(root)
     ops_reports = _recent_ops_reports(root)
     publish_summary = _ops_publish_summary(jobs)
+    track_summary = _track_queue_summary(root)
     return {
         "units": units,
         "backup": backup,
@@ -1168,6 +1193,8 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
         "publish_failure_triage": _ops_publish_failure_triage(root, jobs),
         "publish_summary": publish_summary,
         "instagram_queue_history": _recent_instagram_queue_history(root),
+        "track_summary": track_summary,
+        "track_scheduler_history": _recent_track_queue_history(root),
         "smoke_results": smoke_results,
         "action_buttons": _ops_action_buttons(),
         "action_result": None,
@@ -1179,7 +1206,7 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
         "ops_reports": ops_reports,
         "incident_summary": incident_summary,
         "incident_result": None,
-        "ops_daily_summary": _ops_daily_summary(jobs, units, backup, incident_summary, publish_summary, ops_reports),
+        "ops_daily_summary": _ops_daily_summary(jobs, units, backup, incident_summary, publish_summary, track_summary, ops_reports),
         "workflow_owners": _workflow_owner_summary(jobs),
         "security_hygiene": _security_hygiene_checks(root),
     }
