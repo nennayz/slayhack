@@ -71,6 +71,27 @@ def _write_slay_hack_project(tmp_path: Path) -> None:
     )
 
 
+def _write_stadium_project(tmp_path: Path) -> None:
+    project_dir = tmp_path / "projects" / "stadium_sweethearts"
+    project_dir.mkdir(parents=True)
+    (project_dir / "pm_profile.yaml").write_text(
+        'name: "Stadium"\npage_name: "Stadium Sweethearts"\npersona: "PM for sporty fan-cam content"\n'
+    )
+    (project_dir / "brand.yaml").write_text(
+        'mission: "sporty fan-cam stories"\nvisual:\n  colors: ["#0047ab", "#ffffff"]\n  style: "glossy sports editorial"\n'
+        'platforms: ["instagram", "facebook", "tiktok", "youtube"]\ntone: "playful"\n'
+        'target_audience: "sports fans"\nscript_style: "stadium bestie"\n'
+        'allowed_content_types: ["video", "image", "infographic", "article"]\n'
+    )
+    (project_dir / "weekly_calendar.yaml").write_text(
+        'monday:\n'
+        '  short_video_1: "Touchdown Reaction"\n'
+        '  long_video: "Game day glow-up story"\n'
+        '  article_1: "Fan-cam safety notes"\n'
+        '  infographic_1: "Replayable moments card"\n'
+    )
+
+
 def _slay_hack_ticket_id(tmp_path: Path, suffix: str) -> str:
     slate = _dm._calendar_slate(tmp_path)
     assert slate is not None
@@ -267,6 +288,32 @@ def test_aurora_workflow_page_renders_daily_slate(tmp_path, client):
     assert "4 asset needs" in resp.text
     assert "Engagement review" in resp.text
     assert "Cross-team requests" in resp.text
+
+
+def test_aurora_daily_slate_renders_project_slates_and_learning(tmp_path, client):
+    _write_slay_hack_project(tmp_path)
+    _write_stadium_project(tmp_path)
+    daily_dir = tmp_path / "docs" / "learning" / "daily"
+    daily_dir.mkdir(parents=True)
+    (daily_dir / "2026-05-16-character-art-learning-brief.md").write_text(
+        "# Daily Learning Brief\n\nKeep PM decisions separate from central crew execution.\n"
+    )
+
+    resp = client.get("/aurora/daily-slate", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "PM Command Slate" in resp.text
+    assert "Slay Hack" in resp.text
+    assert "Stadium Sweethearts" in resp.text
+    assert "PM Slay" in resp.text
+    assert "PM Stadium" in resp.text
+    assert "Quick hack" in resp.text
+    assert "Touchdown Reaction" in resp.text
+    assert "Video packages" in resp.text
+    assert "Latest learning" in resp.text
+    assert "Keep PM decisions separate from central crew execution." in resp.text
+    assert "Use this view for" in resp.text
+    assert "Stadium checks fan-cam plays" in resp.text
 
 
 def test_create_video_package_mission_saves_job_and_detail(tmp_path, client):
@@ -765,7 +812,7 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     latest_review_dir = tmp_path / "review" / "crew_final_style_v8"
     latest_review_dir.mkdir(parents=True)
     (latest_review_dir / "review_notes.md").write_text(
-        "# Crew Final Style v8 Review Plan\n\nMia keeps the blue signal-scout direction.\n"
+        "# Crew Final Style v8 Approved Production Notes\n\nMia keeps the blue signal-scout direction.\n"
     )
 
     resp = client.get("/aurora/learning", headers=_auth())
@@ -774,10 +821,13 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "Aurora Learning Desk" in resp.text
     assert "Daily Learning Brief" in resp.text
     assert "Mia needs a targeted review." in resp.text
-    assert "Crew Final Style v8 Review Plan" in resp.text
+    assert "Crew Final Style v8 Approved Production Notes" in resp.text
     assert "Mia keeps the blue signal-scout direction." in resp.text
-    assert "Live asset gate" in resp.text
-    assert "Deploy gate" in resp.text
+    assert "Crew art" in resp.text
+    assert "Approved" in resp.text
+    assert "Deploy status" in resp.text
+    assert "Live" in resp.text
+    assert "current manual crew portrait set is approved production canon" in resp.text
 
 
 def test_island_detail_renders(tmp_path, client, monkeypatch):

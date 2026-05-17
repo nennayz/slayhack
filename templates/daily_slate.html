@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header">
+  <div>
+    <p class="eyebrow">Daily slate</p>
+    <h1>PM Command Slate</h1>
+    <p class="hero-copy">Today's page plans, production tickets, QA gates, and latest learning note in one operating view for Slay, Stadium, and future PMs.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora">Back to Aurora</a>
+    <a class="button button-secondary" href="/aurora/workflow">Workflow</a>
+    <a class="button" href="/aurora/new-mission">Launch mission</a>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Pages</span>
+    <strong>{{ slate_cards | length }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Minimum met</span>
+    <strong>{{ ready_pages }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Tickets</span>
+    <strong>{{ total_tickets }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Learning brief</span>
+    <strong>{{ "Ready" if latest_brief else "Missing" }}</strong>
+  </div>
+</section>
+
+<section class="daily-slate-grid">
+  {% for slate in slate_cards %}
+  <article class="panel daily-slate-card">
+    <div class="section-heading">
+      <p class="eyebrow">{{ slate.project }}</p>
+      <h2>{{ slate.page_name }}</h2>
+    </div>
+    <div class="ops-action-result">
+      <span class="badge badge-ops-ready">PM {{ slate.pm_name }}</span>
+      <span class="badge badge-ops-{{ 'ready' if slate.minimum_met else 'failed' }}">
+        {{ 'Minimum met' if slate.minimum_met else 'Minimum gap' }}
+      </span>
+      <span class="badge badge-ops-ready">{{ slate.slate_date }}</span>
+    </div>
+    <p class="muted">{{ slate.notes }}</p>
+    <div class="slate-counts">
+      <span><strong>{{ slate.counts.short_videos }}</strong> short</span>
+      <span><strong>{{ slate.counts.long_videos }}</strong> long</span>
+      <span><strong>{{ slate.counts.articles }}</strong> articles</span>
+      <span><strong>{{ slate.counts.infographics }}</strong> cards</span>
+    </div>
+    <div class="slate-ticket-list">
+      {% for ticket in slate.tickets %}
+      <div class="slate-ticket">
+        <span>{{ ticket.ticket_type }}</span>
+        <strong>{{ ticket.title }}</strong>
+        <small>{{ ticket.owner }} owns - {{ ticket.decision_owner }} decides - {{ ticket.platform_primary }}</small>
+      </div>
+      {% endfor %}
+    </div>
+    {% if slate.video_packages %}
+    <div class="slate-video-packages">
+      <h3>Video packages</h3>
+      {% for package in slate.video_packages %}
+      <a href="/aurora/workflow" class="slate-package-link">
+        <strong>{{ package.title }}</strong>
+        <small>{{ package.owner }} - {{ package.scene_count }} scenes - {{ package.total_duration_seconds }}s</small>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </article>
+  {% else %}
+  <article class="panel">
+    <p class="muted">No page slates found. Add a project weekly calendar to show planned work here.</p>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Latest learning</p>
+      <h2>{{ latest_brief.path if latest_brief else "No brief yet" }}</h2>
+    </div>
+    {% if latest_brief %}
+    <pre class="learning-note slate-learning-note">{{ latest_brief.body }}</pre>
+    {% else %}
+    <p class="muted">No learning brief found under <code>docs/learning/daily/</code>.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Use this view for</p>
+      <h2>PM daily decisions</h2>
+    </div>
+    <div class="learning-gates">
+      <span>Slay checks SlayHack ticket coverage and video packages.</span>
+      <span>Stadium checks fan-cam plays, safety framing, and replayable moments.</span>
+      <span>Robin uses this page to route today's work without mixing PM decisions with central crew execution.</span>
+    </div>
+  </article>
+</section>
+{% endblock %}

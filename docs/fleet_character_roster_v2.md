@@ -81,15 +81,20 @@ open a major new ship, or override brand-world direction.
 
 ## Current Art Approval Status
 
-Accepted and uploaded into `static/crew/` in the current portrait pass:
-Captain Nayz, Robin, Nami, Slay, Stadium, Mia Trend, Zoe Spark, Bella Quill,
-Lila Lens, Vera Reel, and Nora Sharp.
+Approved production crew art set:
+Captain Nayz, Slay, Stadium, Robin, Mia Trend, Zoe Spark, Bella Quill,
+Lila Lens, Vera Reel, Nora Sharp, Roxy Rise, Emma Heart, Iris Gauge,
+Sage Ledger, Nami, and Genie.
 
-Pending rework before upload/use as final portrait:
-Roxy Rise.
+All approved production portraits are stored in `static/crew/`.
 
-Existing or concept portraits outside the current approval pass:
-Emma Heart, Iris Gauge, Sage Ledger, Genie, and Mara Vale.
+Review folders under `review/` are historical evidence and prompt history, not
+the active gate. Future portrait changes should go through a new review folder
+before replacing `static/crew/`.
+
+Concept boundary still applies:
+Nami and Genie have approved portraits for planned ship cards, but they do not
+imply live access to Freedom private data or Lyra music workflow data.
 
 ## Character Detail
 
@@ -138,7 +143,7 @@ Emma Heart, Iris Gauge, Sage Ledger, Genie, and Mara Vale.
 - Signature object: route tablet, green-gold star map, and bridge navigation
   controls.
 - Output: mission route, crew dispatch, final coordination.
-- Current art status: approved and uploaded as `static/crew/robin.png`.
+- Current art status: approved production portrait at `static/crew/robin.png`.
 
 ### Slay
 
@@ -252,16 +257,14 @@ Emma Heart, Iris Gauge, Sage Ledger, Genie, and Mara Vale.
 
 - Area: The Aurora.
 - Position: Trade Winds Strategist / Growth Strategist.
-- Visual heritage direction: pending redesign.
+- Visual heritage direction: electric-lime trade-winds strategist.
 - Role: caption, hashtags, timing, platform packaging.
 - Personality: upbeat, tactical, data-aware, bold.
-- Hair: pending redesign.
+- Hair: approved production portrait direction; keep distinct from Captain Nayz.
 - Fashion read: electric-lime pirate-market strategist, confident glam, clear
   feminine face direction, and no overlap with Captain Nayz.
 - Signature object: chrome megaphone, launch cards, distribution signals.
-- Current art status: rework required. The latest Roxy image direction was
-  rejected because it still resembled Captain Nayz and did not read clearly as a
-  woman.
+- Current art status: approved production portrait at `static/crew/roxy.png`.
 - Output: caption, hashtags, posting time, editorial guidance.
 
 ### Emma Heart
