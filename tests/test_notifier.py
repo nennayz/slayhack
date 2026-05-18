@@ -146,6 +146,7 @@ def test_send_weekly_report_uses_telegram_fallback(monkeypatch):
     monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
     monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    monkeypatch.setenv("NAYZ_TELEGRAM_NOTIFY_LEVELS", "critical,approval,daily_digest")
     mock_post = MagicMock()
     mock_post.return_value.__enter__ = lambda s: mock_post.return_value
     mock_post.return_value.__exit__ = MagicMock(return_value=False)
@@ -155,6 +156,19 @@ def test_send_weekly_report_uses_telegram_fallback(monkeypatch):
     mock_post.assert_called_once()
     assert mock_post.call_args.args[0] == "https://api.telegram.org/bottelegram-token/sendMessage"
     assert ":bar_chart: Weekly Report" in mock_post.call_args.kwargs["json"]["text"]
+
+
+def test_send_weekly_report_telegram_fallback_suppressed_by_default(monkeypatch):
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    monkeypatch.delenv("NAYZ_TELEGRAM_NOTIFY_LEVELS", raising=False)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    mock_post = MagicMock()
+
+    with patch("notifier.requests.post", mock_post):
+        send_weekly_report([":bar_chart: Weekly Report"], dry_run=False)
+
+    mock_post.assert_not_called()
 
 
 def test_send_healthcheck_alert_dry_run_prints(capsys, monkeypatch):
@@ -252,3 +266,29 @@ def test_send_telegram_scout_report_missing_env_skips(monkeypatch):
         send_telegram_scout_report(None, _scout_job([_opportunity("clean beauty")]))
 
     mock_api.assert_not_called()
+
+
+def test_send_telegram_scout_report_scheduler_suppressed_by_default(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    monkeypatch.delenv("NAYZ_TELEGRAM_NOTIFY_LEVELS", raising=False)
+    job = _scout_job([_opportunity("clean beauty")])
+    job.triggered_by = "scheduler"
+
+    with patch("telegram_bot._api") as mock_api:
+        send_telegram_scout_report(None, job)
+
+    mock_api.assert_not_called()
+
+
+def test_send_telegram_scout_report_scheduler_allowed_by_policy(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    monkeypatch.setenv("NAYZ_TELEGRAM_NOTIFY_LEVELS", "critical,approval,scout")
+    job = _scout_job([_opportunity("clean beauty")])
+    job.triggered_by = "scheduler"
+
+    with patch("telegram_bot._api") as mock_api:
+        send_telegram_scout_report(None, job)
+
+    mock_api.assert_called_once()
