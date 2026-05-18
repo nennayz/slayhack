@@ -62,3 +62,22 @@ def test_architect_brand_yaml_has_required_keys(tmp_path):
     assert "mission" in brand
     assert "target_audience" in brand
     assert "platforms" in brand
+
+
+def test_architect_normalizes_content_formats_for_runtime(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, opp = _make_approved_job(tmp_path)
+    opp.content_formats = ["short video", "reel", "listicle", "infographic"]
+    slug = agent.run(job, projects_root=tmp_path, dry_run=False)
+
+    project_dir = tmp_path / slug
+    brand = yaml.safe_load((project_dir / "brand.yaml").read_text())
+    specs = yaml.safe_load((project_dir / "platform_specs.yaml").read_text())
+    calendar = yaml.safe_load((project_dir / "weekly_calendar.yaml").read_text())
+
+    assert brand["allowed_content_types"] == ["video", "article", "infographic"]
+    assert specs["instagram"]["content_types"] == ["video", "article", "infographic"]
+    assert calendar["monday"]["short_video_1"] == "clean beauty hack"
+    assert calendar["wednesday"]["article_1"] == "clean beauty story"
+    assert calendar["sunday"]["infographic_1"] == "clean beauty tips"
