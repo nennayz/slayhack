@@ -50,3 +50,7 @@ def test_scout_live_calls_brave_search(mock_get):
         result = agent.run(job, dry_run=False)
         assert mock_get.called
         assert len(result.signals) >= 1
+        # Verify Brave results are wired into the signal's raw_data
+        brave_data = result.signals[0].raw_data.get("brave", [])
+        assert len(brave_data) >= 1
+        assert brave_data[0]["title"] == "Clean beauty trend"

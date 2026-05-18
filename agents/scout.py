@@ -60,15 +60,19 @@ class ScoutAgent:
     def _fetch_brave(self, niche: str) -> list[dict]:
         if not self.config.brave_search_api_key:
             return []
-        resp = requests.get(
-            _BRAVE_URL,
-            headers={"Accept": "application/json", "X-Subscription-Token": self.config.brave_search_api_key},
-            params={"q": f"{niche} viral trend social media 2026", "count": 5},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        results = resp.json().get("web", {}).get("results", [])
-        return [{"title": r.get("title", ""), "description": r.get("description", "")} for r in results[:5]]
+        try:
+            resp = requests.get(
+                _BRAVE_URL,
+                headers={"Accept": "application/json", "X-Subscription-Token": self.config.brave_search_api_key},
+                params={"q": f"{niche} viral trend social media 2026", "count": 5},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("web", {}).get("results", [])
+            return [{"title": r.get("title", ""), "description": r.get("description", "")} for r in results[:5]]
+        except Exception as exc:
+            logger.warning("Brave Search failed for %s: %s", niche, exc)
+            return []
 
     def _fetch_google_trends(self, niche: str) -> dict:
         try:
@@ -110,6 +114,8 @@ class ScoutAgent:
             return {}
 
     def _fetch_meta_ads(self, niche: str) -> dict:
+        if not self.config.meta_access_token:
+            return {}
         try:
             resp = requests.get(
                 _META_ADS_URL,
