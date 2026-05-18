@@ -188,6 +188,7 @@ EBOOK_FACTORY_DEFAULTS = {
     "next_missing_drive_artifact": None,
     "source_integrity": {},
     "monetization_integrity": {},
+    "checkout_setup_gate": {},
     "sale_gate": {
         "label": "Captain sale approval",
         "status": "locked",
@@ -319,8 +320,10 @@ def _ebook_sale_gate(
         "status_class": _ebook_sale_status_class(status, ready),
         "ready": ready,
         "blockers": blockers,
+        "approved": status == "approved",
         "action_label": str(gate.get("action_label") or "Captain Approve E-book For Sale"),
         "locked_label": str(gate.get("locked_label") or "Sale approval locked"),
+        "approved_label": str(gate.get("approved_label") or "Sale approval recorded"),
         "boundary": str(
             gate.get("boundary")
             or "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until this gate is approved."
@@ -572,6 +575,9 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "source_integrity": pilot.get("source_integrity") if isinstance(pilot.get("source_integrity"), dict) else {},
             "monetization_integrity": pilot.get("monetization_integrity")
             if isinstance(pilot.get("monetization_integrity"), dict)
+            else {},
+            "checkout_setup_gate": pilot.get("checkout_setup_gate")
+            if isinstance(pilot.get("checkout_setup_gate"), dict)
             else {},
             "sale_gate": sale_gate,
         }
@@ -925,6 +931,9 @@ def aurora_ebook_record_sale_gate(
         blockers = sale_gate.get("blockers") if isinstance(sale_gate.get("blockers"), list) else []
         detail = " ".join(str(item) for item in blockers) or "Sale approval requirements are incomplete."
         raise HTTPException(status_code=400, detail=f"Captain sale approval is locked: {detail}")
+    if sale_gate.get("approved"):
+        message = quote("Captain sale approval: already approved")
+        return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&launch_result={message}", status_code=303)
 
     try:
         registry = _read_ebook_registry(registry_path)
