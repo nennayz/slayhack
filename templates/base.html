@@ -9,10 +9,15 @@
 </head>
 <body>
 <header class="topbar">
-  <a class="brand" href="/">
-    <span class="brand-name">NayzFreedom Fleet</span>
-    <span class="brand-kicker">Aurora / SlayHack Voyage</span>
-  </a>
+  <div class="topbar-brand-row">
+    <a class="brand" href="/">
+      <span class="brand-name">NayzFreedom Fleet</span>
+      <span class="brand-kicker">Aurora / SlayHack Voyage</span>
+    </a>
+    <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
   <nav aria-label="Fleet navigation">
     <div class="nav-group nav-primary">
       <div class="nav-group-links">
@@ -43,5 +48,22 @@
 <main>
 {% block content %}{% endblock %}
 </main>
+<script>
+(function () {
+  var btn = document.querySelector('.nav-toggle');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var header = btn.closest('header');
+    var open = header.classList.toggle('nav-open');
+    btn.setAttribute('aria-expanded', String(open));
+  });
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.topbar')) {
+      document.querySelector('.topbar').classList.remove('nav-open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+})();
+</script>
 </body>
 </html>
