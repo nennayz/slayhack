@@ -1,7 +1,8 @@
 from __future__ import annotations
 from unittest.mock import patch, MagicMock
 
-from notifier import send_healthcheck_alert, send_slack_alert, send_weekly_report
+from models.niche_opportunity import NicheOpportunity, ScoutJob
+from notifier import send_healthcheck_alert, send_slack_alert, send_telegram_scout_report, send_weekly_report
 
 
 FAILURES_ONE = [
@@ -176,3 +177,78 @@ def test_send_healthcheck_alert_uses_telegram_fallback(monkeypatch):
     mock_post.assert_called_once()
     assert mock_post.call_args.args[0] == "https://api.telegram.org/bottelegram-token/sendMessage"
     assert "health failed" in mock_post.call_args.kwargs["json"]["text"]
+
+
+def _scout_job(opportunities: list[NicheOpportunity] | None = None) -> ScoutJob:
+    return ScoutJob(
+        job_id="20260518_010203",
+        triggered_by="telegram",
+        opportunities=opportunities or [],
+    )
+
+
+def _opportunity(name: str, score: float = 91.0) -> NicheOpportunity:
+    return NicheOpportunity(
+        niche_name=name,
+        target_audience="Women USA 25-40",
+        platforms=["instagram", "tiktok"],
+        reach_score=score,
+        trend_direction="rising",
+        content_formats=["reel"],
+        monetization_notes="Low-ticket guide candidate",
+        signals={"source": "dry-run"},
+    )
+
+
+def test_send_telegram_scout_report_sends_top_three(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    mock_api = MagicMock()
+
+    job = _scout_job(
+        [
+            _opportunity("clean beauty", 91),
+            _opportunity("quiet luxury", 85),
+            _opportunity("finance for women", 79),
+            _opportunity("extra niche", 70),
+        ]
+    )
+
+    with patch("telegram_bot._api", mock_api):
+        send_telegram_scout_report(None, job)
+
+    mock_api.assert_called_once()
+    kwargs = mock_api.call_args.kwargs
+    assert kwargs["chat_id"] == "123456"
+    assert "Scout Report" in kwargs["text"]
+    assert "clean beauty" in kwargs["text"]
+    assert "extra niche" not in kwargs["text"]
+    assert kwargs["reply_markup"]["inline_keyboard"][0][0]["callback_data"] == (
+        "scout_approve:20260518_010203:clean beauty"
+    )
+    assert kwargs["reply_markup"]["inline_keyboard"][-1][0]["callback_data"] == "scout_skip:20260518_010203"
+
+
+def test_send_telegram_scout_report_handles_no_opportunities(monkeypatch):
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "telegram-token")
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "123456")
+    mock_api = MagicMock()
+
+    with patch("telegram_bot._api", mock_api):
+        send_telegram_scout_report(None, _scout_job())
+
+    kwargs = mock_api.call_args.kwargs
+    assert "No opportunities found" in kwargs["text"]
+    assert kwargs["reply_markup"]["inline_keyboard"] == [
+        [{"text": "⏭ Skip this report", "callback_data": "scout_skip:20260518_010203"}]
+    ]
+
+
+def test_send_telegram_scout_report_missing_env_skips(monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+
+    with patch("telegram_bot._api") as mock_api:
+        send_telegram_scout_report(None, _scout_job([_opportunity("clean beauty")]))
+
+    mock_api.assert_not_called()

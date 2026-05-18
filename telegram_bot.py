@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -136,6 +137,56 @@ def _spawn_pipeline(
     )
 
 
+def _run_scout_report(token: str, chat_id: str) -> None:
+    try:
+        from config import Config
+        from scout_pipeline import run_scout_pipeline
+        from notifier import send_telegram_scout_report
+
+        cfg = Config.from_env()
+        job = run_scout_pipeline(cfg, triggered_by="telegram", dry_run=True)
+        send_telegram_scout_report(cfg, job)
+    except Exception as exc:
+        _send_message(token, chat_id, f"❌ Scout failed: {exc}")
+
+
+def _approve_scout_niche(token: str, chat_id: str, root: Path, job_id: str, niche_name: str) -> None:
+    try:
+        from config import Config
+        from scout_pipeline import approve_niche
+        from models.niche_opportunity import ScoutJob
+
+        cfg = Config.from_env()
+        report_path = root / "output" / "scout_reports" / f"{job_id}-scout-report.json"
+        job = ScoutJob.model_validate_json(report_path.read_text())
+        slug = approve_niche(job, niche_name, cfg)
+        _send_message(token, chat_id, f"✅ Project <b>{slug}</b> created! Activate with /run {slug}")
+    except Exception as exc:
+        _send_message(token, chat_id, f"❌ Approve failed: {exc}")
+
+
+def _handle_scout_callback(text: str, token: str, chat_id: str, root: Path) -> bool:
+    if text.startswith("scout_approve:"):
+        parts = text.split(":", 2)
+        if len(parts) != 3:
+            _send_message(token, chat_id, "❌ Scout approval callback is invalid.")
+            return True
+        _, job_id, niche_name = parts
+        _send_message(token, chat_id, f"⚙️ Generating project files for <b>{niche_name}</b>...")
+        threading.Thread(
+            target=_approve_scout_niche,
+            args=(token, chat_id, root, job_id, niche_name),
+            daemon=True,
+        ).start()
+        return True
+
+    if text.startswith("scout_skip:"):
+        _send_message(token, chat_id, "⏭ Scout report skipped.")
+        return True
+
+    return False
+
+
 # ── Conversation handler ────────────────────────────────────────────────────
 
 def _handle_update(
@@ -181,6 +232,14 @@ def _handle_update(
         else:
             _send_message(token, chat_id,
                           "✅ No pipeline running. Send any message to start.")
+        return
+
+    if text == "/scout":
+        _send_message(token, chat_id, "🔍 Running Scout dry-run... this may take a minute.")
+        threading.Thread(target=_run_scout_report, args=(token, chat_id), daemon=True).start()
+        return
+
+    if _handle_scout_callback(text, token, chat_id, root):
         return
 
     # Block new conversations while pipeline is running
