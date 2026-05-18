@@ -224,7 +224,11 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '      - name: sales page\n'
         '        status: review_ready\n'
         '        note: "Sales page draft exists."\n'
-        '      - product mockup\n'
+        '      - key: product_mockup\n'
+        '        name: product mockup\n'
+        '        status: review_ready\n'
+        '        path: "docs/monetization/slay_hack/age_like_fine_wine_product_mockup.md"\n'
+        '        note: "Product mockup draft exists."\n'
         '      - name: checkout copy\n'
         '        status: review_ready\n'
         '        note: "Checkout copy draft exists."\n'
@@ -237,6 +241,9 @@ def _write_ebook_registry(tmp_path: Path) -> None:
     )
     (copy_dir / "age_like_fine_wine_checkout_copy.md").write_text(
         "# Age Like Fine Wine - Checkout Copy Draft\n\nCheckout copy is draft-only.\n"
+    )
+    (copy_dir / "age_like_fine_wine_product_mockup.md").write_text(
+        "# Age Like Fine Wine - Product Mockup Draft\n\nSales page hero mockup.\n"
     )
 
 
@@ -2495,7 +2502,7 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Record QA" in resp.text
     assert "0/4" in resp.text
     assert "Next missing launch asset: sales page" in resp.text
-    assert "Next non-copy launch asset: product mockup" in resp.text
+    assert "Next non-copy launch asset: 7-day content push" in resp.text
     assert "Record asset" in resp.text
     assert "Fine Wine 35-44 Monetization Lane" in resp.text
     assert "Slay Basics: 30 Hacks" in resp.text
@@ -2510,7 +2517,9 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Sales page draft" in resp.text
     assert "Checkout copy draft" in resp.text
     assert 'href="/aurora/ebooks/copy/sales_page?project_slug=slay_hack"' in resp.text
+    assert 'href="/aurora/ebooks/assets/product_mockup?project_slug=slay_hack"' in resp.text
     assert "age_like_fine_wine_sales_page.md" in resp.text
+    assert "age_like_fine_wine_product_mockup.md" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
 
@@ -2533,6 +2542,17 @@ def test_aurora_ebooks_launch_copy_asset_route_rejects_unknown_asset(tmp_path, c
 
     assert resp.status_code == 404
     assert "not_registered" in resp.json()["detail"]
+
+
+def test_aurora_ebooks_launch_asset_route_serves_registered_markdown(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get("/aurora/ebooks/assets/product_mockup?project_slug=slay_hack", headers=_auth())
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert "Age Like Fine Wine - Product Mockup Draft" in resp.text
+    assert "Sales page hero mockup." in resp.text
 
 
 def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):

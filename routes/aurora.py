@@ -237,6 +237,19 @@ def _ebook_launch_copy_summary(launch_copy_assets: list[dict[str, object]]) -> d
     }
 
 
+def _ebook_asset_path(root: Path, raw_path: object, label: str) -> Path:
+    relative_path = Path(str(raw_path or "").strip())
+    if not str(relative_path):
+        raise FileNotFoundError(f"{label} path is not registered")
+    if relative_path.is_absolute() or ".." in relative_path.parts:
+        raise ValueError(f"{label} path is invalid")
+    asset_path = (root / relative_path).resolve()
+    root_path = root.resolve()
+    if root_path not in asset_path.parents and asset_path != root_path:
+        raise ValueError(f"{label} path escapes the project root")
+    return asset_path
+
+
 def _ebook_launch_asset_rows(items: object) -> list[dict[str, object]]:
     if not isinstance(items, list):
         return []
@@ -330,7 +343,8 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         (
             item
             for item in launch_assets
-            if item.get("name") not in copy_asset_names and str(item.get("status", "")).lower() != "approved"
+            if item.get("name") not in copy_asset_names
+            and str(item.get("status", "")).lower() not in {"review_ready", "approved"}
         ),
         None,
     )
@@ -369,15 +383,21 @@ def _ebook_launch_copy_asset(root: Path, project_slug: str, asset_key: str) -> t
             continue
         if str(item.get("key", "")).strip() != asset_key.strip():
             continue
-        relative_path = Path(str(item.get("path", "")).strip())
-        if relative_path.is_absolute() or ".." in relative_path.parts:
-            raise ValueError("Launch copy asset path is invalid")
-        asset_path = (root / relative_path).resolve()
-        root_path = root.resolve()
-        if root_path not in asset_path.parents and asset_path != root_path:
-            raise ValueError("Launch copy asset path escapes the project root")
+        asset_path = _ebook_asset_path(root, item.get("path", ""), "Launch copy asset")
         return item, asset_path
     raise FileNotFoundError(f"Launch copy asset {asset_key!r} is not registered")
+
+
+def _ebook_launch_asset_file(root: Path, project_slug: str, asset_key: str) -> tuple[dict[str, object], Path]:
+    factory = _ebook_factory(root, project_slug)
+    for item in factory.get("launch_assets", []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("key", "")).strip() != asset_key.strip():
+            continue
+        asset_path = _ebook_asset_path(root, item.get("path", ""), "Launch asset")
+        return item, asset_path
+    raise FileNotFoundError(f"Launch asset {asset_key!r} is not registered")
 
 
 def _manual_posted_at(job) -> datetime | None:
@@ -506,6 +526,25 @@ def aurora_ebook_launch_copy_asset(
         raise HTTPException(status_code=404, detail=str(exc))
     if not asset_path.exists():
         raise HTTPException(status_code=404, detail=f"Launch copy asset file {asset.get('path')!r} not found")
+    return PlainTextResponse(asset_path.read_text(), media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/aurora/ebooks/assets/{asset_key}", response_class=PlainTextResponse)
+def aurora_ebook_launch_asset_file(
+    request: Request,
+    asset_key: str,
+    project_slug: str = "slay_hack",
+    _: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        asset, asset_path = _ebook_launch_asset_file(root, project_slug, asset_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    if not asset_path.exists():
+        raise HTTPException(status_code=404, detail=f"Launch asset file {asset.get('path')!r} not found")
     return PlainTextResponse(asset_path.read_text(), media_type="text/markdown; charset=utf-8")
 
 

@@ -346,6 +346,14 @@
           {% if item.note %}
           <p>{{ item.note }}</p>
           {% endif %}
+          {% if item.path %}
+          <small><code>{{ item.path }}</code></small>
+          {% endif %}
+          {% if item.key and item.path %}
+          <div class="approval-row-actions">
+            <a class="button button-secondary button-small" href="/aurora/ebooks/assets/{{ item.key }}?project_slug={{ ebook_factory.registry_project }}">Open asset</a>
+          </div>
+          {% endif %}
           <details class="action-drawer">
             <summary>Record asset</summary>
             <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/launch-asset">
