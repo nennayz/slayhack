@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Scout — NayzFreedom Fleet{% endblock %}
+
+{% block content %}
+<section class="hero hero-fleet compact-hero fleet-hero-readiness">
+  <p class="eyebrow">Niche Discovery</p>
+  <h1>Scout</h1>
+  <p class="hero-copy">Scan trending niches across Brave Search, Google Trends, Reddit, and Meta Ads. Approve a winner and the Architect generates a ready-to-activate Fleet project.</p>
+  <div class="hero-actions">
+    <form method="post" action="/scout/run">
+      <button type="submit" class="button">Run Scout Now</button>
+    </form>
+  </div>
+</section>
+
+{% if not job %}
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">No report yet</p>
+    <h2>Nothing scanned yet</h2>
+  </div>
+  <p>Click <strong>Run Scout Now</strong> above to kick off a niche discovery scan. Results will appear here when the pipeline completes.</p>
+</section>
+
+{% else %}
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Latest report</p>
+    <h2>{{ job.job_id }}</h2>
+  </div>
+  <p>Triggered by: <strong>{{ job.triggered_by }}</strong> &nbsp;&middot;&nbsp; Status: <span class="badge badge-{{ job.status }}">{{ job.status | replace('_', ' ') | title }}</span></p>
+</section>
+
+{% if job.opportunities %}
+<section class="content-grid">
+  {% for opp in job.opportunities %}
+  <article class="panel">
+    <div class="section-heading" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+      <div>
+        <p class="eyebrow">
+          {% if opp.trend_direction == 'rising' %}Rising{% elif opp.trend_direction == 'stable' %}Stable{% else %}{{ opp.trend_direction | title }}{% endif %}
+          &nbsp;&middot;&nbsp; {{ opp.platforms | join(', ') }}
+        </p>
+        <h3 style="margin:0;">{{ opp.niche_name }}</h3>
+      </div>
+      <span class="badge {% if opp.reach_score >= 80 %}badge-completed{% elif opp.reach_score >= 60 %}badge-running{% else %}badge-pending{% endif %}" style="font-size:1rem; padding:0.4rem 0.8rem; white-space:nowrap;">
+        {{ opp.reach_score | round(0) | int }}
+      </span>
+    </div>
+
+    <p style="color:var(--muted); font-size:0.88rem; margin-bottom:0.75rem;">{{ opp.target_audience }}</p>
+
+    <p style="font-size:0.85rem; margin-bottom:0.5rem;"><strong>Formats:</strong> {{ opp.content_formats | join(', ') }}</p>
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">{{ opp.monetization_notes }}</p>
+
+    {% if job.status == 'awaiting_approval' %}
+    <form method="post" action="/scout/approve" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
+      <input type="hidden" name="job_id" value="{{ job.job_id }}">
+      <input type="hidden" name="niche_name" value="{{ opp.niche_name }}">
+      <button type="submit" class="button button-small" style="width:100%;">Activate This Niche</button>
+    </form>
+    {% elif job.approved_niche == opp.niche_name %}
+    <span class="badge badge-completed" style="display:block; text-align:center; padding:0.5rem;">Approved</span>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+
+{% else %}
+<section class="panel">
+  <p>No niche opportunities found in this scan. Try running Scout again or check your API keys.</p>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
