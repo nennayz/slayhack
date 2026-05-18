@@ -174,11 +174,13 @@ EBOOK_FACTORY_DEFAULTS = {
     "launch_assets": [],
     "launch_summary": {"approved": 0, "total": 0},
     "next_missing_launch_asset": None,
+    "next_missing_non_copy_launch_asset": None,
     "monetization_lanes": [],
     "active_monetization_lane": {},
     "lane_products": [],
     "offer_source": {},
     "launch_copy_assets": [],
+    "launch_copy_summary": {"review_ready": 0, "total": 0},
 }
 
 
@@ -223,6 +225,15 @@ def _ebook_launch_summary(launch_assets: list[dict[str, object]]) -> dict[str, i
     return {
         "approved": sum(1 for item in launch_assets if str(item.get("status", "")).lower() == "approved"),
         "total": len(launch_assets),
+    }
+
+
+def _ebook_launch_copy_summary(launch_copy_assets: list[dict[str, object]]) -> dict[str, int]:
+    return {
+        "review_ready": sum(
+            1 for item in launch_copy_assets if str(item.get("status", "")).lower() in {"review_ready", "approved"}
+        ),
+        "total": len(launch_copy_assets),
     }
 
 
@@ -310,6 +321,19 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
     launch_copy_assets = (
         active_lane.get("launch_copy_assets") if isinstance(active_lane.get("launch_copy_assets"), list) else []
     )
+    copy_asset_names = {
+        str(item.get("launch_asset", "")).strip()
+        for item in launch_copy_assets
+        if isinstance(item, dict) and item.get("launch_asset")
+    }
+    next_missing_non_copy = next(
+        (
+            item
+            for item in launch_assets
+            if item.get("name") not in copy_asset_names and str(item.get("status", "")).lower() != "approved"
+        ),
+        None,
+    )
     factory.update(
         {
             "has_registry": True,
@@ -324,11 +348,15 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "launch_assets": launch_assets,
             "launch_summary": _ebook_launch_summary(launch_assets),
             "next_missing_launch_asset": next_missing_launch,
+            "next_missing_non_copy_launch_asset": next_missing_non_copy,
             "monetization_lanes": monetization_lanes,
             "active_monetization_lane": active_lane,
             "lane_products": lane_products,
             "offer_source": offer_source,
             "launch_copy_assets": launch_copy_assets,
+            "launch_copy_summary": _ebook_launch_copy_summary(
+                [item for item in launch_copy_assets if isinstance(item, dict)]
+            ),
         }
     )
     return factory
