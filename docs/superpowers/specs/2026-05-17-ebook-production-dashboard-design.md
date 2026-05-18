@@ -118,6 +118,8 @@ For the SlayHack pilot, show read-only verified/missing status for:
 
 Missing artifacts should block QA confidence, not activate generation or checkout.
 
+If the configured Drive root is not mounted on the running host, show the artifacts as registered external proof and state that host-local verification is unavailable. This keeps production honest when the Mac Google Drive folder is not present on the VPS.
+
 ### Production Stages
 
 Render the canonical state sequence:

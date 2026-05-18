@@ -2547,7 +2547,8 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Live publish and checkout stay locked" in resp.text
     assert "PDF proof artifacts" in resp.text
     assert "Drive source verification" in resp.text
-    assert "Verified artifacts: 5/5" in resp.text
+    assert "Registered artifacts: 5" in resp.text
+    assert "Verified on this host: 5/5" in resp.text
     assert "Rendered PDF proof" in resp.text
     assert "Editable source document" in resp.text
     assert "E-book knowledge base" in resp.text
@@ -2616,9 +2617,30 @@ def test_aurora_ebooks_page_surfaces_missing_drive_artifact(tmp_path, client):
     resp = client.get("/aurora/ebooks", headers=_auth())
 
     assert resp.status_code == 200
-    assert "Verified artifacts: 4/5" in resp.text
+    assert "Registered artifacts: 5" in resp.text
+    assert "Verified on this host: 4/5" in resp.text
     assert "Next missing artifact: Visual strategy" in resp.text
     assert "20260517-Slay-Ebook-Visual-Strategy.md" in resp.text
+
+
+def test_aurora_ebooks_page_marks_drive_artifacts_external_when_drive_root_unmounted(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+    project_bridge = tmp_path / "projects" / "slay_hack" / "project_bridge.yaml"
+    project_bridge.write_text(
+        'project: slay_hack\n'
+        'display_name: "Slay Hack"\n'
+        'pm: "Slay"\n'
+        f'drive_root: "{tmp_path / "Missing Drive"}"\n'
+    )
+
+    resp = client.get("/aurora/ebooks", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Registered artifacts: 5" in resp.text
+    assert "Verified on this host: 0/5" in resp.text
+    assert "Drive root is registered but not mounted on this host." in resp.text
+    assert "Next missing artifact:" not in resp.text
+    assert "Rendered PDF proof" in resp.text
 
 
 def test_aurora_ebooks_launch_copy_asset_route_rejects_unknown_asset(tmp_path, client):

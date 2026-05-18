@@ -110,7 +110,11 @@
     <h2>Drive source verification</h2>
   </div>
   <div class="learning-gates">
-    <span>Verified artifacts: {{ ebook_factory.drive_summary.verified }}/{{ ebook_factory.drive_summary.total }}</span>
+    <span>Registered artifacts: {{ ebook_factory.drive_summary.registered }}</span>
+    <span>Verified on this host: {{ ebook_factory.drive_summary.verified }}/{{ ebook_factory.drive_summary.total }}</span>
+    {% if not ebook_factory.drive_summary.host_available %}
+    <span>Drive root is registered but not mounted on this host.</span>
+    {% endif %}
     {% if ebook_factory.next_missing_drive_artifact %}
     <span>Next missing artifact: {{ ebook_factory.next_missing_drive_artifact.label }}</span>
     {% endif %}
