@@ -24,6 +24,29 @@ _DRY_RUN_IDEAS = [
 ]
 
 
+def _normalize_content_type(value: object, allowed_types: list[str]) -> str:
+    allowed = [t for t in allowed_types if t]
+    if len(allowed) == 1:
+        return allowed[0]
+
+    text = str(value or "").strip().lower().replace("_", " ").replace("-", " ")
+    direct = {t: t for t in allowed}
+    if text in direct:
+        return direct[text]
+
+    aliases = [
+        ("infographic", ("infographic", "cheat sheet", "chart", "diagram")),
+        ("video", ("video", "reel", "short form", "shortform", "clip")),
+        ("image", ("image", "photo", "carousel", "post")),
+        ("article", ("article", "blog", "essay", "newsletter")),
+    ]
+    for content_type, markers in aliases:
+        if content_type in allowed and any(marker in text for marker in markers):
+            return content_type
+
+    return allowed[0] if allowed else ContentType.VIDEO.value
+
+
 def _write_ideas_file(job: ContentJob) -> None:
     out_dir = Path("output") / job.pm.page_name / job.id
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -66,7 +89,14 @@ class ZoeAgent(BaseAgent):
             "content_type (str, one of the allowed content types). JSON only."
         )
         raw = self._call_claude(system, user, max_tokens=1024)
-        job.ideas = [Idea(**i) for i in self._parse_json(raw)]
+        normalized = []
+        for item in self._parse_json(raw):
+            item["content_type"] = _normalize_content_type(
+                item.get("content_type"),
+                allowed_types,
+            )
+            normalized.append(item)
+        job.ideas = [Idea(**i) for i in normalized]
         job.stage = "zoe_done"
         _write_ideas_file(job)
         return job
