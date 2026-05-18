@@ -3,7 +3,7 @@ factory:
   safe_boundary: "Live publish and checkout stay locked until Captain approval."
   runbook_path: "docs/ebook_production_runbook.md"
   spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
-  next_action: "Review the rebuilt source proof, finish visual asset embedding, then approve remaining launch assets before Captain sale activation."
+  next_action: "Review the visual proof v3 and approve monetization terms before Captain sale activation."
 
 stages:
   - key: idea
@@ -115,9 +115,9 @@ monetization_lanes:
         next_action: "Bridge readers into Age Like Fine Wine without duplicating the paid promise."
       - role: paid_pilot
         title: "Age Like Fine Wine"
-        status: designed_pdf_ready
+        status: visual_proof_ready_sale_locked
         purpose: "First paid low-ticket product for the 35-44 audience."
-        next_action: "Finish QA and launch asset review."
+        next_action: "Review monetization terms and keep checkout locked until Captain approval."
       - role: order_bump
         title: "Fine Wine 7-Day Glow Routine"
         status: planned
@@ -199,23 +199,23 @@ ebooks:
     project: SlayHack
     pm: Slay
     audience: "women 35-44"
-    status: source_repaired_visual_partial
+    status: visual_proof_ready_sale_locked
     role: "first paid low-ticket monetization pilot"
-    proof: "Rebuilt source proof v2 is versioned in repo: 25 pages, 129003 bytes, text-extractable, title/author/subject metadata present, and SHA-256 d3b494daf2dd8d297e03bdea78d83cc46b9131bd7f8c7cbf166301d2573e570b. The older 20260517 Drive proof remains historical source evidence."
+    proof: "Visual proof v3 is versioned in repo: 28 pages, 1383434 bytes, text-extractable, title/author/subject metadata present, embedded product hero and character tip-card pages, and SHA-256 59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8. The older 20260517 Drive proof remains historical source evidence."
     source_integrity:
       status: ready
-      current_source_of_truth: "Repo-versioned rebuilt DOCX and regenerated PDF proof v2."
+      current_source_of_truth: "Repo-versioned rebuilt DOCX source and visual PDF proof v3."
       blocker: ""
       repair_packet: "docs/monetization/slay_hack/age_like_fine_wine_source_repair_packet.md"
       repair_report: "docs/monetization/slay_hack/age_like_fine_wine_source_repair_report.md"
       source_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2_source.docx"
-      proof_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2.pdf"
-      manifest_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2_manifest.json"
-      proof_sha256: "d3b494daf2dd8d297e03bdea78d83cc46b9131bd7f8c7cbf166301d2573e570b"
-      proof_pages: 25
-      proof_size_bytes: 129003
-      render_note: "DOCX text extraction verified; LibreOffice page-image render QA is unavailable on this host."
-      required_next_action: "Embed or regenerate final visual mockup pages in the designed PDF before Visual QA can pass."
+      proof_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"
+      manifest_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_manifest.json"
+      proof_sha256: "59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8"
+      proof_pages: 28
+      proof_size_bytes: 1383434
+      render_note: "Visual proof pages rendered cleanly from local PNG exports; DOCX render QA remains unavailable because LibreOffice is not installed."
+      required_next_action: "Review monetization terms and launch copy before Captain sale approval."
     captain_sale_gate:
       label: "Captain sale approval"
       status: locked
@@ -259,17 +259,17 @@ ebooks:
         reviewed_by: codex
         reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Visual QA
-        status: PARTIAL
+        status: PASS
         check: "Cover, palette, typography, image consistency, and character usage."
-        note: "Rebuilt source now includes B+C Hybrid chapter host cards, character-card directions, and visual reference labels; regenerated PDF removes the near-blank CTA issue. Keep PARTIAL because Drive mockup PNGs could not be embedded in the proof during this pass, so final character portrait/panel execution is still pending."
+        note: "Visual proof v3 embeds a product hero page, compressed Fleet-controlled character portraits, a repeatable tip-card system page, and a visual QA handoff page. Sample pages rendered cleanly; Google Drive mockup assets remain inaccessible from CLI, but the proof now has actual image assets rather than text-only visual labels."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T04:22:36Z"
+        reviewed_at: "2026-05-18T05:03:12Z"
       - gate: PDF Technical QA
         status: PASS
         check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
-        note: "Rebuilt proof is 25 pages, text-extractable, 129003 bytes, has title/author/subject metadata, uses locked CTA copy instead of a live-looking shop CTA, and has matching repo-versioned DOCX source."
+        note: "Visual proof v3 is 28 pages, text-extractable, 1383434 bytes, has title/author/subject metadata, embeds compressed visual assets, uses locked CTA copy instead of a live-looking shop CTA, and has matching repo-versioned DOCX text source."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T04:22:36Z"
+        reviewed_at: "2026-05-18T05:03:12Z"
       - gate: Monetization QA
         status: PARTIAL
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
@@ -284,7 +284,7 @@ ebooks:
         name: product mockup
         status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_product_mockup.md"
-        note: "Review-ready mockup direction exists for the cover, device stack, sales-page hero, and checkout thumbnail."
+        note: "Visual proof v3 includes a repo-controlled product hero, device/page stack, and character card system; final sale still requires Captain approval."
       - name: checkout copy
         status: review_ready
         note: "Checkout copy draft exists; no payment link is live."

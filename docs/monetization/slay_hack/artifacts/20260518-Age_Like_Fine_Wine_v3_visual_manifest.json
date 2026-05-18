@@ -1,0 +1,32 @@
+{
+  "artifact": "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf",
+  "source_text_artifact": "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2_source.docx",
+  "base_proof": "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2.pdf",
+  "title": "Age Like Fine Wine",
+  "author": "SlayHack",
+  "pages": 28,
+  "size_bytes": 1383434,
+  "sha256": "59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8",
+  "image_pages": [
+    {
+      "page": 2,
+      "images": 2
+    },
+    {
+      "page": 5,
+      "images": 6
+    }
+  ],
+  "embedded_assets": [
+    "static/crew/slay.png",
+    "static/crew/bella.png",
+    "static/crew/lila.png",
+    "static/crew/nora.png",
+    "static/crew/sage-ledger.png",
+    "static/crew/roxy.png"
+  ],
+  "compressed_asset_note": "static/crew images were downsampled before embedding; source assets remain unchanged.",
+  "text_extractable_pages": 28,
+  "sale_boundary": "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until Captain approval.",
+  "visual_note": "v3 adds repo-controlled product hero, character tip-card system, and visual QA handoff pages with embedded static/crew images because the local Google Drive mount is not readable from CLI."
+}
