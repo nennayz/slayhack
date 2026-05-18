@@ -174,6 +174,10 @@ EBOOK_FACTORY_DEFAULTS = {
     "launch_assets": [],
     "launch_summary": {"approved": 0, "total": 0},
     "next_missing_launch_asset": None,
+    "monetization_lanes": [],
+    "active_monetization_lane": {},
+    "lane_products": [],
+    "offer_source": {},
 }
 
 
@@ -298,6 +302,10 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         (item for item in launch_assets if str(item.get("status", "")).lower() != "approved"),
         None,
     )
+    monetization_lanes = raw.get("monetization_lanes") if isinstance(raw.get("monetization_lanes"), list) else []
+    active_lane = next((item for item in monetization_lanes if isinstance(item, dict)), {})
+    lane_products = active_lane.get("products") if isinstance(active_lane.get("products"), list) else []
+    offer_source = active_lane.get("offer_source") if isinstance(active_lane.get("offer_source"), dict) else {}
     factory.update(
         {
             "has_registry": True,
@@ -312,6 +320,10 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "launch_assets": launch_assets,
             "launch_summary": _ebook_launch_summary(launch_assets),
             "next_missing_launch_asset": next_missing_launch,
+            "monetization_lanes": monetization_lanes,
+            "active_monetization_lane": active_lane,
+            "lane_products": lane_products,
+            "offer_source": offer_source,
         }
     )
     return factory

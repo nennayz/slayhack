@@ -134,6 +134,54 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         'launch_assets:\n'
         '  - sales page\n'
         '  - 7-day content push\n'
+        'monetization_lanes:\n'
+        '  - id: fine_wine_35_44\n'
+        '    label: "Fine Wine 35-44 Monetization Lane"\n'
+        '    audience: "women 35-44"\n'
+        '    status: strategy_locked_checkout_locked\n'
+        '    strategy: "Start with the strongest real audience before expanding the full 22-SKU universe."\n'
+        '    boundary: "Checkout, live publish, and public sales stay locked until Captain approval."\n'
+        '    next_action: "Use this lane as the source of truth for sales page and launch assets."\n'
+        '    products:\n'
+        '      - role: lead_magnet\n'
+        '        title: "Slay Basics: 30 Hacks"\n'
+        '        status: pdf_ready\n'
+        '        purpose: "Email capture and trust step."\n'
+        '        next_action: "Bridge readers into Age Like Fine Wine."\n'
+        '      - role: paid_pilot\n'
+        '        title: "Age Like Fine Wine"\n'
+        '        status: designed_pdf_ready\n'
+        '        purpose: "First paid low-ticket product."\n'
+        '        next_action: "Finish QA and launch asset review."\n'
+        '      - role: order_bump\n'
+        '        title: "Fine Wine 7-Day Glow Routine"\n'
+        '        status: planned\n'
+        '        purpose: "Small practical companion."\n'
+        '        next_action: "Draft checkout bump copy."\n'
+        '      - role: next_book\n'
+        '        title: "The Glow Within"\n'
+        '        status: roadmap\n'
+        '        purpose: "Confidence continuation."\n'
+        '        next_action: "Produce after pilot approval."\n'
+        '      - role: next_book\n'
+        '        title: "She\'s Got It Together"\n'
+        '        status: roadmap\n'
+        '        purpose: "Life-ease continuation."\n'
+        '        next_action: "Produce after bundle validation."\n'
+        '    offer_source:\n'
+        '      promise: "Help women 35-44 look more polished and feel more intentional."\n'
+        '      audience: "Women 35-44 in the USA."\n'
+        '      core_offer: "Age Like Fine Wine PDF with routines, checklists, and character-led tips."\n'
+        '      pain_desire:\n'
+        '        - "Old makeup techniques stop working the same way after 35."\n'
+        '      what_inside:\n'
+        '        - "Fine Wine Manifesto"\n'
+        '        - "30-day glow-up checklist"\n'
+        '      bonuses:\n'
+        '        - "Fine Wine 7-Day Glow Routine"\n'
+        '      guarantee: "Refund policy is not active until checkout terms are approved."\n'
+        '      cta: "Start your Fine Wine glow-up"\n'
+        '      checkout_boundary: "Checkout copy is draft-only and cannot be activated until Captain approval."\n'
         'ebooks:\n'
         '  - id: age_like_fine_wine\n'
         '    title: "Age Like Fine Wine"\n'
@@ -2421,6 +2469,14 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "0/2" in resp.text
     assert "Next missing launch asset: sales page" in resp.text
     assert "Record asset" in resp.text
+    assert "Fine Wine 35-44 Monetization Lane" in resp.text
+    assert "Slay Basics: 30 Hacks" in resp.text
+    assert "Fine Wine 7-Day Glow Routine" in resp.text
+    assert "The Glow Within" in resp.text
+    assert "She&#39;s Got It Together" in resp.text
+    assert "Sales source of truth" in resp.text
+    assert "Start your Fine Wine glow-up" in resp.text
+    assert "Checkout copy is draft-only and cannot be activated until Captain approval." in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
 
