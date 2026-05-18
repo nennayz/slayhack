@@ -94,6 +94,85 @@ nav {
   gap: 0.28rem;
 }
 
+.nav-dropdown {
+  margin: 0;
+  position: relative;
+}
+
+.nav-dropdown summary {
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  list-style: none;
+  min-height: 34px;
+  padding: 0.42rem 1.6rem 0.42rem 0.72rem;
+  position: relative;
+  user-select: none;
+}
+
+.nav-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav-dropdown summary::after {
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  content: "";
+  height: 0.38rem;
+  position: absolute;
+  right: 0.72rem;
+  top: 50%;
+  transform: translateY(-62%) rotate(45deg);
+  width: 0.38rem;
+}
+
+.nav-dropdown[open] summary::after {
+  transform: translateY(-36%) rotate(225deg);
+}
+
+.nav-dropdown summary:hover,
+.nav-dropdown summary.active,
+.nav-dropdown[open] summary {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.nav-dropdown .nav-group-links {
+  background: rgba(255,255,255,0.98);
+  border: 1px solid rgba(16, 35, 63, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(7,22,37,0.24);
+  display: grid;
+  gap: 0.2rem;
+  min-width: 190px;
+  padding: 0.45rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 40;
+}
+
+.nav-dropdown .nav-group-links a {
+  border-radius: 10px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.nav-dropdown .nav-group-links a:hover {
+  background: rgba(16,35,63,0.06);
+  color: var(--navy);
+}
+
+.nav-dropdown .nav-group-links a.active {
+  background: rgba(16,35,63,0.1);
+  border-color: rgba(16,35,63,0.12);
+  color: var(--navy);
+}
+
 nav a {
   border: 1px solid transparent;
   border-radius: 999px;
@@ -299,7 +378,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .workflow-rail {
   display: grid;
   gap: 0.65rem;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   margin: 0 0 1.5rem;
 }
 .workflow-rail-step {
@@ -312,6 +391,72 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   min-height: 86px;
   padding: 0.85rem;
   text-decoration: none;
+}
+.workflow-more {
+  margin: 0;
+  position: relative;
+}
+.workflow-more summary {
+  cursor: pointer;
+  display: grid;
+  gap: 0.18rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.workflow-more summary::-webkit-details-marker {
+  display: none;
+}
+.workflow-more summary::after {
+  border: solid var(--muted);
+  border-width: 0 1.5px 1.5px 0;
+  content: "";
+  height: 0.4rem;
+  position: absolute;
+  right: 0.9rem;
+  top: 1rem;
+  transform: rotate(45deg);
+  width: 0.4rem;
+}
+.workflow-more[open] summary {
+  margin-bottom: 0;
+}
+.workflow-more[open] summary::after {
+  transform: translateY(0.2rem) rotate(225deg);
+}
+.workflow-more-menu {
+  background: rgba(255,255,255,0.98);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(16,35,63,0.16);
+  display: grid;
+  gap: 0.25rem;
+  min-width: 220px;
+  padding: 0.45rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  z-index: 35;
+}
+.workflow-more-menu a {
+  border-radius: 10px;
+  color: inherit;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  text-decoration: none;
+}
+.workflow-more-menu a:hover,
+.workflow-more-menu a.active {
+  background: rgba(47,155,131,0.1);
+}
+.workflow-more-menu a strong {
+  color: var(--ink);
+  font-size: 0.94rem;
+}
+.workflow-more-menu a small {
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 .station-icon {
   align-items: center;
@@ -2650,6 +2795,19 @@ a:hover { color: var(--navy-soft); }
     flex: 0 0 auto;
     flex-direction: column;
     gap: 0.25rem;
+  }
+  .nav-dropdown {
+    align-items: flex-start;
+  }
+  .nav-dropdown .nav-group-links {
+    left: 0;
+    right: auto;
+  }
+  .workflow-more-menu {
+    min-width: 100%;
+    position: static;
+    right: auto;
+    top: auto;
   }
   .nav-group-links {
     flex-wrap: nowrap;

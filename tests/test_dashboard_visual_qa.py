@@ -135,6 +135,7 @@ def test_dashboard_visual_qa_local_report_passes(tmp_path, monkeypatch):
         "aurora",
         "daily_slate",
         "approval_queue",
+        "ebooks",
         "crew",
         "crew_detail",
         "ops",

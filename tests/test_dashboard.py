@@ -2341,6 +2341,38 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "current manual crew portrait set is approved production canon and has a production asset audit" in resp.text
 
 
+def test_aurora_ebooks_page_renders_governed_product_factory(client):
+    resp = client.get("/aurora/ebooks", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "E-book Product Factory" in resp.text
+    assert "Age Like Fine Wine" in resp.text
+    assert "designed_pdf_ready" in resp.text
+    assert "Live publish and checkout stay locked" in resp.text
+    assert "docs/ebook_production_runbook.md" in resp.text
+    assert "2026-05-17-ebook-production-dashboard-design.md" in resp.text
+    assert "Content QA" in resp.text
+    assert "Brand QA" in resp.text
+    assert "Visual QA" in resp.text
+    assert "PDF Technical QA" in resp.text
+    assert "Monetization QA" in resp.text
+    assert "Remove hardcoded API key fallback." in resp.text
+    assert "7-day content push" in resp.text
+
+
+def test_aurora_ebooks_link_is_in_navigation(client):
+    resp = client.get("/aurora/ebooks", headers=_auth())
+
+    assert resp.status_code == 200
+    assert 'class="nav-group nav-dropdown"' in resp.text
+    assert '<summary class="active">Voyage</summary>' in resp.text
+    assert 'class="workflow-rail-step workflow-more active station-workflow"' in resp.text
+    assert "<strong>More</strong>" in resp.text
+    assert "Map + monetize" in resp.text
+    assert 'href="/aurora/workflow"' in resp.text
+    assert 'href="/aurora/ebooks">E-books</a>' in resp.text
+
+
 def test_aurora_learning_page_surfaces_manual_closeout_lessons(tmp_path, client):
     _write_job(
         tmp_path,
