@@ -729,6 +729,88 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   font-size: 0.92rem;
 }
 
+.captain-minimal-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1.6fr) repeat(3, minmax(120px, 0.55fr));
+  margin-bottom: 1.5rem;
+}
+.captain-focus-card,
+.captain-pulse-card {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 26px rgba(16,35,63,0.07);
+  padding: 1rem;
+}
+.captain-focus-card {
+  background:
+    linear-gradient(135deg, rgba(94,214,186,0.16), rgba(208,160,84,0.12)),
+    rgba(255,255,255,0.92);
+  display: grid;
+  gap: 0.65rem;
+}
+.captain-focus-card h2 {
+  font-size: 1.25rem;
+  line-height: 1.28;
+  margin: 0;
+}
+.captain-focus-card p,
+.captain-pulse-card small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.captain-focus-card p {
+  margin: 0;
+}
+.captain-focus-card .button {
+  justify-self: start;
+}
+.captain-pulse-card {
+  align-content: center;
+  display: grid;
+  gap: 0.25rem;
+}
+.captain-pulse-card span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.captain-pulse-card strong {
+  color: var(--ink);
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+.evidence-drawer {
+  background: rgba(255,255,255,0.54);
+  border: 1px solid rgba(16,35,63,0.1);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(16,35,63,0.04);
+  margin: 1rem 0 1.5rem;
+  padding: 0.65rem 0.85rem;
+}
+.evidence-drawer > summary {
+  color: var(--navy);
+  font-weight: 800;
+  list-style: none;
+  padding: 0.35rem 0;
+}
+.evidence-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+.evidence-drawer > summary::after {
+  color: var(--muted);
+  content: "Show details";
+  float: right;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.evidence-drawer[open] > summary::after {
+  content: "Hide details";
+}
+
 .button,
 button[type="submit"] {
   background: var(--navy);
@@ -2833,6 +2915,7 @@ a:hover { color: var(--navy-soft); }
   .daily-slate-grid,
   .captain-attention-grid,
   .captain-action-grid,
+  .captain-minimal-grid,
   .next-action-panel,
   .approval-lane-board,
   .daily-brief-review-board,

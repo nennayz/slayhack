@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -76,6 +77,16 @@ def _build_keyboard(options: list[str]) -> dict:
     return {"inline_keyboard": [[{"text": opt, "callback_data": opt}] for opt in options]}
 
 
+def _checkpoint_text(stage: str, summary: str) -> str:
+    mode = os.environ.get("NAYZ_TELEGRAM_CHECKPOINT_DETAIL", "minimal").strip().lower()
+    cleaned = " ".join(summary.split())
+    if mode != "full" and len(cleaned) > 600:
+        cleaned = f"{cleaned[:597]}..."
+    if mode == "minimal":
+        return f"⏸ <b>Approval needed:</b> {stage}\n\n{cleaned}\n\nChoose a button or reply:"
+    return f"⏸ <b>Checkpoint: {stage}</b>\n\n{summary}\n\nReply with a button or type freely:"
+
+
 def send_and_wait(
     stage: str,
     summary: str,
@@ -91,7 +102,7 @@ def send_and_wait(
         logger.warning("Could not write pipeline lock file: %s", exc)
 
     keyboard = _build_keyboard(options)
-    text = f"⏸ <b>Checkpoint: {stage}</b>\n\n{summary}\n\nReply with a button or type freely:"
+    text = _checkpoint_text(stage, summary)
 
     offset = _drain_updates(token)
 

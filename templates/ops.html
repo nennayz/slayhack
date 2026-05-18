@@ -66,6 +66,31 @@
   </article>
 </section>
 
+<section class="captain-minimal-grid ops-cockpit">
+  <article class="captain-focus-card">
+    <span class="badge badge-ops-missing">Ops focus</span>
+    <h2>Watch failures, queues, and service health</h2>
+    <p>Use this page for operational intervention. Raw logs, queue history, and audit trails are kept in the backup drawer below.</p>
+  </article>
+  <article class="captain-pulse-card">
+    <span>IG due</span>
+    <strong>{{ publish_summary.counts.instagram_due_now }}</strong>
+    <small>Queue items now</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Tracking due</span>
+    <strong>{{ track_summary.counts.due_now }}</strong>
+    <small>Performance checks</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Incidents</span>
+    <strong>{{ incident_summary.open }}</strong>
+    <small>Open notes</small>
+  </article>
+</section>
+
+<details class="evidence-drawer ops-backup-drawer">
+  <summary>Operational evidence and raw logs</summary>
 <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
@@ -635,4 +660,5 @@
     </div>
   </article>
 </section>
+</details>
 {% endblock %}

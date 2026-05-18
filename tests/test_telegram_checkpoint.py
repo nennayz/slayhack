@@ -1,7 +1,7 @@
 from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
-from telegram_checkpoint import _drain_updates, send_and_wait
+from telegram_checkpoint import _checkpoint_text, _drain_updates, send_and_wait
 
 
 def _resp(result_data):
@@ -195,3 +195,22 @@ def test_send_and_wait_writes_lock_on_send_failure(tmp_path):
     content = lock.read_text()
     assert content  # non-empty
     float(content)  # parseable as a timestamp — raises ValueError if wrong
+
+
+def test_checkpoint_text_defaults_to_minimal_and_truncates(monkeypatch):
+    monkeypatch.delenv("NAYZ_TELEGRAM_CHECKPOINT_DETAIL", raising=False)
+
+    text = _checkpoint_text("qa_review", "x" * 700)
+
+    assert "Approval needed" in text
+    assert "Checkpoint:" not in text
+    assert len(text) < 700
+
+
+def test_checkpoint_text_full_mode_keeps_original_summary(monkeypatch):
+    monkeypatch.setenv("NAYZ_TELEGRAM_CHECKPOINT_DETAIL", "full")
+
+    text = _checkpoint_text("qa_review", "Line 1\n\nLine 2")
+
+    assert "Checkpoint: qa_review" in text
+    assert "Line 1\n\nLine 2" in text

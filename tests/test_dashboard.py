@@ -3088,7 +3088,7 @@ def test_aurora_ebooks_link_is_in_navigation(tmp_path, client):
 
     assert resp.status_code == 200
     assert 'class="nav-group nav-dropdown"' in resp.text
-    assert '<summary class="active">Voyage</summary>' in resp.text
+    assert '<summary class="">More</summary>' in resp.text
     assert 'class="workflow-rail-step workflow-more active station-workflow"' in resp.text
     assert "<strong>More</strong>" in resp.text
     assert "Map + monetize" in resp.text

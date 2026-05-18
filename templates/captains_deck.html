@@ -25,27 +25,62 @@
   </div>
 </section>
 
+<section class="captain-minimal-grid">
+  <article class="captain-focus-card">
+    <span class="badge badge-ops-missing">Next decision</span>
+    <h2>{{ command_brief.detail }}</h2>
+    <p>{{ command_brief.action }}</p>
+    {% if attention_jobs %}
+    <a class="button" href="/jobs/{{ attention_jobs[0].id }}">Open priority mission</a>
+    {% elif active_jobs %}
+    <a class="button" href="/jobs/{{ active_jobs[0].id }}">Monitor active mission</a>
+    {% else %}
+    <a class="button" href="/aurora/daily-slate">Open slate</a>
+    {% endif %}
+  </article>
+  <article class="captain-pulse-card">
+    <span>Running</span>
+    <strong>{{ summary.running }}</strong>
+    <small>Active missions</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Waiting</span>
+    <strong>{{ summary.awaiting_approval }}</strong>
+    <small>Approval gates</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Failed</span>
+    <strong>{{ summary.failed }}</strong>
+    <small>Needs repair</small>
+  </article>
+</section>
+
 {% include "_captain_attention_lane.html" %}
 
 {% include "_captain_action_console.html" %}
 
-{% include "_learning_runbook.html" %}
+<details class="evidence-drawer captain-backup-drawer">
+  <summary>Learning proof and fleet backup</summary>
+  {% include "_learning_runbook.html" %}
 
-<section class="ship-grid">
-  {% for ship in fleet_status %}
-  <a class="ship-card {{ ship.css_class }}" href="{{ ship.href }}">
-    <span class="ship-kicker">{{ ship.kicker }}</span>
-    <h2>{{ ship.name }}</h2>
-    <p>{{ ship.description }}</p>
-    <div class="ship-status">
-      <span>{{ ship.state }}</span>
-      <strong>{{ ship.detail }}</strong>
-    </div>
-  </a>
-  {% endfor %}
-</section>
+  <section class="ship-grid">
+    {% for ship in fleet_status %}
+    <a class="ship-card {{ ship.css_class }}" href="{{ ship.href }}">
+      <span class="ship-kicker">{{ ship.kicker }}</span>
+      <h2>{{ ship.name }}</h2>
+      <p>{{ ship.description }}</p>
+      <div class="ship-status">
+        <span>{{ ship.state }}</span>
+        <strong>{{ ship.detail }}</strong>
+      </div>
+    </a>
+    {% endfor %}
+  </section>
+</details>
 
-<section class="content-grid">
+<details class="evidence-drawer captain-backup-drawer">
+  <summary>Mission lists and raw status</summary>
+  <section class="content-grid">
   <article class="panel">
     <div class="section-heading">
       <p class="eyebrow">Captain's brief</p>
@@ -134,4 +169,5 @@
     {% endif %}
   </article>
 </section>
+</details>
 {% endblock %}

@@ -11,6 +11,24 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_TELEGRAM_LEVELS = {"critical", "approval"}
+
+
+def _configured_levels(env_name: str, default: set[str]) -> set[str]:
+    raw = os.environ.get(env_name)
+    if raw is None:
+        return set(default)
+    normalized = {part.strip().lower() for part in raw.split(",") if part.strip()}
+    if "none" in normalized:
+        return set()
+    if "all" in normalized:
+        return {"critical", "approval", "daily_digest", "scout", "debug"}
+    return normalized
+
+
+def _telegram_level_enabled(level: str) -> bool:
+    return level.lower() in _configured_levels("NAYZ_TELEGRAM_NOTIFY_LEVELS", DEFAULT_TELEGRAM_LEVELS)
+
 
 def _post_slack(message: str, missing_label: str) -> bool:
     url = os.environ.get("SLACK_WEBHOOK_URL")
@@ -29,7 +47,11 @@ def _post_slack(message: str, missing_label: str) -> bool:
     return True
 
 
-def _post_telegram(message: str, missing_label: str) -> bool:
+def _post_telegram(message: str, missing_label: str, *, level: str) -> bool:
+    if not _telegram_level_enabled(level):
+        logger.info("Telegram %s suppressed by notification policy level=%s", missing_label, level)
+        return False
+
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:
@@ -55,13 +77,13 @@ def _post_telegram(message: str, missing_label: str) -> bool:
     return True
 
 
-def _send_alert(message: str, missing_label: str) -> None:
+def _send_alert(message: str, missing_label: str, *, level: str = "critical") -> None:
     if _post_slack(message, missing_label):
         return
-    if _post_telegram(message, missing_label):
+    if _post_telegram(message, missing_label, level=level):
         return
     print(
-        f"WARNING: SLACK_WEBHOOK_URL or TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID not set — "
+        f"WARNING: SLACK_WEBHOOK_URL or Telegram level/env not enabled — "
         f"skipping {missing_label}.",
         file=sys.stderr,
     )
@@ -97,7 +119,7 @@ def send_slack_alert(
         print(message)
         return
 
-    _send_alert(message, "scheduler alert")
+    _send_alert(message, "scheduler alert", level="critical")
 
 
 def send_weekly_report(lines: list[str], dry_run: bool = False) -> None:
@@ -113,7 +135,7 @@ def send_weekly_report(lines: list[str], dry_run: bool = False) -> None:
         print(message)
         return
 
-    _send_alert(message, "weekly report")
+    _send_alert(message, "weekly report", level="daily_digest")
 
 
 def send_healthcheck_alert(message: str, dry_run: bool = False) -> None:
@@ -122,11 +144,15 @@ def send_healthcheck_alert(message: str, dry_run: bool = False) -> None:
         print(message)
         return
 
-    _send_alert(message, "health-check alert")
+    _send_alert(message, "health-check alert", level="critical")
 
 
 def send_telegram_scout_report(config, job) -> None:
     """Send top 3 scout opportunities to Telegram with Approve/Skip buttons."""
+    if str(getattr(job, "triggered_by", "")).lower() != "telegram" and not _telegram_level_enabled("scout"):
+        logger.info("Telegram scout report suppressed by notification policy")
+        return
+
     token = os.getenv("TELEGRAM_BOT_TOKEN", "")
     chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
     if not token or not chat_id:

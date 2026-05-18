@@ -50,6 +50,38 @@
   </div>
 </section>
 
+{% if ebook_factory.pilot %}
+<section class="captain-minimal-grid ebook-cockpit">
+  <article class="captain-focus-card">
+    <span class="badge {{ ebook_factory.checkout_setup_gate.status_class if ebook_factory.checkout_setup_gate else ebook_factory.sale_gate.status_class }}">
+      {{ ebook_factory.checkout_setup_gate.status | replace("_", " ") if ebook_factory.checkout_setup_gate else ebook_factory.sale_gate.status | replace("_", " ") }}
+    </span>
+    <h2>{{ ebook_factory.pilot.title }}</h2>
+    <p>{{ ebook_factory.checkout_setup_gate.next_action if ebook_factory.checkout_setup_gate else ebook_factory.next_action }}</p>
+    {% if ebook_factory.checkout_setup_gate.secure_delivery.internal_delivery_route %}
+    <a class="button" href="{{ ebook_factory.checkout_setup_gate.secure_delivery.internal_delivery_route }}">Open protected PDF proof</a>
+    {% endif %}
+  </article>
+  <article class="captain-pulse-card">
+    <span>Checkout smoke</span>
+    <strong>{{ ebook_factory.checkout_setup_gate.smoke_summary.passed if ebook_factory.checkout_setup_gate else 0 }}/{{ ebook_factory.checkout_setup_gate.smoke_summary.total if ebook_factory.checkout_setup_gate else 0 }}</strong>
+    <small>{{ ebook_factory.checkout_setup_gate.next_smoke_check.label if ebook_factory.checkout_setup_gate.next_smoke_check else "Ready for next gate" }}</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Public checkout</span>
+    <strong>{{ ebook_factory.checkout_setup_gate.public_checkout_gate.status if ebook_factory.checkout_setup_gate.public_checkout_gate else "locked" }}</strong>
+    <small>No live sale is active</small>
+  </article>
+  <article class="captain-pulse-card">
+    <span>Sale approval</span>
+    <strong>{{ ebook_factory.sale_gate.status | replace("_", " ") }}</strong>
+    <small>{{ ebook_factory.sale_gate.approved_by or "Captain gate" }}</small>
+  </article>
+</section>
+{% endif %}
+
+<details class="evidence-drawer ebook-evidence-drawer">
+  <summary>Governance backup: registry, sale approval, and source proof</summary>
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Factory posture</p>
@@ -151,6 +183,7 @@
   </form>
 </section>
 {% endif %}
+</details>
 
 {% if ebook_factory.checkout_setup_gate %}
 <section class="panel spacious">
@@ -233,6 +266,8 @@
 </section>
 {% endif %}
 
+<details class="evidence-drawer ebook-evidence-drawer">
+  <summary>Evidence / backup details</summary>
 {% if not ebook_factory.pilot %}
 <section class="panel spacious">
   <div class="section-heading">
@@ -587,4 +622,5 @@
     </div>
   </article>
 </section>
+</details>
 {% endblock %}
