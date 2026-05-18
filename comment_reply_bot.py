@@ -193,8 +193,13 @@ def _send_message(token: str, chat_id: str, text: str) -> None:
 def _download_photo(token: str, file_id: str) -> bytes:
     data = _api(token, "getFile", file_id=file_id)
     file_path = data["result"]["file_path"]
-    response = requests.get(f"https://api.telegram.org/file/bot{token}/{file_path}", timeout=30)
-    response.raise_for_status()
+    url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+    except Exception as exc:
+        safe_url = f"https://api.telegram.org/file/bot<redacted>/{file_path}"
+        raise RuntimeError(f"Photo download failed [{safe_url}]: {type(exc).__name__}") from exc
     return response.content
 
 
