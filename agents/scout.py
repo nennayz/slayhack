@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
@@ -11,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 _BRAVE_URL = "https://api.search.brave.com/res/v1/web/search"
 _META_ADS_URL = "https://graph.facebook.com/v19.0/ads_archive"
+_GTRENDS_LOCK = threading.Lock()  # Google Trends rate-limits parallel requests
 
 _DRY_SIGNALS = [
     NicheSignal(niche_name="clean beauty", raw_data={"source": "dry-run", "trend": "rising", "reddit_size": 450000}),
@@ -77,9 +80,11 @@ class ScoutAgent:
     def _fetch_google_trends(self, niche: str) -> dict:
         try:
             from pytrends.request import TrendReq
-            pt = TrendReq(hl="en-US", tz=300)
-            pt.build_payload([niche], timeframe="today 3-m", geo="US")
-            interest = pt.interest_over_time()
+            with _GTRENDS_LOCK:
+                time.sleep(2)
+                pt = TrendReq(hl="en-US", tz=300)
+                pt.build_payload([niche], timeframe="today 3-m", geo="US")
+                interest = pt.interest_over_time()
             if interest.empty:
                 return {"trend_direction": "unknown"}
             values = interest[niche].tolist()
@@ -129,6 +134,13 @@ class ScoutAgent:
                 },
                 timeout=10,
             )
+            if resp.status_code == 400:
+                logger.warning(
+                    "Meta Ads Library returned 400 for '%s' — token needs ads_read permission "
+                    "(requires a user token, not a page token). Skipping Meta Ads source.",
+                    niche,
+                )
+                return {}
             resp.raise_for_status()
             data = resp.json()
             ad_count = len(data.get("data", []))
