@@ -32,6 +32,7 @@ class BrandProfile(BaseModel):
     tone: str
     target_audience: str
     script_style: str
+    comment_reply_style: str = ""
     nora_max_retries: int = 2
     allowed_content_types: list[ContentType] = Field(
         default_factory=lambda: [

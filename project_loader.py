@@ -97,6 +97,7 @@ def load_project(project_slug: str, root: Path | None = None) -> PMProfile:
         tone=brand_data["tone"],
         target_audience=brand_data["target_audience"],
         script_style=brand_data["script_style"],
+        comment_reply_style=brand_data.get("comment_reply_style", ""),
         nora_max_retries=brand_data.get("nora_max_retries", 2),
         **extra,
     )

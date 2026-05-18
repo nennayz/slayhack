@@ -104,18 +104,22 @@ def enforce_char_limit(reply: str, max_chars: int, router: ModelRouter | None) -
 
 
 def build_system_prompt(brand: object, max_chars: int) -> str:
+    comment_reply_style = getattr(brand, "comment_reply_style", "").strip()
+    style_section = f"\nComment reply style guide:\n{comment_reply_style}\n" if comment_reply_style else ""
     return (
         "You are a social media community manager.\n"
         f"Brand tone: {brand.tone}\n"
         f"Target audience: {brand.target_audience}\n"
         f"Writing style: {brand.script_style}\n\n"
+        f"{style_section}"
         "Look at this screenshot carefully.\n\n"
         "1. Find ALL comments visible in the image, reading top to bottom.\n"
         "2. For each comment, write ONE reply that matches the brand tone.\n"
         f"3. Each reply must be under {max_chars} characters.\n"
-        "4. Match the language of the comment (Thai replies Thai, English replies English).\n"
-        "5. Do not use hashtags unless the comment contains them.\n"
-        "6. Never mention AI or automation.\n\n"
+        "4. Use the comment reply style guide when one is provided.\n"
+        "5. Match the language of the comment unless the style guide gives a stricter language rule.\n"
+        "6. Do not use hashtags unless the comment contains them.\n"
+        "7. Never mention AI or automation unless the visible comment directly asks about AI.\n\n"
         "Return your response in this exact format:\n"
         "COMMENT_1: [exact comment text you read]\n"
         "REPLY_1: [your reply]\n"
