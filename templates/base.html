@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/htmx.min.js"></script>
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 <header class="topbar">
   <div class="topbar-brand-row">
     <a class="brand" href="/">

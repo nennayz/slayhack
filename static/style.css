@@ -3220,3 +3220,163 @@ a:hover { color: var(--navy-soft); }
     width: 100%;
   }
 }
+
+/* ─── Micro-animations (global) ─── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(94,214,186,0.5); }
+  60%       { box-shadow: 0 0 0 5px rgba(94,214,186,0); }
+}
+
+main {
+  animation: fadeInUp 0.22s ease both;
+}
+
+.badge-running {
+  animation: badge-pulse 2.4s ease infinite;
+}
+
+.mission-row {
+  transition: background 0.14s;
+}
+
+/* ─── Aurora dark theme (body.aurora-page) ─── */
+
+body.aurora-page {
+  background: #071625;
+  color: rgba(255,255,255,0.88);
+}
+
+body.aurora-page h1,
+body.aurora-page h2,
+body.aurora-page h3 { color: rgba(255,255,255,0.93); }
+
+body.aurora-page p { color: rgba(255,255,255,0.6); }
+body.aurora-page .hero-copy { color: rgba(255,255,255,0.72); }
+body.aurora-page .eyebrow { color: #e8d07a; }
+body.aurora-page .muted { color: rgba(255,255,255,0.48); }
+
+/* links in main content */
+body.aurora-page main a:not(.button):not([class*="badge"]):not(.mission-row):not(.island-card):not(.nav-toggle):not(.brand) {
+  color: #7de2d1;
+}
+body.aurora-page main a:not(.button):not([class*="badge"]):not(.mission-row):not(.island-card):not(.nav-toggle):not(.brand):hover {
+  color: #b983ff;
+}
+
+/* panels & stat-cards */
+body.aurora-page .panel,
+body.aurora-page .stat-card {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+}
+body.aurora-page .panel::before,
+body.aurora-page .stat-card::before {
+  background: linear-gradient(90deg, transparent, rgba(125,226,209,0.25), transparent);
+}
+
+/* aurora-command / island-command */
+body.aurora-page .aurora-command article,
+body.aurora-page .island-command article {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+}
+body.aurora-page .aurora-command article:first-child,
+body.aurora-page .island-command article:first-child {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.12), rgba(185,131,255,0.09)),
+    rgba(255,255,255,0.06);
+}
+body.aurora-page .aurora-command span,
+body.aurora-page .aurora-command small,
+body.aurora-page .island-command span,
+body.aurora-page .island-command small { color: rgba(255,255,255,0.48); }
+body.aurora-page .aurora-command strong,
+body.aurora-page .island-command strong { color: rgba(255,255,255,0.92); }
+
+/* captain cards */
+body.aurora-page .captain-pulse-card,
+body.aurora-page .captain-focus-card,
+body.aurora-page .captain-action-card {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.1);
+}
+body.aurora-page .captain-focus-card {
+  background:
+    linear-gradient(135deg, rgba(94,214,186,0.1), rgba(125,226,209,0.06)),
+    rgba(255,255,255,0.07);
+}
+body.aurora-page .captain-pulse-card small,
+body.aurora-page .captain-action-card p:not(.eyebrow) { color: rgba(255,255,255,0.5); }
+body.aurora-page .captain-pulse-card span { color: rgba(255,255,255,0.44); }
+body.aurora-page .captain-pulse-card strong { color: rgba(255,255,255,0.9); }
+body.aurora-page .captain-action-meter {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+body.aurora-page .captain-action-meter strong { color: rgba(255,255,255,0.9); }
+body.aurora-page .captain-action-meter span { color: rgba(255,255,255,0.44); }
+
+/* mission rows */
+body.aurora-page .mission-row {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.88);
+}
+body.aurora-page .mission-row:hover {
+  background: rgba(255,255,255,0.1);
+}
+body.aurora-page .mission-row span { color: rgba(255,255,255,0.46); }
+body.aurora-page .mission-row strong { color: rgba(255,255,255,0.9); }
+
+/* learning-gates & proof-grid */
+body.aurora-page .learning-gates span,
+body.aurora-page .manual-proof-grid span {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.68);
+}
+
+/* island card */
+body.aurora-page .island-card {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.1), rgba(185,131,255,0.08)),
+    rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+body.aurora-page .island-card:hover {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.18), rgba(185,131,255,0.14)),
+    rgba(255,255,255,0.1);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.4);
+}
+body.aurora-page .island-card-name { color: rgba(255,255,255,0.92); }
+body.aurora-page .island-card-pm { color: rgba(255,255,255,0.48); }
+
+/* section headings */
+body.aurora-page .section-heading h2 { color: rgba(255,255,255,0.92); }
+body.aurora-page .section-heading p { color: rgba(255,255,255,0.5); }
+
+/* evidence drawer */
+body.aurora-page .evidence-drawer {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* inline-actions buttons on dark bg */
+body.aurora-page .button-secondary {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+}
+body.aurora-page .button-secondary:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.28);
+  color: #fff;
+}
