@@ -150,6 +150,8 @@ PM_KNOWLEDGE_SMOKE_CHECKS = [
     "What is the best next product/action recommendation style?",
 ]
 
+EBOOK_QA_STATUSES = {"PASS", "PARTIAL", "FAIL"}
+
 EBOOK_FACTORY_DEFAULTS = {
     "state": "No e-book registry found",
     "safe_boundary": "Live publish and checkout stay locked until Captain approval.",
@@ -158,18 +160,21 @@ EBOOK_FACTORY_DEFAULTS = {
     "next_action": "Create projects/<project_slug>/ebooks.yaml before tracking e-book production in Fleet.",
     "registry_path": "",
     "registry_error": "",
+    "registry_project": "slay_hack",
     "has_registry": False,
     "pilot": {},
     "ebooks": [],
     "stages": [],
     "roles": [],
     "qa_gates": [],
+    "qa_summary": {"passed": 0, "total": 0},
+    "next_missing_qa_gate": None,
     "hardening": [],
     "launch_assets": [],
 }
 
 
-def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, object]:
+def _ebook_registry_location(root: Path, project_slug: str) -> tuple[str, Path]:
     resolved_project = resolve_project_slug(project_slug, root=root)
     registry_path = root / "projects" / resolved_project / "ebooks.yaml"
     if not registry_path.exists() and project_slug == "slay_hack":
@@ -178,6 +183,37 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         if fallback_path.exists():
             resolved_project = fallback_project
             registry_path = fallback_path
+    return resolved_project, registry_path
+
+
+def _ebook_qa_status_class(status: object) -> str:
+    normalized = str(status or "").upper()
+    if normalized == "PASS":
+        return "badge-ops-ready"
+    if normalized == "FAIL":
+        return "badge-ops-failed"
+    return "badge-ops-missing"
+
+
+def _ebook_qa_summary(qa_gates: list[dict[str, object]]) -> dict[str, int]:
+    return {
+        "passed": sum(1 for item in qa_gates if str(item.get("status", "")).upper() == "PASS"),
+        "total": len(qa_gates),
+    }
+
+
+def _read_ebook_registry(registry_path: Path) -> dict[str, object]:
+    try:
+        raw = yaml.safe_load(registry_path.read_text()) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(str(exc)) from exc
+    if not isinstance(raw, dict):
+        raise ValueError("Top-level YAML value must be a mapping.")
+    return raw
+
+
+def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, object]:
+    resolved_project, registry_path = _ebook_registry_location(root, project_slug)
     factory = dict(EBOOK_FACTORY_DEFAULTS)
     factory["registry_project"] = resolved_project
     factory["registry_path"] = f"projects/{resolved_project}/ebooks.yaml"
@@ -185,16 +221,10 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         return factory
 
     try:
-        raw = yaml.safe_load(registry_path.read_text()) or {}
-    except yaml.YAMLError as exc:
+        raw = _read_ebook_registry(registry_path)
+    except ValueError as exc:
         factory["state"] = "E-book registry invalid"
         factory["registry_error"] = str(exc)
-        factory["next_action"] = "Fix the e-book registry YAML before using this dashboard surface."
-        return factory
-
-    if not isinstance(raw, dict):
-        factory["state"] = "E-book registry invalid"
-        factory["registry_error"] = "Top-level YAML value must be a mapping."
         factory["next_action"] = "Fix the e-book registry YAML before using this dashboard surface."
         return factory
 
@@ -205,6 +235,12 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
 
     ebooks = raw.get("ebooks") if isinstance(raw.get("ebooks"), list) else []
     pilot = next((item for item in ebooks if isinstance(item, dict)), {})
+    qa_gates = [
+        {**item, "status_class": _ebook_qa_status_class(item.get("status"))}
+        for item in pilot.get("qa_gates", [])
+        if isinstance(item, dict)
+    ]
+    next_missing = next((item for item in qa_gates if str(item.get("status", "")).upper() != "PASS"), None)
     factory.update(
         {
             "has_registry": True,
@@ -212,7 +248,9 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "pilot": pilot,
             "stages": raw.get("stages") if isinstance(raw.get("stages"), list) else [],
             "roles": raw.get("roles") if isinstance(raw.get("roles"), list) else [],
-            "qa_gates": pilot.get("qa_gates") if isinstance(pilot.get("qa_gates"), list) else [],
+            "qa_gates": qa_gates,
+            "qa_summary": _ebook_qa_summary(qa_gates),
+            "next_missing_qa_gate": next_missing,
             "hardening": raw.get("hardening") if isinstance(raw.get("hardening"), list) else [],
             "launch_assets": (
                 pilot.get("launch_assets")
@@ -325,7 +363,81 @@ def aurora_workflow(request: Request, _: str = Depends(verify_auth)):
 @router.get("/aurora/ebooks", response_class=HTMLResponse)
 def aurora_ebooks(request: Request, _: str = Depends(verify_auth)):
     project_slug = request.query_params.get("project", "slay_hack")
-    return templates.TemplateResponse(request, "ebooks.html", {"ebook_factory": _ebook_factory(_root(request), project_slug)})
+    return templates.TemplateResponse(
+        request,
+        "ebooks.html",
+        {
+            "ebook_factory": _ebook_factory(_root(request), project_slug),
+            "qa_result": request.query_params.get("qa_result", ""),
+        },
+    )
+
+
+@router.post("/aurora/ebooks/qa-gate")
+def aurora_ebook_record_qa_gate(
+    request: Request,
+    project_slug: str = Form("slay_hack"),
+    ebook_id: str = Form(...),
+    gate: str = Form(...),
+    status: str = Form(...),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    status_clean = status.strip().upper()
+    if status_clean not in EBOOK_QA_STATUSES:
+        raise HTTPException(status_code=400, detail="QA status must be PASS, PARTIAL, or FAIL")
+
+    resolved_project, registry_path = _ebook_registry_location(root, project_slug.strip() or "slay_hack")
+    if not registry_path.exists():
+        raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
+
+    try:
+        registry = _read_ebook_registry(registry_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    ebooks = registry.get("ebooks")
+    if not isinstance(ebooks, list):
+        raise HTTPException(status_code=400, detail="E-book registry must contain an ebooks list")
+
+    ebook = next(
+        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
+        None,
+    )
+    if ebook is None:
+        raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
+
+    qa_gates = ebook.get("qa_gates")
+    if not isinstance(qa_gates, list):
+        raise HTTPException(status_code=400, detail=f"E-book {ebook_id!r} has no QA gates")
+
+    gate_row = next(
+        (item for item in qa_gates if isinstance(item, dict) and str(item.get("gate", "")).strip() == gate.strip()),
+        None,
+    )
+    if gate_row is None:
+        raise HTTPException(status_code=400, detail=f"QA gate {gate!r} is not registered for this e-book")
+
+    gate_row["status"] = status_clean
+    gate_row["note"] = note.strip()
+    gate_row["reviewed_by"] = user
+    gate_row["reviewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False, allow_unicode=True))
+
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Recorded {status_clean} for e-book QA gate {gate_row['gate']}",
+        actor=user,
+        result=f"{resolved_project}:{ebook_id}:{gate_row['gate']}={status_clean}",
+        next_action="Continue QA recording until all gates are PASS; live publish and checkout remain locked.",
+        files=[f"projects/{resolved_project}/ebooks.yaml"],
+        metadata={"project": resolved_project, "ebook_id": ebook_id, "gate": gate_row["gate"], "status": status_clean},
+    )
+
+    message = quote(f"{gate_row['gate']}: {status_clean}")
+    return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&qa_result={message}", status_code=303)
 
 
 @router.get("/aurora/daily-slate", response_class=HTMLResponse)

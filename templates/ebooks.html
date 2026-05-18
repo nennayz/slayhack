@@ -12,6 +12,13 @@
 
 {% include "_aurora_flow.html" %}
 
+{% if qa_result %}
+<section class="panel spacious">
+  <span class="badge badge-ops-ready">QA result recorded</span>
+  <p>{{ qa_result }}</p>
+</section>
+{% endif %}
+
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Pilot</span>
@@ -23,11 +30,11 @@
   </div>
   <div class="stat-card">
     <span>QA gates</span>
-    <strong>{{ ebook_factory.qa_gates | length }}</strong>
+    <strong>{{ ebook_factory.qa_summary.passed }}/{{ ebook_factory.qa_summary.total }}</strong>
   </div>
   <div class="stat-card">
-    <span>Boundary</span>
-    <strong>Locked</strong>
+    <span>Next QA</span>
+    <strong>{{ ebook_factory.next_missing_qa_gate.gate if ebook_factory.next_missing_qa_gate else "Ready" }}</strong>
   </div>
 </section>
 
@@ -42,6 +49,7 @@
     <span>Registry: <code>{{ ebook_factory.registry_path }}</code></span>
     <span>Runbook: <code>{{ ebook_factory.runbook_path }}</code></span>
     <span>Dashboard spec: <code>{{ ebook_factory.spec_path }}</code></span>
+    <span>Live boundary: checkout and publish remain locked.</span>
   </div>
 </section>
 
@@ -112,13 +120,41 @@
       <p class="eyebrow">QA certification</p>
       <h2>Review before sale</h2>
     </div>
+    {% if ebook_factory.next_missing_qa_gate %}
+    <div class="learning-gates">
+      <span>Next missing QA gate: {{ ebook_factory.next_missing_qa_gate.gate }}</span>
+    </div>
+    {% endif %}
     <div class="manual-learning-list">
       {% for item in ebook_factory.qa_gates %}
       <article class="manual-learning-row">
         <div>
-          <span class="badge badge-ops-missing">{{ item.status }}</span>
+          <span class="badge {{ item.status_class }}">{{ item.status }}</span>
           <strong>{{ item.gate }}</strong>
           <p>{{ item.check }}</p>
+          {% if item.reviewed_at %}
+          <small>Last review: {{ item.reviewed_by or "unknown" }} / {{ item.reviewed_at }}</small>
+          {% endif %}
+          {% if item.note %}
+          <p>{{ item.note }}</p>
+          {% endif %}
+          <details class="action-drawer">
+            <summary>Record QA</summary>
+            <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/qa-gate">
+              <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
+              <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
+              <input name="gate" type="hidden" value="{{ item.gate }}">
+              <label for="qa_status_{{ loop.index }}">Status</label>
+              <select id="qa_status_{{ loop.index }}" name="status">
+                <option value="PASS" {% if item.status == "PASS" %}selected{% endif %}>PASS</option>
+                <option value="PARTIAL" {% if item.status == "PARTIAL" %}selected{% endif %}>PARTIAL</option>
+                <option value="FAIL" {% if item.status == "FAIL" %}selected{% endif %}>FAIL</option>
+              </select>
+              <label for="qa_note_{{ loop.index }}">Review note</label>
+              <textarea id="qa_note_{{ loop.index }}" name="note" rows="3">{{ item.note or "" }}</textarea>
+              <button type="submit">Record QA</button>
+            </form>
+          </details>
         </div>
       </article>
       {% else %}
