@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import time
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -123,6 +124,12 @@ def _assistant_message_from_openai(message) -> dict:
     return payload
 
 
+def _is_rate_limit_error(exc: Exception) -> bool:
+    if exc.__class__.__name__ == "RateLimitError":
+        return True
+    return getattr(exc, "status_code", None) == 429
+
+
 class Orchestrator:
     def __init__(self, config: Config, safe_prep: bool = False):
         self.config = config
@@ -140,6 +147,23 @@ class Orchestrator:
         }
         self._unattended: bool = False
         self.safe_prep = safe_prep
+        self._rate_limit_sleep_seconds = 2.0
+
+    def _create_chat_completion(self, **kwargs):
+        attempts = 4
+        for attempt in range(attempts):
+            try:
+                return self.client.chat.completions.create(**kwargs)
+            except Exception as exc:
+                if not _is_rate_limit_error(exc) or attempt == attempts - 1:
+                    raise
+                sleep_seconds = self._rate_limit_sleep_seconds * (attempt + 1)
+                log_action("orchestrator_rate_limit_retry", {
+                    "model": kwargs.get("model", self.model),
+                    "attempt": attempt + 1,
+                    "sleep_seconds": sleep_seconds,
+                })
+                time.sleep(sleep_seconds)
 
     def run(self, job: ContentJob, unattended: bool = False) -> ContentJob:
         self._unattended = unattended
@@ -156,7 +180,7 @@ class Orchestrator:
         messages: list[dict] = [{"role": "user", "content": first_message}]
 
         while True:
-            response = self.client.chat.completions.create(
+            response = self._create_chat_completion(
                 model=self.model,
                 max_tokens=4096,
                 tools=_openai_tools(),
