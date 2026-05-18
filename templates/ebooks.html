@@ -100,6 +100,89 @@
 </section>
 {% endif %}
 
+{% if ebook_factory.active_monetization_lane %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Monetization lane</p>
+    <h2>{{ ebook_factory.active_monetization_lane.label }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ ebook_factory.active_monetization_lane.strategy }}</span>
+    <span>Audience: {{ ebook_factory.active_monetization_lane.audience }}</span>
+    <span>Status: {{ ebook_factory.active_monetization_lane.status | replace("_", " ") }}</span>
+    <span>{{ ebook_factory.active_monetization_lane.boundary }}</span>
+    <span>{{ ebook_factory.active_monetization_lane.next_action }}</span>
+  </div>
+  <div class="approval-lane-board">
+    {% for item in ebook_factory.lane_products %}
+    <article class="approval-lane">
+      <div class="approval-lane-heading">
+        <div>
+          <p class="eyebrow">{{ item.role | replace("_", " ") }}</p>
+          <h3>{{ item.title }}</h3>
+        </div>
+        <span class="badge badge-ops-missing">{{ item.status | replace("_", " ") }}</span>
+      </div>
+      <p>{{ item.purpose }}</p>
+      <small>{{ item.next_action }}</small>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if ebook_factory.offer_source %}
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Sales source of truth</p>
+      <h2>Offer stack</h2>
+    </div>
+    <div class="manual-learning-list">
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge badge-ops-ready">Promise</span>
+          <strong>{{ ebook_factory.offer_source.promise }}</strong>
+          <p>{{ ebook_factory.offer_source.audience }}</p>
+        </div>
+      </article>
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge badge-ops-ready">Core offer</span>
+          <strong>{{ ebook_factory.offer_source.core_offer }}</strong>
+          <p>{{ ebook_factory.offer_source.cta }}</p>
+        </div>
+      </article>
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge badge-ops-missing">Checkout locked</span>
+          <strong>{{ ebook_factory.offer_source.checkout_boundary }}</strong>
+          <p>{{ ebook_factory.offer_source.guarantee }}</p>
+        </div>
+      </article>
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Offer inputs</p>
+      <h2>Copy blocks for launch assets</h2>
+    </div>
+    <div class="learning-gates">
+      {% for item in ebook_factory.offer_source.what_inside %}
+      <span>{{ item }}</span>
+      {% endfor %}
+      {% for item in ebook_factory.offer_source.bonuses %}
+      <span>Bonus: {{ item }}</span>
+      {% endfor %}
+      {% for item in ebook_factory.offer_source.pain_desire %}
+      <span>{{ item }}</span>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endif %}
+
 {% if ebook_factory.stages %}
 <section class="panel spacious">
   <div class="section-heading">

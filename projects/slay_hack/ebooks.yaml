@@ -99,6 +99,63 @@ launch_assets:
   - post-purchase next step
   - tracking plan
 
+monetization_lanes:
+  - id: fine_wine_35_44
+    label: "Fine Wine 35-44 Monetization Lane"
+    audience: "women 35-44"
+    status: strategy_locked_checkout_locked
+    strategy: "Start with the strongest real audience before expanding the full 22-SKU universe."
+    boundary: "Checkout, live publish, and public sales stay locked until QA gates, launch assets, and Captain approval are complete."
+    next_action: "Use this lane as the source of truth for sales page, checkout copy, delivery email, lead magnet bridge, and the 7-day content push."
+    products:
+      - role: lead_magnet
+        title: "Slay Basics: 30 Hacks"
+        status: pdf_ready
+        purpose: "Email capture and first trust step before the paid offer."
+        next_action: "Bridge readers into Age Like Fine Wine without duplicating the paid promise."
+      - role: paid_pilot
+        title: "Age Like Fine Wine"
+        status: designed_pdf_ready
+        purpose: "First paid low-ticket product for the 35-44 audience."
+        next_action: "Finish QA and launch asset review."
+      - role: order_bump
+        title: "Fine Wine 7-Day Glow Routine"
+        status: planned
+        purpose: "Small practical companion that should not overlap the free 30 Hacks lead magnet."
+        next_action: "Draft one-page routine and checkout bump copy."
+      - role: next_book
+        title: "The Glow Within"
+        status: roadmap
+        purpose: "Confidence and self-care continuation for the same 35-44 reader."
+        next_action: "Produce after Age Like Fine Wine launch package is approved."
+      - role: next_book
+        title: "She's Got It Together"
+        status: roadmap
+        purpose: "Life-ease continuation for established women, moms, and career seniors."
+        next_action: "Produce after The Glow Within or bundle validation."
+    offer_source:
+      promise: "Help women 35-44 look more polished, feel more intentional, and treat aging as refinement instead of decline."
+      audience: "Women 35-44 in the USA who want elevated beauty, confidence, and realistic routines without Gen Z pressure."
+      core_offer: "Age Like Fine Wine PDF with mature-skin beauty guidance, character-led tips, routines, checklists, and a 30-day glow-up path."
+      pain_desire:
+        - "Old makeup techniques stop working the same way after 35."
+        - "Readers want to feel current and elegant without chasing teenage trends."
+        - "They need simple routines that fit real schedules and real skin changes."
+      what_inside:
+        - "Fine Wine Manifesto"
+        - "Skincare reboot for 35+ skin"
+        - "Foundation and eye-area technique refresh"
+        - "SPF and forgotten-zone checklist"
+        - "10-minute elevated look"
+        - "30-day glow-up checklist"
+      bonuses:
+        - "Fine Wine 7-Day Glow Routine"
+        - "Mature Skin Quick Checklist"
+        - "Character tip cards from Auntie V, Bella Mist, Sera, Sunny, Wanda, and Conceal"
+      guarantee: "Low-risk digital product framing; refund policy is not active until checkout terms are explicitly approved by Nayz."
+      cta: "Start your Fine Wine glow-up"
+      checkout_boundary: "Checkout copy is draft-only and cannot be activated until Captain approval."
+
 ebooks:
   - id: age_like_fine_wine
     title: "Age Like Fine Wine"
