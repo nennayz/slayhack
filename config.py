@@ -24,6 +24,12 @@ class Config:
     youtube_client_id: str = ""
     youtube_client_secret: str = ""
     youtube_refresh_token: str = ""
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_user_agent: str = "nayzfreedom-scout/1.0"
+    scout_timezone: str = "America/New_York"
+    scout_seed_categories: str = ""   # comma-separated, parsed at use time
+    scout_drive_folder_id: str = ""
 
     @classmethod
     def from_env(cls) -> Config:
@@ -46,4 +52,14 @@ class Config:
             youtube_client_id=os.getenv("YOUTUBE_CLIENT_ID", ""),
             youtube_client_secret=os.getenv("YOUTUBE_CLIENT_SECRET", ""),
             youtube_refresh_token=os.getenv("YOUTUBE_REFRESH_TOKEN", ""),
+            reddit_client_id=os.getenv("REDDIT_CLIENT_ID", ""),
+            reddit_client_secret=os.getenv("REDDIT_CLIENT_SECRET", ""),
+            reddit_user_agent=os.getenv("REDDIT_USER_AGENT", "nayzfreedom-scout/1.0"),
+            scout_timezone=os.getenv("SCOUT_TIMEZONE", "America/New_York"),
+            scout_seed_categories=os.getenv(
+                "SCOUT_SEED_CATEGORIES",
+                "clean beauty,quiet luxury,wellness,self care,personal finance for women,"
+                "home aesthetic,sustainable fashion,mental health,career growth",
+            ),
+            scout_drive_folder_id=os.getenv("SCOUT_DRIVE_FOLDER_ID", ""),
         )
