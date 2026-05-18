@@ -5,6 +5,13 @@ Owner: Lila Lens
 Audience: women 35-44
 Boundary: review asset only; checkout and public sales remain locked until Captain approval.
 
+## Current Proof Asset
+
+- Visual proof: `docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf`
+- Manifest: `docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_manifest.json`
+- SHA-256: `59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8`
+- Boundary: the proof is ready for visual review, but checkout and public sale remain locked until Captain approval.
+
 ## Mockup Purpose
 
 Create one premium product image set that makes Age Like Fine Wine feel like a polished paid e-book, not a generic PDF download. The mockup should support the sales page hero, checkout thumbnail, launch post visuals, and delivery confirmation.
@@ -60,4 +67,4 @@ Create a premium e-book product mockup for "Age Like Fine Wine", a beauty and co
 
 ## Approval Gate
 
-This draft can be used to create or review the visual mockup, but it does not approve checkout activation, public launch, or live posting.
+The v3 visual proof satisfies the repo-controlled product mockup direction for visual review. It does not approve checkout activation, public launch, or live posting.
