@@ -59,6 +59,9 @@
     {% if ebook_factory.next_missing_launch_asset %}
     <span>Next launch asset: {{ ebook_factory.next_missing_launch_asset.name }}</span>
     {% endif %}
+    {% if ebook_factory.next_missing_non_copy_launch_asset %}
+    <span>Next non-copy launch asset: {{ ebook_factory.next_missing_non_copy_launch_asset.name }}</span>
+    {% endif %}
   </div>
 </section>
 
@@ -188,6 +191,12 @@
   <div class="section-heading">
     <p class="eyebrow">Launch copy asset pack</p>
     <h2>Reviewable drafts from the Fine Wine lane</h2>
+  </div>
+  <div class="learning-gates">
+    <span>Copy drafts review-ready: {{ ebook_factory.launch_copy_summary.review_ready }}/{{ ebook_factory.launch_copy_summary.total }}</span>
+    {% if ebook_factory.next_missing_non_copy_launch_asset %}
+    <span>Next non-copy launch asset: {{ ebook_factory.next_missing_non_copy_launch_asset.name }}</span>
+    {% endif %}
   </div>
   <div class="manual-learning-list">
     {% for item in ebook_factory.launch_copy_assets %}

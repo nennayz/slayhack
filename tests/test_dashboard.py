@@ -186,13 +186,13 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '      - key: sales_page\n'
         '        label: "Sales page draft"\n'
         '        launch_asset: sales page\n'
-        '        status: draft_ready\n'
+        '        status: review_ready\n'
         '        path: "docs/monetization/slay_hack/age_like_fine_wine_sales_page.md"\n'
         '        review_note: "Use as the first reviewable sales page source; checkout remains locked."\n'
         '      - key: checkout_copy\n'
         '        label: "Checkout copy draft"\n'
         '        launch_asset: checkout copy\n'
-        '        status: draft_ready\n'
+        '        status: review_ready\n'
         '        path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_copy.md"\n'
         '        review_note: "Draft checkout and order-bump copy only; no payment link is live."\n'
         'ebooks:\n'
@@ -221,7 +221,13 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '        status: PARTIAL\n'
         '        check: "Sales page and checkout copy."\n'
         '    launch_assets:\n'
-        '      - sales page\n'
+        '      - name: sales page\n'
+        '        status: review_ready\n'
+        '        note: "Sales page draft exists."\n'
+        '      - product mockup\n'
+        '      - name: checkout copy\n'
+        '        status: review_ready\n'
+        '        note: "Checkout copy draft exists."\n'
         '      - 7-day content push\n'
     )
     copy_dir = tmp_path / "docs" / "monetization" / "slay_hack"
@@ -2487,8 +2493,9 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "0/5" in resp.text
     assert "Next missing QA gate: Content QA" in resp.text
     assert "Record QA" in resp.text
-    assert "0/2" in resp.text
+    assert "0/4" in resp.text
     assert "Next missing launch asset: sales page" in resp.text
+    assert "Next non-copy launch asset: product mockup" in resp.text
     assert "Record asset" in resp.text
     assert "Fine Wine 35-44 Monetization Lane" in resp.text
     assert "Slay Basics: 30 Hacks" in resp.text
@@ -2499,6 +2506,7 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Start your Fine Wine glow-up" in resp.text
     assert "Checkout copy is draft-only and cannot be activated until Captain approval." in resp.text
     assert "Launch copy asset pack" in resp.text
+    assert "Copy drafts review-ready: 2/2" in resp.text
     assert "Sales page draft" in resp.text
     assert "Checkout copy draft" in resp.text
     assert 'href="/aurora/ebooks/copy/sales_page?project_slug=slay_hack"' in resp.text
@@ -2648,7 +2656,7 @@ def test_aurora_ebooks_records_launch_asset_result(tmp_path, client):
 
     page = client.get("/aurora/ebooks", headers=_auth())
     assert page.status_code == 200
-    assert "0/2" in page.text
+    assert "0/4" in page.text
     assert "Next missing launch asset: sales page" in page.text
     assert "Offer stack draft is ready for review." in page.text
 
@@ -2671,8 +2679,8 @@ def test_aurora_ebooks_records_approved_launch_asset_count(tmp_path, client):
 
     assert resp.status_code == 303
     page = client.get("/aurora/ebooks", headers=_auth())
-    assert "1/2" in page.text
-    assert "Next missing launch asset: 7-day content push" in page.text
+    assert "1/4" in page.text
+    assert "Next missing launch asset: product mockup" in page.text
 
 
 def test_aurora_ebooks_rejects_invalid_launch_asset_status(tmp_path, client):

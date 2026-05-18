@@ -159,31 +159,31 @@ monetization_lanes:
       - key: sales_page
         label: "Sales page draft"
         launch_asset: sales page
-        status: draft_ready
+        status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_sales_page.md"
         review_note: "Use as the first reviewable sales page source; checkout remains locked."
       - key: checkout_copy
         label: "Checkout copy draft"
         launch_asset: checkout copy
-        status: draft_ready
+        status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_copy.md"
         review_note: "Draft checkout and order-bump copy only; no payment link is live."
       - key: delivery_email
         label: "Delivery email draft"
         launch_asset: delivery email
-        status: draft_ready
+        status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
         review_note: "Delivery copy uses placeholders until file delivery and support terms are approved."
       - key: lead_magnet_bridge
         label: "Lead magnet bridge copy"
         launch_asset: lead magnet
-        status: draft_ready
+        status: review_ready
         path: "docs/monetization/slay_hack/slay_basics_to_fine_wine_bridge.md"
         review_note: "Bridge from Slay Basics into Age Like Fine Wine without duplicating the free offer."
       - key: seven_day_content_push
         label: "7-day content push draft"
         launch_asset: 7-day content push
-        status: draft_ready
+        status: review_ready
         path: "docs/monetization/slay_hack/fine_wine_7_day_content_push.md"
         review_note: "Manual publish handoff draft; live posting remains locked."
 
@@ -217,11 +217,21 @@ ebooks:
         status: PARTIAL
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
     launch_assets:
-      - sales page
+      - name: sales page
+        status: review_ready
+        note: "Sales page draft exists in the Fine Wine launch copy asset pack."
       - product mockup
-      - checkout copy
-      - delivery email
-      - lead magnet
-      - 7-day content push
+      - name: checkout copy
+        status: review_ready
+        note: "Checkout copy draft exists; no payment link is live."
+      - name: delivery email
+        status: review_ready
+        note: "Delivery email draft exists with placeholder download and support terms."
+      - name: lead magnet
+        status: review_ready
+        note: "Lead magnet bridge draft connects Slay Basics to Age Like Fine Wine."
+      - name: 7-day content push
+        status: review_ready
+        note: "Manual publish handoff draft exists; live posting remains locked."
       - post-purchase next step
       - tracking plan
