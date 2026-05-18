@@ -150,6 +150,30 @@ def test_orchestrator_raises_on_unexpected_stop_reason(mocker, tmp_path, monkeyp
     assert job.status == JobStatus.FAILED
 
 
+def test_orchestrator_retries_rate_limit_errors(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+
+    class FakeRateLimitError(Exception):
+        status_code = 429
+
+    create = mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create
+    create.side_effect = [
+        FakeRateLimitError("rate limit"),
+        _make_end_turn_response(),
+    ]
+    sleep = mocker.patch("orchestrator.time.sleep")
+
+    orch = Orchestrator(make_config())
+    orch._rate_limit_sleep_seconds = 0.01
+    job = make_job(dry_run=True)
+    result = orch.run(job)
+
+    assert result.status == JobStatus.COMPLETED
+    assert create.call_count == 2
+    sleep.assert_called_once_with(0.01)
+
+
 def test_orchestrator_marks_publish_failures_failed(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
