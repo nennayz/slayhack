@@ -35,6 +35,21 @@ Full design spec: [`docs/superpowers/specs/2026-05-12-slay-hack-agency-design.md
 | **Roxy Rise** | `agents/roxy.py` | Hashtags, caption, optimal posting time |
 | **Emma Heart** | `agents/emma.py` | FAQ markdown for community management |
 
+### Scout Pipeline (Niche Discovery)
+
+Separate 3-agent system for discovering new page opportunities. Runs daily at 08:00 ET via scheduler and on-demand via Telegram `/scout` or dashboard button.
+
+| Agent | File | Role |
+|---|---|---|
+| **Scout** | `agents/scout.py` | Parallel scan: Brave Search, Google Trends (pytrends), Reddit (praw), Meta Ads Library |
+| **Analyst** | `agents/analyst.py` | Scores and ranks niches on 4 dimensions via OpenAI (temperature=0) |
+| **Architect** | `agents/architect.py` | Generates `projects/<slug>/` with 4 YAML files after Captain approves |
+
+Data model: `models/niche_opportunity.py` — `NicheSignal`, `NicheOpportunity`, `ScoutJob`
+Orchestrator: `scout_pipeline.py` — `run_scout_pipeline()`, `approve_niche()`
+
+Approval flow: Captain sees top-3 report → taps Approve in Telegram or clicks "Activate This Niche" on dashboard → Architect generates project files → ready to activate with `python main.py --project <slug>`
+
 ---
 
 ## Multi-Page Architecture
@@ -128,6 +143,9 @@ python reporter.py --dry-run
 # Cron entry for VPS (8 AM every Monday)
 # 0 8 * * 1 /path/to/.venv/bin/python /path/to/reporter.py >> /var/log/nayzfreedom.log 2>&1
 
+# Run Scout niche discovery manually (dry-run)
+python -c "from config import Config; from scout_pipeline import run_scout_pipeline; job = run_scout_pipeline(Config.from_env(), triggered_by='manual', dry_run=True); [print(f'{o.reach_score:.0f} — {o.niche_name}') for o in job.opportunities]"
+
 # Run tests
 pytest
 
@@ -176,6 +194,7 @@ Primary routes:
 - `/aurora/crew` and `/aurora/crew/{slug}` — Aurora crew registry and character sheets
 - `/freedom` — planned personal ship placeholder; do not add sensitive data until privacy boundaries are stronger
 - `/lyra` — planned music ship placeholder
+- `/scout/` — Scout niche discovery: latest report, niche cards with reach scores, Run Scout Now button, Activate This Niche approval
 - `/readiness` — private operational preflight for auth, project config, output, assets, deploy files, and privacy boundary
 
 The Freedom and Lyra should stay clearly marked as planned until their data model, privacy model, and memory boundaries are ready.
