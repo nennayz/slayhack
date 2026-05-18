@@ -1,11 +1,15 @@
 tiktok:
   editorial: "Prioritize viral retention and comments. Use a mistake-callout hook in the first 3 words, fast pacing, sound-on assumptions, and a comment CTA. Favor 60+ second Hack videos when Creator Rewards revenue is the goal."
+  comment_max_chars: 150
 instagram:
   editorial: "Optimize for saves and profile trust. Use polished Reels, concise captions, clear visual hierarchy, Stories or poll follow-ups, and save-first CTAs. Avoid dumping cross-posts with no engagement strategy."
+  comment_max_chars: 2200
 facebook:
   editorial: "Optimize for shares, broad clarity, and community funnel movement. Use slightly clearer language than TikTok, longer captions when useful, and rotate CTAs to the Group, Messenger Channel, TikTok, or YouTube."
+  comment_max_chars: 8000
 youtube:
   editorial: "Optimize for searchability and repeat viewing. Keep Shorts titles under 60 characters, make the first second visually clear, add simple descriptions, and group episodes into repeatable playlists."
+  comment_max_chars: 10000
 messenger:
   editorial: "Use as the high-intimacy broadcast layer. Send short daily tips, polls, Q&A prompts, and exclusive previews that feed future public content ideas."
 facebook_group:

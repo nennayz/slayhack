@@ -10,3 +10,11 @@ TikTok:
 YouTube:
   content_types: *id001
   primary: true
+tiktok:
+  comment_max_chars: 150
+instagram:
+  comment_max_chars: 2200
+youtube:
+  comment_max_chars: 10000
+facebook:
+  comment_max_chars: 8000

@@ -1,11 +1,15 @@
 tiktok:
   editorial: "Use fast 6-8 second vertical fan-cam loops with an immediate visual moment, crowd ambience, short overlays, and playful captions. Avoid claims that the footage is real or hidden-camera."
+  comment_max_chars: 150
 instagram:
   editorial: "Keep the grid polished with pink, navy, white, red, and golden stadium-light consistency. Prioritize clear face, emotion, stadium atmosphere, and safe AI disclosure in bio or pinned context."
+  comment_max_chars: 2200
 youtube:
   editorial: "Use repeatable Shorts titles under 60 characters such as The Camera Found Her, Sweetheart of the Night, or Wrong Team Right Energy. Make the first frame readable and the reaction loop obvious."
+  comment_max_chars: 10000
 facebook:
   editorial: "Use cleaner disclosure and broad sports lifestyle captions for Reels. Favor football, baseball, basketball, and tailgate themes with shareable PG-13 charm."
+  comment_max_chars: 8000
 google_drive:
   editorial: "Organize assets under Stadium Sweethearts > Assets for logos, profiles, covers, character references, prompts, and published-ready exports. Flag any image with real team marks for cleanup before use."
 notion:
