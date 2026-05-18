@@ -126,7 +126,7 @@ def _page_checks(root: Path, mission_path: str | None = None) -> list[PageCheck]
         PageCheck("manual_posting_kits", "/aurora/manual-posting?lane=kit_synced", ("Manual Kit Posting Checklist", "Open Drive kit", "Post manually", "Record post URL", "Tracking queued")),
         PageCheck("manual_posting_tracking", "/aurora/manual-posting?lane=waiting_tracking", ("Tracking Proof Assist", "Waiting on 24h / 72h proof", "Run tracking queue now")),
         PageCheck("manual_posting_closeout", "/aurora/manual-posting?lane=tracking_complete", ("Closeout-to-Learning Assist", "Tracking complete to learning loop", "Learning bridge")),
-        PageCheck("ebooks", "/aurora/ebooks", ("E-book Product Factory", "Age Like Fine Wine", "designed_pdf_ready", "Drive source verification", "Registered artifacts", "Verified on this host", "Live publish and checkout stay locked", "QA certification")),
+        PageCheck("ebooks", "/aurora/ebooks", ("E-book Product Factory", "Age Like Fine Wine", "designed_pdf_ready", "Drive source verification", "Registered artifacts", "Verified on this host", "Live publish and checkout stay locked", "Captain sale gate", "QA certification")),
         PageCheck(
             "crew",
             "/aurora/crew",

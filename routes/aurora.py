@@ -153,6 +153,7 @@ PM_KNOWLEDGE_SMOKE_CHECKS = [
 
 EBOOK_QA_STATUSES = {"PASS", "PARTIAL", "FAIL"}
 EBOOK_LAUNCH_ASSET_STATUSES = {"missing", "draft_ready", "review_ready", "approved"}
+EBOOK_SALE_GATE_STATUSES = {"locked", "approved"}
 
 EBOOK_FACTORY_DEFAULTS = {
     "state": "No e-book registry found",
@@ -185,6 +186,15 @@ EBOOK_FACTORY_DEFAULTS = {
     "drive_artifacts": [],
     "drive_summary": {"registered": 0, "verified": 0, "missing": 0, "host_available": False, "total": 0},
     "next_missing_drive_artifact": None,
+    "source_integrity": {},
+    "sale_gate": {
+        "label": "Captain sale approval",
+        "status": "locked",
+        "status_class": "badge-ops-unavailable",
+        "ready": False,
+        "blockers": ["No e-book registry is ready."],
+        "action_label": "Captain Approve E-book For Sale",
+    },
 }
 
 
@@ -238,6 +248,82 @@ def _ebook_launch_copy_summary(launch_copy_assets: list[dict[str, object]]) -> d
             1 for item in launch_copy_assets if str(item.get("status", "")).lower() in {"review_ready", "approved"}
         ),
         "total": len(launch_copy_assets),
+    }
+
+
+def _ebook_sale_status_class(status: object, ready: bool) -> str:
+    normalized = str(status or "").lower()
+    if normalized == "approved" and ready:
+        return "badge-ops-ready"
+    if ready:
+        return "badge-ops-missing"
+    return "badge-ops-unavailable"
+
+
+def _ebook_sale_gate(
+    pilot: dict[str, object],
+    qa_gates: list[dict[str, object]],
+    launch_assets: list[dict[str, object]],
+    drive_artifacts: list[dict[str, object]],
+) -> dict[str, object]:
+    gate = pilot.get("captain_sale_gate") if isinstance(pilot.get("captain_sale_gate"), dict) else {}
+    source_integrity = pilot.get("source_integrity") if isinstance(pilot.get("source_integrity"), dict) else {}
+    blockers: list[str] = []
+
+    if not qa_gates:
+        blockers.append("QA gates must be registered.")
+    else:
+        missing_qa = [
+            str(item.get("gate") or "QA gate")
+            for item in qa_gates
+            if str(item.get("status", "")).upper() != "PASS"
+        ]
+        if missing_qa:
+            blockers.append(f"QA gates still blocked: {', '.join(missing_qa)}.")
+
+    if not launch_assets:
+        blockers.append("Launch assets must be registered.")
+    else:
+        missing_assets = [
+            str(item.get("name") or "launch asset")
+            for item in launch_assets
+            if str(item.get("status", "")).lower() != "approved"
+        ]
+        if missing_assets:
+            blockers.append(f"Launch assets still need approval: {', '.join(missing_assets)}.")
+
+    if str(source_integrity.get("status") or "").lower() != "ready":
+        blockers.append("Source integrity must be ready with a matching editable source and PDF proof.")
+
+    if drive_artifacts:
+        missing_drive = [
+            str(item.get("label") or "Drive artifact")
+            for item in drive_artifacts
+            if item.get("host_available") and item.get("status") != "verified"
+        ]
+        if missing_drive:
+            blockers.append(f"Drive artifacts missing on this host: {', '.join(missing_drive)}.")
+
+    ready = not blockers
+    status = str(gate.get("status") or "locked").lower()
+    if status not in EBOOK_SALE_GATE_STATUSES:
+        status = "locked"
+    if not ready:
+        status = "locked"
+
+    return {
+        **gate,
+        "label": str(gate.get("label") or "Captain sale approval"),
+        "status": status,
+        "status_class": _ebook_sale_status_class(status, ready),
+        "ready": ready,
+        "blockers": blockers,
+        "action_label": str(gate.get("action_label") or "Captain Approve E-book For Sale"),
+        "locked_label": str(gate.get("locked_label") or "Sale approval locked"),
+        "boundary": str(
+            gate.get("boundary")
+            or "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until this gate is approved."
+        ),
     }
 
 
@@ -452,6 +538,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         None,
     )
     drive_artifacts = _ebook_drive_artifact_rows(root, resolved_project, pilot)
+    sale_gate = _ebook_sale_gate(pilot, qa_gates, launch_assets, drive_artifacts)
     factory.update(
         {
             "has_registry": True,
@@ -481,6 +568,8 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
                 (item for item in drive_artifacts if item.get("status") == "missing"),
                 None,
             ),
+            "source_integrity": pilot.get("source_integrity") if isinstance(pilot.get("source_integrity"), dict) else {},
+            "sale_gate": sale_gate,
         }
     )
     return factory
@@ -811,6 +900,66 @@ def aurora_ebook_record_launch_asset(
     )
 
     message = quote(f"{asset_row['name']}: {status_clean}")
+    return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&launch_result={message}", status_code=303)
+
+
+@router.post("/aurora/ebooks/sale-gate")
+def aurora_ebook_record_sale_gate(
+    request: Request,
+    project_slug: str = Form("slay_hack"),
+    ebook_id: str = Form(...),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    resolved_project, registry_path = _ebook_registry_location(root, project_slug.strip() or "slay_hack")
+    if not registry_path.exists():
+        raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
+
+    factory = _ebook_factory(root, resolved_project)
+    sale_gate = factory.get("sale_gate") if isinstance(factory.get("sale_gate"), dict) else {}
+    if not sale_gate.get("ready"):
+        blockers = sale_gate.get("blockers") if isinstance(sale_gate.get("blockers"), list) else []
+        detail = " ".join(str(item) for item in blockers) or "Sale approval requirements are incomplete."
+        raise HTTPException(status_code=400, detail=f"Captain sale approval is locked: {detail}")
+
+    try:
+        registry = _read_ebook_registry(registry_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    ebooks = registry.get("ebooks")
+    if not isinstance(ebooks, list):
+        raise HTTPException(status_code=400, detail="E-book registry must contain an ebooks list")
+
+    ebook = next(
+        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
+        None,
+    )
+    if ebook is None:
+        raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
+
+    captain_gate = ebook.get("captain_sale_gate")
+    if not isinstance(captain_gate, dict):
+        captain_gate = {}
+    captain_gate["status"] = "approved"
+    captain_gate["approved_by"] = user
+    captain_gate["approved_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    captain_gate["approval_note"] = "Captain approved e-book for sale activation after all readiness gates passed."
+    ebook["captain_sale_gate"] = captain_gate
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False, allow_unicode=True))
+
+    _write_work_event(
+        root,
+        "implementation_step",
+        "Recorded Captain e-book sale approval",
+        actor=user,
+        result=f"{resolved_project}:{ebook_id}:captain_sale_gate=approved",
+        next_action="Checkout activation remains a separate explicit setup step; live publish is still locked.",
+        files=[f"projects/{resolved_project}/ebooks.yaml"],
+        metadata={"project": resolved_project, "ebook_id": ebook_id, "status": "approved"},
+    )
+
+    message = quote("Captain sale approval: approved")
     return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&launch_result={message}", status_code=303)
 
 

@@ -58,6 +58,36 @@ def test_scheduler_loads_todays_brief(tmp_path, monkeypatch):
     assert any("--content-type" in str(c) and "infographic" in str(c) for c in calls_flat)
 
 
+def test_scheduler_skips_daily_scout_for_injected_root(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
+    import yaml
+    (tmp_path / "projects" / "nayzfreedom_fleet" / "weekly_calendar.yaml").write_text(
+        yaml.dump(MONDAY_CALENDAR)
+    )
+    monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()), \
+         patch("scheduler._run_daily_scout") as mock_scout:
+        exit_code = sched_module.run_scheduler(dry_run=False, root=tmp_path)
+    assert exit_code == 0
+    mock_scout.assert_not_called()
+
+
+def test_scheduler_can_run_daily_scout_when_requested(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
+    import yaml
+    (tmp_path / "projects" / "nayzfreedom_fleet" / "weekly_calendar.yaml").write_text(
+        yaml.dump(MONDAY_CALENDAR)
+    )
+    monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()), \
+         patch("scheduler._run_daily_scout") as mock_scout:
+        exit_code = sched_module.run_scheduler(dry_run=True, root=tmp_path, run_scout=True)
+    assert exit_code == 0
+    mock_scout.assert_called_once_with(dry_run=True)
+
+
 def test_scheduler_skips_missing_day(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
@@ -236,7 +266,7 @@ def test_scheduler_skips_production_video_jobs_without_google_credentials(tmp_pa
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
     with patch("scheduler.subprocess.run", return_value=_make_ok_result()) as mock_run:
-        exit_code = sched_module.run_scheduler(dry_run=False)
+        exit_code = sched_module.run_scheduler(dry_run=False, run_scout=False)
     assert exit_code == 0
     assert mock_run.call_count == 4
     for c in mock_run.call_args_list:

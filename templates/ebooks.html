@@ -65,6 +65,42 @@
   </div>
 </section>
 
+{% if ebook_factory.pilot %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Captain sale gate</p>
+    <h2>{{ ebook_factory.sale_gate.label }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span class="badge {{ ebook_factory.sale_gate.status_class }}">{{ ebook_factory.sale_gate.status | replace("_", " ") }}</span>
+    <span>{{ ebook_factory.sale_gate.boundary }}</span>
+    {% if ebook_factory.source_integrity.status %}
+    <span>Source integrity: {{ ebook_factory.source_integrity.status | replace("_", " ") }}</span>
+    {% endif %}
+    {% if ebook_factory.source_integrity.repair_packet %}
+    <span>Repair packet: <code>{{ ebook_factory.source_integrity.repair_packet }}</code></span>
+    {% endif %}
+    {% if ebook_factory.sale_gate.approved_at %}
+    <span>Sale approved by {{ ebook_factory.sale_gate.approved_by or "unknown" }} / {{ ebook_factory.sale_gate.approved_at }}</span>
+    {% endif %}
+    {% for blocker in ebook_factory.sale_gate.blockers %}
+    <span>{{ blocker }}</span>
+    {% endfor %}
+  </div>
+  <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/sale-gate">
+    <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
+    <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
+    <button type="submit" {% if not ebook_factory.sale_gate.ready %}disabled{% endif %}>
+      {% if ebook_factory.sale_gate.ready %}
+      {{ ebook_factory.sale_gate.action_label }}
+      {% else %}
+      {{ ebook_factory.sale_gate.locked_label }}
+      {% endif %}
+    </button>
+  </form>
+</section>
+{% endif %}
+
 {% if not ebook_factory.pilot %}
 <section class="panel spacious">
   <div class="section-heading">

@@ -113,6 +113,7 @@ def run_scheduler(
     root: Path | None = None,
     max_workers: int = 3,
     safe_prep: bool = False,
+    run_scout: bool | None = None,
 ) -> int:
     _root = root if root is not None else _ROOT
     active_slugs = list_project_slugs(_root)
@@ -132,7 +133,9 @@ def run_scheduler(
     failures: list[dict] = []
 
     log_action("scheduler_start", {"run_date": run_date, "dry_run": dry_run})
-    _run_daily_scout(dry_run=dry_run)
+    should_run_scout = root is None if run_scout is None else run_scout
+    if should_run_scout:
+        _run_daily_scout(dry_run=dry_run)
 
     # Collect all jobs to run today across all projects
     pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)

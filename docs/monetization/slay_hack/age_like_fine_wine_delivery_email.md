@@ -1,7 +1,7 @@
 # Age Like Fine Wine - Delivery Email Draft
 
-Status: draft_ready
-Boundary: Delivery link, support terms, and refund terms are placeholders until Captain approval.
+Status: review_ready
+Boundary: Delivery link, support terms, and refund terms are drafted but inactive until Captain approval.
 
 ## Subject Options
 
@@ -36,11 +36,15 @@ If you added Fine Wine 7-Day Glow Routine, start Day 1 today. If not, use the 30
 
 Questions or download issues:
 
-[SUPPORT EMAIL PLACEHOLDER]
+[APPROVED SUPPORT EMAIL]
 
-## Policy Placeholder
+Support response target: within 2 business days.
 
-Refund and support terms are not active until checkout terms are explicitly approved by Nayz.
+## Policy Note
+
+If your file cannot be accessed and support cannot resolve the issue, the purchase can be refunded under the approved checkout terms. Duplicate purchases can be refunded. General change-of-mind refunds for a digital download are not active unless Nayz approves that policy before checkout activation.
+
+Age Like Fine Wine provides general beauty education and routine planning. It is not medical, dermatology, supplement, or diagnosis advice. Results vary by person.
 
 ## Closing
 

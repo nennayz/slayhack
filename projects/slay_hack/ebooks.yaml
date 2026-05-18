@@ -3,7 +3,7 @@ factory:
   safe_boundary: "Live publish and checkout stay locked until Captain approval."
   runbook_path: "docs/ebook_production_runbook.md"
   spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
-  next_action: "Run Fleet QA against the existing PDF proof, then prepare the launch package."
+  next_action: "Repair source integrity and visual QA before Captain sale activation."
 
 stages:
   - key: idea
@@ -106,7 +106,7 @@ monetization_lanes:
     status: strategy_locked_checkout_locked
     strategy: "Start with the strongest real audience before expanding the full 22-SKU universe."
     boundary: "Checkout, live publish, and public sales stay locked until QA gates, launch assets, and Captain approval are complete."
-    next_action: "Use this lane as the source of truth for sales page, checkout copy, delivery email, lead magnet bridge, and the 7-day content push."
+    next_action: "Use this lane as the source of truth for sales page, checkout copy, delivery email, checkout terms, lead magnet bridge, and the 7-day content push."
     products:
       - role: lead_magnet
         title: "Slay Basics: 30 Hacks"
@@ -152,7 +152,7 @@ monetization_lanes:
         - "Fine Wine 7-Day Glow Routine"
         - "Mature Skin Quick Checklist"
         - "Character tip cards from Auntie V, Bella Mist, Sera, Sunny, Wanda, and Conceal"
-      guarantee: "Low-risk digital product framing; refund policy is not active until checkout terms are explicitly approved by Nayz."
+      guarantee: "Low-risk digital product framing; refund and support terms are drafted but not active until checkout terms are explicitly approved by Nayz."
       cta: "Start your Fine Wine glow-up"
       checkout_boundary: "Checkout copy is draft-only and cannot be activated until Captain approval."
     launch_copy_assets:
@@ -173,7 +173,13 @@ monetization_lanes:
         launch_asset: delivery email
         status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
-        review_note: "Delivery copy uses placeholders until file delivery and support terms are approved."
+        review_note: "Delivery copy now includes support, refund, and disclaimer boundaries; links remain placeholders until file delivery is approved."
+      - key: checkout_terms
+        label: "Checkout terms draft"
+        launch_asset: checkout terms
+        status: review_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+        review_note: "Draft support, refund, delivery, buyer expectation, and checkout preflight terms. Not active until Captain approval."
       - key: lead_magnet_bridge
         label: "Lead magnet bridge copy"
         launch_asset: lead magnet
@@ -193,9 +199,21 @@ ebooks:
     project: SlayHack
     pm: Slay
     audience: "women 35-44"
-    status: designed_pdf_ready
+    status: qa_blocked
     role: "first paid low-ticket monetization pilot"
-    proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."
+    proof: "Current verified PDF proof is 39 pages, 6 x 8 inches, about 9.5 MB, text-extractable, bookmarked, and SHA-256 92b6baa2e0bc7cc53ed3d33d9aabe4e33f5d70680dd9b4e96391c5807e236e63. Earlier 61-page/29.9 MB handoff language is historical and no longer treated as current proof."
+    source_integrity:
+      status: blocked
+      current_source_of_truth: "Rendered PDF proof only; matching editable source was not found in the Drive folder."
+      blocker: "Registered DOCX is a different 40 Life Hacks product, not Age Like Fine Wine."
+      repair_packet: "docs/monetization/slay_hack/age_like_fine_wine_source_repair_packet.md"
+      required_next_action: "Create or replace the editable source with a matching Age Like Fine Wine source document, then regenerate the PDF."
+    captain_sale_gate:
+      label: "Captain sale approval"
+      status: locked
+      action_label: "Captain Approve E-book For Sale"
+      locked_label: "Sale approval locked"
+      boundary: "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until all QA gates, launch assets, source integrity, and Captain approval are complete."
     drive:
       folder: "Ebook Project"
       artifacts:
@@ -206,7 +224,7 @@ ebooks:
         - key: docx_source
           label: "Editable source document"
           path: "slay_hack_ebook_updated.docx"
-          expected: "Source document for review edits before any regenerated PDF."
+          expected: "Registered source is currently a different 40 Life Hacks product; replace with matching Age Like Fine Wine source before sale."
         - key: universe_map
           label: "E-book universe map"
           path: "ebook_universe_map.png"
@@ -223,7 +241,7 @@ ebooks:
       - gate: Content QA
         status: PARTIAL
         check: "Promise, chapter value, exercises, filler, and risky claims."
-        note: "Useful 10-chapter 35+ beauty guide with clear routine value, but skincare/retinol/SPF/collagen claims need source citations or a non-medical disclaimer before sale. Registered editable DOCX is a different 40 Life Hacks product, so source integrity is not fully proven."
+        note: "Useful 10-chapter 35+ beauty guide with clear routine value, but skincare/retinol/SPF/collagen claims still need the source repair packet's disclaimer/citation patch applied to the actual editable source and regenerated PDF. Registered editable DOCX is a different 40 Life Hacks product, so source integrity remains blocked."
         reviewed_by: codex
         reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Brand QA
@@ -241,13 +259,13 @@ ebooks:
       - gate: PDF Technical QA
         status: PARTIAL
         check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
-        note: "PDF is 39 pages, 6x8 inches, text-extractable, bookmarked, and 9.5 MB. Blockers: missing title/author metadata, no active links despite a shop CTA button, and file proof differs from older 61-page/29.9 MB handoff language."
+        note: "PDF is 39 pages, 6x8 inches, text-extractable, bookmarked, and 9.5 MB. Blockers: missing title/author metadata, no active links despite a shop CTA button, and no matching editable source for a regenerated proof."
         reviewed_by: codex
         reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Monetization QA
         status: PARTIAL
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
-        note: "Sales, checkout, delivery, bridge, content-push, post-purchase, and tracking drafts exist. Keep PARTIAL because final support/refund/delivery terms are placeholders and the PDF contains a live-looking slayhack.com/shop CTA before checkout is approved."
+        note: "Sales, checkout, delivery, checkout terms, bridge, content-push, post-purchase, and tracking drafts exist. Keep PARTIAL because checkout terms are review-ready but not Captain-approved, and the PDF contains a live-looking slayhack.com/shop CTA before checkout is approved."
         reviewed_by: codex
         reviewed_at: "2026-05-18T03:19:25Z"
     launch_assets:
@@ -264,7 +282,12 @@ ebooks:
         note: "Checkout copy draft exists; no payment link is live."
       - name: delivery email
         status: review_ready
-        note: "Delivery email draft exists with placeholder download and support terms."
+        note: "Delivery email draft includes support, refund, and buyer expectation boundaries; delivery link remains locked until final file delivery is approved."
+      - key: checkout_terms
+        name: checkout terms
+        status: review_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+        note: "Review-ready support, refund, delivery, buyer expectation, and checkout activation terms exist; they are not live."
       - name: lead magnet
         status: review_ready
         note: "Lead magnet bridge draft connects Slay Basics to Age Like Fine Wine."
