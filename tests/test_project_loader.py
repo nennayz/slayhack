@@ -48,6 +48,24 @@ def test_project_slug_alias_falls_back_when_legacy_folder_exists(tmp_path):
     assert list_project_slugs(tmp_path) == ["nayzfreedom_fleet"]
 
 
+def test_list_project_slugs_hides_pending_scout_projects(tmp_path):
+    active = tmp_path / "projects" / "active"
+    active.mkdir(parents=True)
+    (active / "pm_profile.yaml").write_text("page_name: Active\n")
+
+    pending = tmp_path / "projects" / "pending_scout"
+    pending.mkdir(parents=True)
+    (pending / "pm_profile.yaml").write_text("page_name: Pending\n")
+    (pending / "scout_activation.yaml").write_text("scheduler_rotation_approved: false\n")
+
+    approved = tmp_path / "projects" / "approved_scout"
+    approved.mkdir(parents=True)
+    (approved / "pm_profile.yaml").write_text("page_name: Approved\n")
+    (approved / "scout_activation.yaml").write_text("scheduler_rotation_approved: true\n")
+
+    assert list_project_slugs(tmp_path) == ["active", "approved_scout"]
+
+
 def test_load_slay_hack_allowed_content_types():
     pm = load_project("slay_hack")
     assert set(pm.brand.allowed_content_types) == {

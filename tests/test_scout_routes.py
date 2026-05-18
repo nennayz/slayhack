@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("DASHBOARD_USER", "admin")
@@ -52,6 +53,38 @@ def _saved_job(tmp_path: Path) -> ScoutJob:
     return job
 
 
+def _saved_activation_review(tmp_path: Path) -> None:
+    project_dir = tmp_path / "projects" / "personal_finance_for_women"
+    project_dir.mkdir(parents=True)
+    (project_dir / "pm_profile.yaml").write_text(
+        yaml.dump({
+            "name": "Alex",
+            "page_name": "PersonalFinanceForWomen",
+            "persona": "Scout-created PM",
+        })
+    )
+    (project_dir / "scout_activation.yaml").write_text(
+        yaml.dump({
+            "source": "scout",
+            "source_report": "20260518_040508",
+            "niche_name": "personal finance for women",
+            "status": "captain_review",
+            "scheduler_rotation_approved": False,
+        })
+    )
+    proof_dir = tmp_path / "output" / "PersonalFinanceForWomen" / "20260518_041815_694380"
+    proof_dir.mkdir(parents=True)
+    (proof_dir / "job.json").write_text(json.dumps({
+        "id": "20260518_041815_694380",
+        "dry_run": True,
+        "content_type": "article",
+        "stage": "publish_done",
+        "selected_idea": {"title": "Empowering Women Through Smart Investments"},
+    }))
+    for artifact in ["ideas.md", "bella_output.md", "growth.md", "faq.md"]:
+        (proof_dir / artifact).write_text("proof")
+
+
 # ── GET /scout/ ────────────────────────────────────────────────────────────
 
 
@@ -69,6 +102,19 @@ def test_scout_index_shows_report(tmp_path):
     assert resp.status_code == 200
     assert job.job_id in resp.text
     assert "clean beauty" in resp.text
+
+
+def test_scout_index_shows_activation_review_with_dry_run_proof(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.get("/scout/", headers=_auth())
+    assert resp.status_code == 200
+    assert "Scout-created projects" in resp.text
+    assert "PersonalFinanceForWomen" in resp.text
+    assert "Dry-run proven" in resp.text
+    assert "Not in live rotation" in resp.text
+    assert "Empowering Women Through Smart Investments" in resp.text
+    assert "Approve for scheduler rotation" in resp.text
 
 
 def test_scout_index_requires_auth(tmp_path):
@@ -141,6 +187,49 @@ def test_scout_approve_requires_auth(tmp_path):
     resp = client.post(
         "/scout/approve",
         data={"job_id": "20260517_120000", "niche_name": "x"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 401
+
+
+# ── POST /scout/rotation/approve ───────────────────────────────────────────
+
+
+def test_scout_rotation_approve_updates_marker(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/rotation/approve",
+        data={"project_slug": "personal_finance_for_women"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    marker = yaml.safe_load(
+        (tmp_path / "projects" / "personal_finance_for_women" / "scout_activation.yaml").read_text()
+    )
+    assert marker["scheduler_rotation_approved"] is True
+    assert marker["status"] == "rotation_approved"
+    assert "approved_at" in marker
+
+
+def test_scout_rotation_approve_blocks_bad_slug(tmp_path):
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/rotation/approve",
+        data={"project_slug": "../slay_hack"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 400
+
+
+def test_scout_rotation_approve_requires_auth(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/rotation/approve",
+        data={"project_slug": "personal_finance_for_women"},
         follow_redirects=False,
     )
     assert resp.status_code == 401

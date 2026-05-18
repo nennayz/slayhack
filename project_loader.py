@@ -37,7 +37,19 @@ def list_project_slugs(root: Path | None = None) -> list[str]:
     return sorted(
         p.parent.name for p in base.glob("*/pm_profile.yaml")
         if p.parent.name not in aliases_with_targets
+        and _scheduler_rotation_approved(p.parent)
     )
+
+
+def _scheduler_rotation_approved(project_dir: Path) -> bool:
+    activation_path = project_dir / "scout_activation.yaml"
+    if not activation_path.exists():
+        return True
+    try:
+        data = yaml.safe_load(activation_path.read_text()) or {}
+    except yaml.YAMLError:
+        return False
+    return bool(data.get("scheduler_rotation_approved"))
 
 
 def load_project_page_name(project_slug: str, root: Path | None = None) -> str:
