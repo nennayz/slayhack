@@ -1816,7 +1816,16 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
 def _project_options(root: Path) -> list[dict]:
     options = []
     for slug in list_project_slugs(root):
-        options.append({"slug": slug, "label": load_project_page_name(slug, root=root)})
+        page_name = load_project_page_name(slug, root=root)
+        resolved = resolve_project_slug(slug, root=root)
+        base = (root or Path(".")) / "projects" / resolved
+        pm_name = ""
+        try:
+            pm_data = yaml.safe_load((base / "pm_profile.yaml").read_text()) or {}
+            pm_name = pm_data.get("name") or ""
+        except Exception:
+            pass
+        options.append({"slug": slug, "label": page_name, "pm_name": pm_name})
     return options
 
 

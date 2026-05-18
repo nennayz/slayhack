@@ -311,7 +311,6 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   border-radius: 18px;
   box-shadow: 0 18px 36px rgba(16,35,63,0.16);
   display: block;
-  grid-column: 1 / -1;
   height: 320px;
   object-fit: cover;
   object-position: center;
@@ -322,6 +321,11 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .fleet-hero-command .ship-hero-art {
   border: 1px solid rgba(255,255,255,0.24);
   box-shadow: 0 22px 48px rgba(0,0,0,0.28);
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  height: 100%;
+  min-height: 280px;
+  width: 320px;
 }
 .compact-hero {
   display: block;
@@ -542,7 +546,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   z-index: 1;
 }
 .aurora-crew-strip img {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   border: 2px solid rgba(255,255,255,0.8);
   border-radius: 18px;
   box-shadow: 0 10px 24px rgba(16,35,63,0.12);
@@ -2497,6 +2501,42 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 }
 .island-chip span { font-weight: 700; }
 .island-chip small { color: var(--muted); margin-top: 0.2rem; }
+.island-card {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.18), rgba(185,131,255,0.14)),
+    rgba(255,255,255,0.82);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 6px 18px rgba(16,35,63,0.07);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 200px;
+  padding: 1rem 1.15rem;
+  text-decoration: none;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.island-card:hover {
+  box-shadow: 0 14px 32px rgba(16,35,63,0.13);
+  transform: translateY(-2px);
+}
+.island-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.island-card-pm {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+.island-card-cta {
+  color: var(--aurora);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.55rem;
+}
 .island-status-panel {
   background: rgba(255,255,255,0.78);
   border: 1px solid var(--line);
@@ -2645,9 +2685,10 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 }
 .crew-card p { color: var(--muted); }
 .crew-portrait {
+  aspect-ratio: 3 / 4;
   border-radius: 16px;
   display: block;
-  height: 220px;
+  height: auto;
   margin-bottom: 0.9rem;
   object-fit: cover;
   object-position: center top;
@@ -2668,9 +2709,10 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   margin-bottom: 1rem;
 }
 .character-portrait {
+  aspect-ratio: 3 / 4;
   border-radius: 18px;
   display: block;
-  height: 280px;
+  height: auto;
   object-fit: cover;
   object-position: center top;
   width: 220px;
@@ -3115,5 +3157,12 @@ a:hover { color: var(--navy-soft); }
   }
   .ship-hero-art {
     height: 160px;
+  }
+  .fleet-hero-command .ship-hero-art {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    height: 160px;
+    min-height: unset;
+    width: 100%;
   }
 }

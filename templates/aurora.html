@@ -103,9 +103,10 @@
     </div>
     <div class="tag-list">
       {% for project in projects %}
-      <a class="island-chip" href="/aurora/islands/{{ project.slug }}">
-        <span>{{ project.label }}</span>
-        <small>View island</small>
+      <a class="island-card" href="/aurora/islands/{{ project.slug }}">
+        <span class="island-card-name">{{ project.label }}</span>
+        {% if project.pm_name %}<small class="island-card-pm">PM · {{ project.pm_name }}</small>{% endif %}
+        <span class="island-card-cta">Open island →</span>
       </a>
       {% else %}
       <span class="muted">No projects configured.</span>
