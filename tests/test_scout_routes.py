@@ -44,6 +44,16 @@ def _saved_job(tmp_path: Path) -> ScoutJob:
                 content_formats=["reel", "infographic"],
                 monetization_notes="High affiliate, e-book",
                 signals={"summary": "strong beauty signal"},
+            ),
+            NicheOpportunity(
+                niche_name="quiet luxury",
+                target_audience="Women USA 25-40",
+                platforms=["instagram"],
+                reach_score=82.0,
+                trend_direction="stable",
+                content_formats=["reel", "article"],
+                monetization_notes="LTK affiliate, capsule wardrobe guide",
+                signals={"summary": "style signal"},
             )
         ],
         signals=[
@@ -120,6 +130,22 @@ def test_scout_index_shows_report(tmp_path):
     assert "clean beauty" in resp.text
     assert "Open full report" in resp.text
     assert "Activate This Niche" not in resp.text
+
+
+def test_scout_index_shows_compare_view(tmp_path):
+    job = _saved_job(tmp_path)
+    client = _client(tmp_path)
+    resp = client.get("/scout/", headers=_auth())
+    assert resp.status_code == 200
+    assert "Niche Decision Table" in resp.text
+    assert "Viral" in resp.text
+    assert "Money" in resp.text
+    assert "Target" in resp.text
+    assert "Confidence" in resp.text
+    assert "Sources" in resp.text
+    assert "clean beauty" in resp.text
+    assert "quiet luxury" in resp.text
+    assert f"/scout/reports/{job.job_id}/clean_beauty" in resp.text
 
 
 def test_scout_report_detail_shows_interactive_analysis(tmp_path):

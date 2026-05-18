@@ -32,6 +32,54 @@
 </section>
 {% endif %}
 
+{% if compare_rows %}
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Compare view</p>
+    <h2>Niche Decision Table</h2>
+  </div>
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Niche</th>
+          <th>Worth</th>
+          <th>Viral</th>
+          <th>Money</th>
+          <th>Target</th>
+          <th>Confidence</th>
+          <th>Sources</th>
+          <th>Recommendation</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in compare_rows %}
+        <tr>
+          <td data-label="Niche">
+            <strong>{{ row.niche_name }}</strong><br>
+            <span style="color:var(--muted); font-size:0.8rem;">{{ row.target }}</span><br>
+            <span style="color:var(--muted); font-size:0.8rem;">{{ row.formats }}</span>
+          </td>
+          <td data-label="Worth"><span class="badge {% if row.worth_opening == 'High' %}badge-completed{% elif row.worth_opening == 'Medium' %}badge-running{% else %}badge-pending{% endif %}">{{ row.worth_opening }}</span></td>
+          <td data-label="Viral">{{ row.viral_score }}</td>
+          <td data-label="Money">{{ row.monetization_score }}</td>
+          <td data-label="Target">{{ row.target_score }}</td>
+          <td data-label="Confidence">{{ row.confidence_score }}</td>
+          <td data-label="Sources">{{ row.source_count }}/4</td>
+          <td data-label="Recommendation">
+            {{ row.recommendation }}<br>
+            <span style="color:var(--muted); font-size:0.8rem;">{{ row.project_label }}</span>
+          </td>
+          <td data-label="Action"><a class="button button-small" href="{{ row.report_url }}">Open report</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 {% if activation_reviews %}
 <section>
   <div class="section-heading">

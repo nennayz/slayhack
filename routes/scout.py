@@ -192,6 +192,33 @@ def _scout_report_view(root: Path, job: ScoutJob, opp) -> dict:
     }
 
 
+def _compare_rows(root: Path, job: ScoutJob | None) -> list[dict]:
+    if not job:
+        return []
+    rows = []
+    for opp in sorted(job.opportunities, key=lambda item: item.reach_score, reverse=True):
+        report = _scout_report_view(root, job, opp)
+        score_lookup = {card["label"]: card["score"] for card in report["score_cards"]}
+        source_working = sum(1 for card in report["source_cards"] if card["status"] == "working")
+        rows.append({
+            "slug": report["niche_slug"],
+            "niche_name": opp.niche_name,
+            "target": opp.target_audience,
+            "viral_score": score_lookup.get("Viral potential", _score(opp.reach_score)),
+            "monetization_score": score_lookup.get("Monetization", 0),
+            "target_score": score_lookup.get("Target clarity", 0),
+            "confidence_score": score_lookup.get("Source confidence", 0),
+            "worth_opening": report["worth_opening"],
+            "recommendation": report["recommendation"],
+            "project_label": report["project_status"]["label"] or "Report only",
+            "source_count": source_working,
+            "monetization": opp.monetization_notes,
+            "formats": ", ".join(opp.content_formats),
+            "report_url": f"/scout/reports/{job.job_id}/{report['niche_slug']}",
+        })
+    return rows
+
+
 def _latest_report(root: Path) -> ScoutJob | None:
     reports_dir = root / "output" / "scout_reports"
     if not reports_dir.exists():
@@ -280,6 +307,7 @@ async def scout_index(request: Request, _: str = Depends(verify_auth)):
                 {"opportunity": opp, "slug": _niche_slug(opp.niche_name)}
                 for opp in (job.opportunities if job else [])
             ],
+            "compare_rows": _compare_rows(root, job),
             "activation_reviews": _activation_reviews(root),
         },
     )
