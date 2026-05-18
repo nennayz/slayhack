@@ -411,7 +411,7 @@ if __name__ == "__main__":
     if not token:
         logger.error("COMMENT_BOT_TOKEN must be set.")
         sys.exit(1)
-    chat_map_path = _ROOT / "comment_chat_map.yaml"
+    chat_map_path = Path(os.getenv("COMMENT_CHAT_MAP_PATH", str(_ROOT / "comment_chat_map.yaml")))
     if not chat_map_path.exists():
         logger.error("comment_chat_map.yaml not found at %s", chat_map_path)
         sys.exit(1)

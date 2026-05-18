@@ -35,6 +35,7 @@ if [ -f "$INSTALL_DIR/deploy/nayzfreedom-ops.sudoers" ]; then
     chmod 440 /etc/sudoers.d/nayzfreedom-ops
 fi
 for unit in \
+    nayzfreedom-comment-reply-bot.service \
     nayzfreedom-log-retention.service \
     nayzfreedom-log-retention.timer \
     nayzfreedom-ops-report.service \
@@ -53,9 +54,20 @@ systemctl restart nayzfreedom-dashboard.service
 systemctl status nayzfreedom-dashboard.service --no-pager
 systemctl restart nayzfreedom-bot.service
 systemctl status nayzfreedom-bot.service --no-pager
+comment_chat_map_path="$(grep -E '^COMMENT_CHAT_MAP_PATH=.' "$INSTALL_DIR/.env" | tail -n 1 | cut -d= -f2-)"
+comment_chat_map_path="${comment_chat_map_path:-$INSTALL_DIR/secrets/comment_chat_map.yaml}"
+if grep -q '^COMMENT_BOT_TOKEN=.\+' "$INSTALL_DIR/.env" && grep -q '^GEMINI_API_KEY=.\+' "$INSTALL_DIR/.env" && [ -f "$comment_chat_map_path" ]; then
+    systemctl enable --now nayzfreedom-comment-reply-bot.service
+    systemctl restart nayzfreedom-comment-reply-bot.service
+    systemctl status nayzfreedom-comment-reply-bot.service --no-pager
+else
+    systemctl disable --now nayzfreedom-comment-reply-bot.service 2>/dev/null || true
+    echo "Comment reply bot not started: COMMENT_BOT_TOKEN, GEMINI_API_KEY, or COMMENT_CHAT_MAP_PATH is missing."
+fi
 systemctl restart nayzfreedom-healthcheck.timer
 
 echo ""
 echo "Done. Services are running."
 echo "Dashboard logs: journalctl -u nayzfreedom-dashboard -f"
 echo "Bot logs:       journalctl -u nayzfreedom-bot -f"
+echo "Comment logs:   journalctl -u nayzfreedom-comment-reply-bot -f"
