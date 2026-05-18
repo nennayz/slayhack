@@ -1,12 +1,23 @@
-Instagram:
-  content_types: &id001
-  - video
-  - infographic
-  - article
+instagram:
+  comment_max_chars: 2200
+  content_types:
+    - video
+    - infographic
+    - article
   primary: true
-TikTok:
-  content_types: *id001
+tiktok:
+  comment_max_chars: 150
+  content_types:
+    - video
+    - infographic
+    - article
   primary: true
-YouTube:
-  content_types: *id001
+youtube:
+  comment_max_chars: 10000
+  content_types:
+    - video
+    - infographic
+    - article
   primary: true
+facebook:
+  comment_max_chars: 8000
