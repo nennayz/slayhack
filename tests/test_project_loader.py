@@ -3,6 +3,7 @@ from project_loader import (
     list_project_slugs,
     load_platform_specs,
     load_project,
+    load_project_bridge,
     ProjectNotFoundError,
     resolve_project_slug,
 )
@@ -16,8 +17,10 @@ def test_load_slay_hack():
     assert pm.page_name == "Slayhack"
     assert "male Project Manager" in pm.persona
     assert "Format A" in pm.persona
+    assert "e-book product lane" in pm.persona
     assert pm.brand.nora_max_retries == 2
     assert "#F06292" in pm.brand.visual.colors
+    assert "18-44" in pm.brand.target_audience
 
 
 def test_load_missing_project_raises():
@@ -87,3 +90,23 @@ def test_load_platform_specs_missing_file_returns_empty(tmp_path, monkeypatch):
     # No platform_specs.yaml — function should return {}
     result = load_platform_specs("test_no_specs")
     assert result == {}
+
+
+def test_load_project_bridge_slay_hack():
+    bridge = load_project_bridge("slay_hack")
+
+    assert bridge["project"] == "slay_hack"
+    assert bridge["display_name"] == "Slay Hack"
+    assert bridge["pm"] == "Slay"
+    assert bridge["current_phase"] == "ebook_product_launch"
+    assert bridge["drive_root"].endswith("My Drive/Slay Hack")
+    assert bridge["master_file"] == "Slay Hack Master File/Project Slay Hack - Master Operating File.md"
+    assert "Ebook Project/20260517-Ebook-Knowledge-Base.md" in bridge["pm_review_sources"]
+
+
+def test_load_project_bridge_missing_file_returns_empty(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    project_dir = tmp_path / "projects" / "test_no_bridge"
+    project_dir.mkdir(parents=True)
+
+    assert load_project_bridge("test_no_bridge") == {}

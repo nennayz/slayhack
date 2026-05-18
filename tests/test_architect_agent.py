@@ -1,0 +1,64 @@
+from __future__ import annotations
+from pathlib import Path
+import yaml
+from config import Config
+from models.niche_opportunity import NicheOpportunity, ScoutJob, ScoutJobStatus
+
+
+def _make_config() -> Config:
+    return Config(brave_search_api_key="x", openai_api_key="test-openai")
+
+
+def _make_approved_job(tmp_path: Path) -> tuple[ScoutJob, NicheOpportunity]:
+    opp = NicheOpportunity(
+        niche_name="clean beauty",
+        target_audience="Women USA 22-38",
+        platforms=["instagram", "tiktok"],
+        reach_score=91.0,
+        trend_direction="rising",
+        content_formats=["reel", "infographic"],
+        monetization_notes="High affiliate potential",
+        signals={},
+    )
+    job = ScoutJob(job_id="test_arch_001", triggered_by="test")
+    job.approved_niche = "clean beauty"
+    job.opportunities = [opp]
+    return job, opp
+
+
+def test_architect_dry_run_returns_slug(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, _ = _make_approved_job(tmp_path)
+    slug = agent.run(job, projects_root=tmp_path, dry_run=True)
+    assert slug == "clean_beauty"
+
+
+def test_architect_dry_run_does_not_write_files(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, _ = _make_approved_job(tmp_path)
+    agent.run(job, projects_root=tmp_path, dry_run=True)
+    assert not (tmp_path / "clean_beauty").exists()
+
+
+def test_architect_live_creates_project_files(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, _ = _make_approved_job(tmp_path)
+    slug = agent.run(job, projects_root=tmp_path, dry_run=False)
+    project_dir = tmp_path / slug
+    assert project_dir.exists()
+    for fname in ["brand.yaml", "pm_profile.yaml", "platform_specs.yaml", "weekly_calendar.yaml"]:
+        assert (project_dir / fname).exists(), f"Missing {fname}"
+
+
+def test_architect_brand_yaml_has_required_keys(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, _ = _make_approved_job(tmp_path)
+    slug = agent.run(job, projects_root=tmp_path, dry_run=False)
+    brand = yaml.safe_load((tmp_path / slug / "brand.yaml").read_text())
+    assert "mission" in brand
+    assert "target_audience" in brand
+    assert "platforms" in brand
