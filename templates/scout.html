@@ -30,8 +30,54 @@
   </div>
   <p>Triggered by: <strong>{{ job.triggered_by }}</strong> &nbsp;&middot;&nbsp; Status: <span class="badge badge-{{ job.status }}">{{ job.status | replace('_', ' ') | title }}</span></p>
 </section>
+{% endif %}
 
-{% if job.opportunities %}
+{% if activation_reviews %}
+<section>
+  <div class="section-heading">
+    <p class="eyebrow">Activation review</p>
+    <h2>Scout-created projects</h2>
+  </div>
+  <div class="content-grid">
+    {% for review in activation_reviews %}
+    <article class="panel">
+      <div class="section-heading" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+        <div>
+          <p class="eyebrow">{{ review.source_report or "Scout report" }}</p>
+          <h3 style="margin:0;">{{ review.page_name }}</h3>
+        </div>
+        <span class="badge badge-ops-{{ 'ready' if review.approved else 'missing' }}">
+          {{ "In rotation" if review.approved else "Captain approval needed" }}
+        </span>
+      </div>
+      <p style="color:var(--muted); font-size:0.88rem;">{{ review.niche_name }}</p>
+      <p style="font-size:0.85rem; margin-bottom:0.5rem;">
+        <strong>Status:</strong>
+        {{ "Dry-run proven" if review.proof else "Dry-run proof missing" }}
+        &nbsp;&middot;&nbsp;
+        {{ "Scheduler rotation approved" if review.approved else "Not in live rotation" }}
+      </p>
+      {% if review.proof %}
+      <p style="font-size:0.85rem; margin-bottom:0.5rem;">
+        <strong>Proof:</strong> {{ review.proof.idea_title or review.proof.job_id }}
+      </p>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:0.75rem;">
+        {{ review.proof.output_path }} &nbsp;&middot;&nbsp; {{ review.proof.artifacts | join(', ') }}
+      </p>
+      {% endif %}
+      {% if not review.approved %}
+      <form method="post" action="/scout/rotation/approve" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
+        <input type="hidden" name="project_slug" value="{{ review.slug }}">
+        <button type="submit" class="button button-small" style="width:100%;">Approve for scheduler rotation</button>
+      </form>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if job and job.opportunities %}
 <section class="content-grid">
   {% for opp in job.opportunities %}
   <article class="panel">
@@ -66,10 +112,9 @@
   {% endfor %}
 </section>
 
-{% else %}
+{% elif job %}
 <section class="panel">
   <p>No niche opportunities found in this scan. Try running Scout again or check your API keys.</p>
 </section>
-{% endif %}
 {% endif %}
 {% endblock %}

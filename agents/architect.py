@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -95,6 +96,18 @@ def _weekly_calendar_yaml(opp: NicheOpportunity) -> dict:
     return schedule or {"monday": {"short_video_1": f"{opp.niche_name} hack"}}
 
 
+def _scout_activation_yaml(job: ScoutJob, opp: NicheOpportunity) -> dict:
+    return {
+        "source": "scout",
+        "source_report": job.job_id,
+        "niche_name": opp.niche_name,
+        "status": "captain_review",
+        "scheduler_rotation_approved": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "review_notes": "Dry-run proof required before scheduler rotation approval.",
+    }
+
+
 class ArchitectAgent:
     def __init__(self, config: Config):
         self.config = config
@@ -105,7 +118,7 @@ class ArchitectAgent:
         if dry_run:
             logger.info("Architect dry-run: would create projects/%s/", slug)
             return slug
-        self._write_project(slug, opp, projects_root)
+        self._write_project(slug, opp, projects_root, job)
         # Record completion message on job for callers who inspect job state after approval
         job.status_message = f"Project {slug} created at projects/{slug}/"
         return slug
@@ -119,7 +132,7 @@ class ArchitectAgent:
                 return opp
         raise ValueError(f"Approved niche '{job.approved_niche}' not found in opportunities")
 
-    def _write_project(self, slug: str, opp: NicheOpportunity, root: Path) -> None:
+    def _write_project(self, slug: str, opp: NicheOpportunity, root: Path, job: ScoutJob) -> None:
         project_dir = root / slug
         project_dir.mkdir(parents=True, exist_ok=True)
 
@@ -128,6 +141,7 @@ class ArchitectAgent:
             "pm_profile.yaml": _pm_profile_yaml(opp, slug),
             "platform_specs.yaml": _platform_specs_yaml(opp),
             "weekly_calendar.yaml": _weekly_calendar_yaml(opp),
+            "scout_activation.yaml": _scout_activation_yaml(job, opp),
         }
         for filename, data in files.items():
             (project_dir / filename).write_text(

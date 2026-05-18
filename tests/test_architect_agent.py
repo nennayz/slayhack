@@ -49,7 +49,13 @@ def test_architect_live_creates_project_files(tmp_path):
     slug = agent.run(job, projects_root=tmp_path, dry_run=False)
     project_dir = tmp_path / slug
     assert project_dir.exists()
-    for fname in ["brand.yaml", "pm_profile.yaml", "platform_specs.yaml", "weekly_calendar.yaml"]:
+    for fname in [
+        "brand.yaml",
+        "pm_profile.yaml",
+        "platform_specs.yaml",
+        "weekly_calendar.yaml",
+        "scout_activation.yaml",
+    ]:
         assert (project_dir / fname).exists(), f"Missing {fname}"
 
 
@@ -81,3 +87,18 @@ def test_architect_normalizes_content_formats_for_runtime(tmp_path):
     assert calendar["monday"]["short_video_1"] == "clean beauty hack"
     assert calendar["wednesday"]["article_1"] == "clean beauty story"
     assert calendar["sunday"]["infographic_1"] == "clean beauty tips"
+
+
+def test_architect_marks_scout_project_pending_rotation(tmp_path):
+    from agents.architect import ArchitectAgent
+    agent = ArchitectAgent(_make_config())
+    job, _ = _make_approved_job(tmp_path)
+    slug = agent.run(job, projects_root=tmp_path, dry_run=False)
+
+    activation = yaml.safe_load((tmp_path / slug / "scout_activation.yaml").read_text())
+
+    assert activation["source"] == "scout"
+    assert activation["source_report"] == job.job_id
+    assert activation["niche_name"] == "clean beauty"
+    assert activation["status"] == "captain_review"
+    assert activation["scheduler_rotation_approved"] is False
