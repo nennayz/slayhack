@@ -237,5 +237,9 @@ ebooks:
       - name: 7-day content push
         status: review_ready
         note: "Manual publish handoff draft exists; live posting remains locked."
-      - post-purchase next step
+      - key: post_purchase_next_step
+        name: post-purchase next step
+        status: review_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_post_purchase_next_step.md"
+        note: "Review-ready post-purchase journey exists for thank-you, delivery, start-here, support, and next-step boundaries."
       - tracking plan
