@@ -93,7 +93,24 @@ def _source_cards(source: dict, opp) -> list[dict]:
     ]
 
 
-def _scout_report_view(job: ScoutJob, opp) -> dict:
+def _project_review_status(root: Path, niche_name: str) -> dict:
+    project_slug = _niche_slug(niche_name)
+    project_dir = root / "projects" / project_slug
+    activation_path = project_dir / "scout_activation.yaml"
+    status = {"slug": project_slug, "exists": project_dir.exists(), "rotation_approved": False, "label": ""}
+    if activation_path.exists():
+        try:
+            data = yaml.safe_load(activation_path.read_text()) or {}
+        except yaml.YAMLError:
+            data = {}
+        status["rotation_approved"] = bool(data.get("scheduler_rotation_approved"))
+        status["label"] = "Project in scheduler rotation" if status["rotation_approved"] else "Project created, pending rotation approval"
+    elif project_dir.exists():
+        status["label"] = "Project already exists"
+    return status
+
+
+def _scout_report_view(root: Path, job: ScoutJob, opp) -> dict:
     source = _source_data(job, opp)
     source_cards = _source_cards(source, opp)
     platforms = ", ".join(opp.platforms)
@@ -150,6 +167,7 @@ def _scout_report_view(job: ScoutJob, opp) -> dict:
         "job_id": job.job_id,
         "niche_slug": _niche_slug(opp.niche_name),
         "opportunity": opp,
+        "project_status": _project_review_status(root, opp.niche_name),
         "summary": (
             f"{opp.niche_name} is a {opp.trend_direction} niche for {opp.target_audience}. "
             f"The opening is {formats} content on {platforms}, with monetization via {monetization_text}."
@@ -197,7 +215,7 @@ async def scout_report_detail(
     return templates.TemplateResponse(
         request,
         "scout_report.html",
-        {"job": job, "report": _scout_report_view(job, opp)},
+        {"job": job, "report": _scout_report_view(root, job, opp)},
     )
 
 
