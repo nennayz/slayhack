@@ -232,7 +232,15 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '      - name: checkout copy\n'
         '        status: review_ready\n'
         '        note: "Checkout copy draft exists."\n'
-        '      - 7-day content push\n'
+        '      - name: 7-day content push\n'
+        '        status: review_ready\n'
+        '        note: "Manual publish handoff draft exists; live posting remains locked."\n'
+        '      - key: post_purchase_next_step\n'
+        '        name: post-purchase next step\n'
+        '        status: review_ready\n'
+        '        path: "docs/monetization/slay_hack/age_like_fine_wine_post_purchase_next_step.md"\n'
+        '        note: "Post-purchase next step draft exists."\n'
+        '      - tracking plan\n'
     )
     copy_dir = tmp_path / "docs" / "monetization" / "slay_hack"
     copy_dir.mkdir(parents=True, exist_ok=True)
@@ -244,6 +252,9 @@ def _write_ebook_registry(tmp_path: Path) -> None:
     )
     (copy_dir / "age_like_fine_wine_product_mockup.md").write_text(
         "# Age Like Fine Wine - Product Mockup Draft\n\nSales page hero mockup.\n"
+    )
+    (copy_dir / "age_like_fine_wine_post_purchase_next_step.md").write_text(
+        "# Age Like Fine Wine - Post-Purchase Next Step Draft\n\nYour Fine Wine glow-up guide is ready.\n"
     )
 
 
@@ -2500,9 +2511,9 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "0/5" in resp.text
     assert "Next missing QA gate: Content QA" in resp.text
     assert "Record QA" in resp.text
-    assert "0/4" in resp.text
+    assert "0/6" in resp.text
     assert "Next missing launch asset: sales page" in resp.text
-    assert "Next non-copy launch asset: 7-day content push" in resp.text
+    assert "Next non-copy launch asset: tracking plan" in resp.text
     assert "Record asset" in resp.text
     assert "Fine Wine 35-44 Monetization Lane" in resp.text
     assert "Slay Basics: 30 Hacks" in resp.text
@@ -2518,10 +2529,13 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Checkout copy draft" in resp.text
     assert 'href="/aurora/ebooks/copy/sales_page?project_slug=slay_hack"' in resp.text
     assert 'href="/aurora/ebooks/assets/product_mockup?project_slug=slay_hack"' in resp.text
+    assert 'href="/aurora/ebooks/assets/post_purchase_next_step?project_slug=slay_hack"' in resp.text
     assert "age_like_fine_wine_sales_page.md" in resp.text
     assert "age_like_fine_wine_product_mockup.md" in resp.text
+    assert "age_like_fine_wine_post_purchase_next_step.md" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
+    assert "tracking plan" in resp.text
 
 
 def test_aurora_ebooks_launch_copy_asset_route_serves_registered_markdown(tmp_path, client):
@@ -2553,6 +2567,17 @@ def test_aurora_ebooks_launch_asset_route_serves_registered_markdown(tmp_path, c
     assert resp.headers["content-type"].startswith("text/markdown")
     assert "Age Like Fine Wine - Product Mockup Draft" in resp.text
     assert "Sales page hero mockup." in resp.text
+
+
+def test_aurora_ebooks_post_purchase_asset_route_serves_registered_markdown(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get("/aurora/ebooks/assets/post_purchase_next_step?project_slug=slay_hack", headers=_auth())
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert "Age Like Fine Wine - Post-Purchase Next Step Draft" in resp.text
+    assert "Your Fine Wine glow-up guide is ready." in resp.text
 
 
 def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):
@@ -2672,11 +2697,12 @@ def test_aurora_ebooks_records_launch_asset_result(tmp_path, client):
     assert sales_page["note"] == "Offer stack draft is ready for review."
     assert sales_page["reviewed_by"] == "admin"
     assert sales_page["reviewed_at"]
-    assert "7-day content push" in assets
+    seven_day = next(item for item in assets if isinstance(item, dict) and item["name"] == "7-day content push")
+    assert seven_day["status"] == "review_ready"
 
     page = client.get("/aurora/ebooks", headers=_auth())
     assert page.status_code == 200
-    assert "0/4" in page.text
+    assert "0/6" in page.text
     assert "Next missing launch asset: sales page" in page.text
     assert "Offer stack draft is ready for review." in page.text
 
@@ -2699,7 +2725,7 @@ def test_aurora_ebooks_records_approved_launch_asset_count(tmp_path, client):
 
     assert resp.status_code == 303
     page = client.get("/aurora/ebooks", headers=_auth())
-    assert "1/4" in page.text
+    assert "1/6" in page.text
     assert "Next missing launch asset: product mockup" in page.text
 
 
