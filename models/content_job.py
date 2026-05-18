@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Annotated, Literal, Optional, Union
+from uuid import uuid4
 from pydantic import BaseModel, Field
 
 
@@ -122,7 +123,7 @@ class PostPerformance(BaseModel):
 
 
 class ContentJob(BaseModel):
-    id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S_%f"))
+    id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid4().hex[:6])
     project: str
     pm: PMProfile
     brief: str

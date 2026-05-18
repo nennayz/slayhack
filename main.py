@@ -24,7 +24,13 @@ _SKIP_LOCK_ENV = "NAYZ_SKIP_PIPELINE_LOCK"
 def _acquire_lock() -> bool:
     if os.getenv(_SKIP_LOCK_ENV) == "1":
         return False
-    if _LOCK_FILE.exists():
+    try:
+        # O_CREAT|O_EXCL is atomic on POSIX — no race between check and create
+        fd = os.open(str(_LOCK_FILE), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return True
+    except FileExistsError:
         try:
             pid = int(_LOCK_FILE.read_text().strip())
         except (ValueError, OSError):
@@ -35,8 +41,6 @@ def _acquire_lock() -> bool:
             f"If no pipeline is running, delete {_LOCK_FILE} manually."
         )
         sys.exit(1)
-    _LOCK_FILE.write_text(str(os.getpid()))
-    return True
 
 
 def main() -> None:
