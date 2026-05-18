@@ -12,11 +12,7 @@ from pathlib import Path
 import requests
 import yaml
 
-try:
-    from comment_model_router import ModelRouter, ProviderConfig
-except ImportError:  # comment_model_router added in a later task
-    ModelRouter = None  # type: ignore[assignment,misc]
-    ProviderConfig = None  # type: ignore[assignment,misc]
+from comment_model_router import ModelRouter, ProviderConfig
 
 from project_loader import load_project, resolve_project_slug
 
