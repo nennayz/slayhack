@@ -200,6 +200,7 @@ def test_scout_index_shows_activation_review_with_dry_run_proof(tmp_path):
     assert "Not in live rotation" in resp.text
     assert "Empowering Women Through Smart Investments" in resp.text
     assert "Approve for scheduler rotation" in resp.text
+    assert "Remove test project" in resp.text
 
 
 def test_scout_index_requires_auth(tmp_path):
@@ -315,6 +316,63 @@ def test_scout_rotation_approve_requires_auth(tmp_path):
     resp = client.post(
         "/scout/rotation/approve",
         data={"project_slug": "personal_finance_for_women"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 401
+
+
+# ── POST /scout/projects/delete ────────────────────────────────────────────
+
+
+def test_scout_project_delete_archives_scout_project_without_output_delete(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/projects/delete",
+        data={"project_slug": "personal_finance_for_women", "confirm_slug": "personal_finance_for_women"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert not (tmp_path / "projects" / "personal_finance_for_women").exists()
+    assert (tmp_path / "vault" / "deleted_projects" / "personal_finance_for_women" / "scout_activation.yaml").exists()
+    assert (tmp_path / "output" / "PersonalFinanceForWomen" / "20260518_041815_694380" / "job.json").exists()
+
+
+def test_scout_project_delete_requires_matching_confirmation(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/projects/delete",
+        data={"project_slug": "personal_finance_for_women", "confirm_slug": "wrong"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 400
+    assert (tmp_path / "projects" / "personal_finance_for_women").exists()
+
+
+def test_scout_project_delete_blocks_non_scout_project(tmp_path):
+    project_dir = tmp_path / "projects" / "slay_hack"
+    project_dir.mkdir(parents=True)
+    (project_dir / "pm_profile.yaml").write_text("name: Slay\npage_name: SlayHack\npersona: PM\n")
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/projects/delete",
+        data={"project_slug": "slay_hack", "confirm_slug": "slay_hack"},
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 404
+    assert project_dir.exists()
+
+
+def test_scout_project_delete_requires_auth(tmp_path):
+    _saved_activation_review(tmp_path)
+    client = _client(tmp_path)
+    resp = client.post(
+        "/scout/projects/delete",
+        data={"project_slug": "personal_finance_for_women", "confirm_slug": "personal_finance_for_women"},
         follow_redirects=False,
     )
     assert resp.status_code == 401

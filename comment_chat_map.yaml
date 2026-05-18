@@ -8,9 +8,6 @@ chats:
   "-1002222222222":
     project: stadium_sweethearts
     default_platform: tiktok
-  "-1003333333333":
-    project: personal_finance_for_women
-    default_platform: instagram
 
 # Global fallback chain — tried in order when the active provider fails (429 / quota)
 fallback_chain:

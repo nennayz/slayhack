@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import json
 import re
+import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -290,6 +291,7 @@ def _activation_reviews(root: Path) -> list[dict]:
             "status": data.get("status", "captain_review"),
             "approved": approved,
             "proof": _latest_dry_run_proof(root, slug),
+            "can_delete": data.get("source") == "scout",
         })
     return reviews
 
@@ -356,6 +358,43 @@ async def scout_rotation_approve(
     data["status"] = "rotation_approved"
     data["approved_at"] = datetime.now(timezone.utc).isoformat()
     activation_path.write_text(yaml.dump(data, allow_unicode=True, default_flow_style=False), encoding="utf-8")
+    return RedirectResponse(url="/scout/", status_code=303)
+
+
+@router.post("/projects/delete")
+async def scout_project_delete(
+    request: Request,
+    project_slug: str = Form(...),
+    confirm_slug: str = Form(...),
+    _: str = Depends(verify_auth),
+):
+    root = _root(request)
+    if not _PROJECT_SLUG_RE.match(project_slug) or confirm_slug != project_slug:
+        raise HTTPException(status_code=400, detail="Invalid project delete confirmation")
+
+    projects_dir = (root / "projects").resolve()
+    project_dir = (projects_dir / project_slug).resolve()
+    if not str(project_dir).startswith(str(projects_dir) + "/"):
+        raise HTTPException(status_code=400, detail="Invalid project_slug")
+
+    activation_path = project_dir / "scout_activation.yaml"
+    if not activation_path.exists():
+        raise HTTPException(status_code=404, detail="Only Scout-created projects can be deleted here")
+
+    try:
+        activation_data = yaml.safe_load(activation_path.read_text()) or {}
+    except yaml.YAMLError as exc:
+        raise HTTPException(status_code=400, detail="Invalid scout activation marker") from exc
+    if activation_data.get("source") != "scout":
+        raise HTTPException(status_code=403, detail="Only Scout-created projects can be deleted here")
+
+    archive_dir = root / "vault" / "deleted_projects"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    destination = archive_dir / project_slug
+    if destination.exists():
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        destination = archive_dir / f"{project_slug}-{timestamp}"
+    shutil.move(str(project_dir), str(destination))
     return RedirectResponse(url="/scout/", status_code=303)
 
 
