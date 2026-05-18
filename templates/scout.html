@@ -5,7 +5,7 @@
 <section class="hero hero-fleet compact-hero fleet-hero-readiness">
   <p class="eyebrow">Niche Discovery</p>
   <h1>Scout</h1>
-  <p class="hero-copy">Scan trending niches across Brave Search, Google Trends, Reddit, and Meta Ads. Approve a winner and the Architect generates a ready-to-activate Fleet project.</p>
+  <p class="hero-copy">Scan trending niches across Brave Search, Google Trends, Reddit, and Meta Ads. Open each report first, then approve only when the niche is worth turning into a Fleet project.</p>
   <div class="hero-actions">
     <form method="post" action="/scout/run">
       <button type="submit" class="button">Run Scout Now</button>
@@ -77,9 +77,10 @@
 </section>
 {% endif %}
 
-{% if job and job.opportunities %}
+{% if job and opportunity_reports %}
 <section class="content-grid">
-  {% for opp in job.opportunities %}
+  {% for item in opportunity_reports %}
+  {% set opp = item.opportunity %}
   <article class="panel">
     <div class="section-heading" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
       <div>
@@ -100,11 +101,7 @@
     <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">{{ opp.monetization_notes }}</p>
 
     {% if job.status == 'awaiting_approval' %}
-    <form method="post" action="/scout/approve" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
-      <input type="hidden" name="job_id" value="{{ job.job_id }}">
-      <input type="hidden" name="niche_name" value="{{ opp.niche_name }}">
-      <button type="submit" class="button button-small" style="width:100%;">Activate This Niche</button>
-    </form>
+    <a class="button button-small" style="display:block; text-align:center;" href="/scout/reports/{{ job.job_id }}/{{ item.slug }}">Open full report</a>
     {% elif job.approved_niche == opp.niche_name %}
     <span class="badge badge-completed" style="display:block; text-align:center; padding:0.5rem;">Approved</span>
     {% endif %}

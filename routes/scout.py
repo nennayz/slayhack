@@ -24,6 +24,154 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/scout", tags=["scout"])
 _PROJECT_SLUG_RE = re.compile(r"^[a-z0-9_]+$")
+_NICHE_SLUG_RE = re.compile(r"^[a-z0-9_]+$")
+
+
+def _niche_slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+
+def _score(value: float) -> int:
+    return max(0, min(100, int(round(value))))
+
+
+def _load_report(root: Path, job_id: str) -> ScoutJob:
+    if not _JOB_ID_RE.match(job_id):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    reports_dir = (root / "output" / "scout_reports").resolve()
+    report_path = (reports_dir / f"{job_id}-scout-report.json").resolve()
+    if not str(report_path).startswith(str(reports_dir) + "/"):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="Scout report not found")
+    return ScoutJob.model_validate_json(report_path.read_text())
+
+
+def _find_opportunity(job: ScoutJob, niche_slug: str):
+    if not _NICHE_SLUG_RE.match(niche_slug):
+        raise HTTPException(status_code=400, detail="Invalid niche")
+    for opp in job.opportunities:
+        if _niche_slug(opp.niche_name) == niche_slug:
+            return opp
+    raise HTTPException(status_code=404, detail="Niche not found in report")
+
+
+def _source_data(job: ScoutJob, opp) -> dict:
+    for signal in job.signals:
+        if signal.niche_name.lower() == opp.niche_name.lower():
+            return signal.raw_data
+    return opp.signals or {}
+
+
+def _source_cards(source: dict, opp) -> list[dict]:
+    brave = source.get("brave") or []
+    trends = source.get("google_trends") or {}
+    reddit = source.get("reddit") or {}
+    meta = source.get("meta_ads") or {}
+    reddit_subs = reddit.get("subreddits") or []
+    return [
+        {
+            "name": "Brave Search",
+            "status": "working" if brave else "missing",
+            "summary": f"{len(brave)} search signals found" if brave else "No search examples captured",
+        },
+        {
+            "name": "Google Trends",
+            "status": "working" if trends and trends.get("trend_direction") != "unknown" else "limited",
+            "summary": trends.get("trend_direction", opp.trend_direction),
+        },
+        {
+            "name": "Reddit",
+            "status": "working" if reddit_subs else "missing",
+            "summary": f"{len(reddit_subs)} subreddit signals" if reddit_subs else "No Reddit credentials/signals",
+        },
+        {
+            "name": "Meta Ads",
+            "status": "working" if meta.get("active_ads") is not None else "limited",
+            "summary": f"{meta.get('active_ads')} active ads sampled" if meta.get("active_ads") is not None else "Token/permission limited",
+        },
+    ]
+
+
+def _scout_report_view(job: ScoutJob, opp) -> dict:
+    source = _source_data(job, opp)
+    source_cards = _source_cards(source, opp)
+    platforms = ", ".join(opp.platforms)
+    formats = ", ".join(opp.content_formats)
+    monetization_text = opp.monetization_notes.strip()
+    monetization_score = 78
+    money_keywords = ["affiliate", "e-book", "ebook", "course", "membership", "sponsor", "cpm", "newsletter", "coaching"]
+    monetization_score += sum(3 for keyword in money_keywords if keyword in monetization_text.lower())
+    trend_bonus = 8 if opp.trend_direction == "rising" else (2 if opp.trend_direction == "stable" else -8)
+    source_confidence = 45 + sum(12 for card in source_cards if card["status"] == "working")
+
+    score_cards = [
+        {"label": "Viral potential", "score": _score(opp.reach_score + trend_bonus), "note": f"{opp.trend_direction} trend on {platforms}"},
+        {"label": "Target clarity", "score": _score(65 + min(len(opp.target_audience), 80) / 2), "note": opp.target_audience},
+        {"label": "Monetization", "score": _score(monetization_score), "note": monetization_text},
+        {"label": "Content depth", "score": _score(58 + len(opp.content_formats) * 10 + len(opp.platforms) * 4), "note": formats},
+        {"label": "Brand fit", "score": _score(82 if "women" in opp.target_audience.lower() else 70), "note": "Fits the current women 18-44 Scout brief"},
+        {"label": "Source confidence", "score": _score(source_confidence), "note": "Based on unlocked data sources"},
+    ]
+
+    brave_items = source.get("brave") or []
+    reddit_items = (source.get("reddit") or {}).get("subreddits") or []
+    viral_drivers = [
+        f"Reach score is {opp.reach_score:.0f}/100 with a {opp.trend_direction} trend read.",
+        f"Best early formats: {formats}.",
+    ]
+    viral_drivers.extend(
+        item.get("title") or item.get("description", "")
+        for item in brave_items[:3]
+        if item.get("title") or item.get("description")
+    )
+    viral_drivers.extend(
+        f"r/{item.get('name')} has {item.get('subscribers', 0):,} subscribers"
+        for item in reddit_items[:2]
+        if item.get("name")
+    )
+
+    monetization_paths = [part.strip() for part in re.split(r"[,;]", monetization_text) if part.strip()]
+    if not monetization_paths:
+        monetization_paths = ["Lead magnet", "low-ticket digital product", "affiliate offers"]
+
+    content_angles = [
+        f"{opp.niche_name} myth vs fact",
+        f"{opp.niche_name} beginner checklist",
+        f"{opp.niche_name} mistake audit",
+        f"{opp.niche_name} product or tool stack",
+    ]
+
+    recommendation = "Approve to create project" if opp.reach_score >= 80 else "Watchlist and gather more data"
+    if _score(source_confidence) < 60:
+        recommendation = "Need more source data before project approval"
+
+    return {
+        "job_id": job.job_id,
+        "niche_slug": _niche_slug(opp.niche_name),
+        "opportunity": opp,
+        "summary": (
+            f"{opp.niche_name} is a {opp.trend_direction} niche for {opp.target_audience}. "
+            f"The opening is {formats} content on {platforms}, with monetization via {monetization_text}."
+        ),
+        "worth_opening": "High" if opp.reach_score >= 80 else ("Medium" if opp.reach_score >= 65 else "Low"),
+        "recommendation": recommendation,
+        "score_cards": score_cards,
+        "source_cards": source_cards,
+        "viral_drivers": [item for item in viral_drivers if item][:6],
+        "target_profile": [
+            f"Core audience: {opp.target_audience}",
+            f"Primary platforms: {platforms}",
+            f"Best starter formats: {formats}",
+        ],
+        "monetization_paths": monetization_paths[:6],
+        "content_angles": content_angles,
+        "risks": [
+            "Approve project only after reading this report.",
+            "Missing Reddit or Meta Ads data lowers confidence until credentials are unlocked.",
+            "Run a dry-run proof before scheduler rotation.",
+        ],
+    }
 
 
 def _latest_report(root: Path) -> ScoutJob | None:
@@ -34,6 +182,23 @@ def _latest_report(root: Path) -> ScoutJob | None:
     if not reports:
         return None
     return ScoutJob.model_validate_json(reports[0].read_text())
+
+
+@router.get("/reports/{job_id}/{niche_slug}", response_class=HTMLResponse)
+async def scout_report_detail(
+    request: Request,
+    job_id: str,
+    niche_slug: str,
+    _: str = Depends(verify_auth),
+):
+    root = _root(request)
+    job = _load_report(root, job_id)
+    opp = _find_opportunity(job, niche_slug)
+    return templates.TemplateResponse(
+        request,
+        "scout_report.html",
+        {"job": job, "report": _scout_report_view(job, opp)},
+    )
 
 
 def _latest_dry_run_proof(root: Path, project_slug: str) -> dict | None:
@@ -91,7 +256,14 @@ async def scout_index(request: Request, _: str = Depends(verify_auth)):
     return templates.TemplateResponse(
         request,
         "scout.html",
-        {"job": job, "activation_reviews": _activation_reviews(root)},
+        {
+            "job": job,
+            "opportunity_reports": [
+                {"opportunity": opp, "slug": _niche_slug(opp.niche_name)}
+                for opp in (job.opportunities if job else [])
+            ],
+            "activation_reviews": _activation_reviews(root),
+        },
     )
 
 
@@ -152,16 +324,12 @@ async def scout_approve(
 
     if not _JOB_ID_RE.match(job_id):
         raise HTTPException(status_code=400, detail="Invalid job_id")
-    reports_dir = (root / "output" / "scout_reports").resolve()
-    report_path = (reports_dir / f"{job_id}-scout-report.json").resolve()
-    if not str(report_path).startswith(str(reports_dir) + "/"):
-        raise HTTPException(status_code=400, detail="Invalid job_id")
 
     def _background() -> None:
         try:
             cfg = Config.from_env()
             from scout_pipeline import approve_niche
-            job = ScoutJob.model_validate_json(report_path.read_text())
+            job = _load_report(root, job_id)
             approve_niche(job, niche_name, cfg, projects_root=root / "projects")
         except Exception as exc:
             logger.error("Dashboard approve failed: %s", exc)

@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Scout Report — {{ report.opportunity.niche_name }}{% endblock %}
+
+{% block content %}
+<section class="hero hero-fleet compact-hero fleet-hero-readiness">
+  <p class="eyebrow">Scout Report {{ report.job_id }}</p>
+  <h1>{{ report.opportunity.niche_name }}</h1>
+  <p class="hero-copy">{{ report.summary }}</p>
+  <div class="hero-actions">
+    <a class="button button-secondary" href="/scout/">Back to Scout</a>
+    {% if job.status == 'awaiting_approval' %}
+    <form method="post" action="/scout/approve" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
+      <input type="hidden" name="job_id" value="{{ job.job_id }}">
+      <input type="hidden" name="niche_name" value="{{ report.opportunity.niche_name }}">
+      <button type="submit" class="button">Approve to create project</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+<section class="stats-grid">
+  <article class="stat-card">
+    <span>Worth opening</span>
+    <strong>{{ report.worth_opening }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Recommendation</span>
+    <strong>{{ report.recommendation }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Reach score</span>
+    <strong>{{ report.opportunity.reach_score | round(0) | int }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Trend</span>
+    <strong>{{ report.opportunity.trend_direction | title }}</strong>
+  </article>
+</section>
+
+<section>
+  <div class="section-heading">
+    <p class="eyebrow">Scorecard</p>
+    <h2>Decision Signals</h2>
+  </div>
+  <div class="content-grid">
+    {% for card in report.score_cards %}
+    <article class="panel">
+      <div class="section-heading" style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+        <div>
+          <p class="eyebrow">{{ card.label }}</p>
+          <h3 style="margin:0;">{{ card.score }}/100</h3>
+        </div>
+        <span class="badge {% if card.score >= 80 %}badge-completed{% elif card.score >= 60 %}badge-running{% else %}badge-pending{% endif %}">{{ "Strong" if card.score >= 80 else ("Medium" if card.score >= 60 else "Weak") }}</span>
+      </div>
+      <p style="color:var(--muted); font-size:0.88rem;">{{ card.note }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Viral signal</p>
+      <h2>Why This Could Spread</h2>
+    </div>
+    <ul>
+      {% for item in report.viral_drivers %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Target</p>
+      <h2>Who This Page Serves</h2>
+    </div>
+    <ul>
+      {% for item in report.target_profile %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Monetization</p>
+      <h2>How It Can Make Money</h2>
+    </div>
+    <ul>
+      {% for path in report.monetization_paths %}
+      <li>{{ path }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Content strategy</p>
+      <h2>Starter Angles</h2>
+    </div>
+    <ul>
+      {% for angle in report.content_angles %}
+      <li>{{ angle }}</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section>
+  <div class="section-heading">
+    <p class="eyebrow">Sources</p>
+    <h2>Signal Coverage</h2>
+  </div>
+  <div class="content-grid">
+    {% for source in report.source_cards %}
+    <article class="panel">
+      <span class="badge badge-ops-{{ 'ready' if source.status == 'working' else 'missing' }}">{{ source.status | title }}</span>
+      <h3>{{ source.name }}</h3>
+      <p style="color:var(--muted); font-size:0.88rem;">{{ source.summary }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Risk notes</p>
+    <h2>Before Approval</h2>
+  </div>
+  <ul>
+    {% for risk in report.risks %}
+    <li>{{ risk }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}
