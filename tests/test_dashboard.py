@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 # Set env vars before dashboard is first imported in this process
@@ -2414,8 +2415,101 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Visual QA" in resp.text
     assert "PDF Technical QA" in resp.text
     assert "Monetization QA" in resp.text
+    assert "0/5" in resp.text
+    assert "Next missing QA gate: Content QA" in resp.text
+    assert "Record QA" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
+
+
+def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/qa-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "gate": "Content QA",
+            "status": "PASS",
+            "note": "Chapter value and claims checked.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith("/aurora/ebooks?project=slay_hack&qa_result=Content%20QA%3A%20PASS")
+    registry = yaml.safe_load((tmp_path / "projects" / "slay_hack" / "ebooks.yaml").read_text())
+    gates = registry["ebooks"][0]["qa_gates"]
+    content_gate = next(item for item in gates if item["gate"] == "Content QA")
+    assert content_gate["status"] == "PASS"
+    assert content_gate["note"] == "Chapter value and claims checked."
+    assert content_gate["reviewed_by"] == "admin"
+    assert content_gate["reviewed_at"]
+    brand_gate = next(item for item in gates if item["gate"] == "Brand QA")
+    assert brand_gate["status"] == "PARTIAL"
+
+    page = client.get("/aurora/ebooks", headers=_auth())
+    assert page.status_code == 200
+    assert "1/5" in page.text
+    assert "Next missing QA gate: Brand QA" in page.text
+    assert "Chapter value and claims checked." in page.text
+
+
+def test_aurora_ebooks_rejects_invalid_qa_status(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/qa-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "gate": "Content QA",
+            "status": "READY",
+            "note": "Invalid state.",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "QA status must be PASS, PARTIAL, or FAIL"
+
+
+def test_aurora_ebooks_rejects_unknown_qa_gate(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/qa-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "gate": "Legal QA",
+            "status": "PASS",
+            "note": "Unknown gate.",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "is not registered" in resp.json()["detail"]
+
+
+def test_aurora_ebooks_record_requires_registry(client):
+    resp = client.post(
+        "/aurora/ebooks/qa-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "gate": "Content QA",
+            "status": "PASS",
+            "note": "No registry.",
+        },
+    )
+
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"]
 
 
 def test_aurora_ebooks_page_renders_empty_state_without_registry(client):
