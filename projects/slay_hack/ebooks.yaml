@@ -223,18 +223,33 @@ ebooks:
       - gate: Content QA
         status: PARTIAL
         check: "Promise, chapter value, exercises, filler, and risky claims."
+        note: "Useful 10-chapter 35+ beauty guide with clear routine value, but skincare/retinol/SPF/collagen claims need source citations or a non-medical disclaimer before sale. Registered editable DOCX is a different 40 Life Hacks product, so source integrity is not fully proven."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Brand QA
-        status: PARTIAL
+        status: PASS
         check: "SlayHack voice, PM direction, vocabulary, and target-reader match."
+        note: "Title, Auntie V/Bella Mist framing, 35-44 audience, refinement-not-decline promise, and SlayHack tone align with the Fine Wine lane."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Visual QA
-        status: PARTIAL
+        status: FAIL
         check: "Cover, palette, typography, image consistency, and character usage."
+        note: "Cover and palette are polished, but interior is mostly text and tip boxes. It does not meet the visual-first B+C Hybrid strategy, lacks character portraits/icons/panels, and includes a near-blank page before the final CTA."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T03:19:25Z"
       - gate: PDF Technical QA
         status: PARTIAL
         check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
+        note: "PDF is 39 pages, 6x8 inches, text-extractable, bookmarked, and 9.5 MB. Blockers: missing title/author metadata, no active links despite a shop CTA button, and file proof differs from older 61-page/29.9 MB handoff language."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Monetization QA
         status: PARTIAL
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
+        note: "Sales, checkout, delivery, bridge, content-push, post-purchase, and tracking drafts exist. Keep PARTIAL because final support/refund/delivery terms are placeholders and the PDF contains a live-looking slayhack.com/shop CTA before checkout is approved."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T03:19:25Z"
     launch_assets:
       - name: sales page
         status: review_ready
