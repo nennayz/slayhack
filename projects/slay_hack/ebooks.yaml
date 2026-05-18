@@ -220,7 +220,11 @@ ebooks:
       - name: sales page
         status: review_ready
         note: "Sales page draft exists in the Fine Wine launch copy asset pack."
-      - product mockup
+      - key: product_mockup
+        name: product mockup
+        status: review_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_product_mockup.md"
+        note: "Review-ready mockup direction exists for the cover, device stack, sales-page hero, and checkout thumbnail."
       - name: checkout copy
         status: review_ready
         note: "Checkout copy draft exists; no payment link is live."
