@@ -54,6 +54,27 @@ def test_zoe_live_limits_allowed_type_when_preset(mocker):
     assert "Allowed content types: article" in captured["user"]
 
 
+def test_zoe_live_normalizes_requested_content_type(mocker):
+    ideas_json = '[{"number":1,"title":"Article","hook":"h","angle":"a","content_type":"carousel-style posts"}]'
+    mocker.patch.object(ZoeAgent, "_call_claude", return_value=ideas_json)
+    job = make_job(dry_run=False)
+    job.content_type = ContentType.ARTICLE
+    job.trend_data = {"trends": [], "trending_sounds": [], "formats": []}
+    agent = ZoeAgent(make_config())
+    job = agent.run(job)
+    assert job.ideas[0].content_type == ContentType.ARTICLE
+
+
+def test_zoe_live_normalizes_common_content_type_aliases(mocker):
+    ideas_json = '[{"number":1,"title":"Reel","hook":"h","angle":"a","content_type":"short-form videos"}]'
+    mocker.patch.object(ZoeAgent, "_call_claude", return_value=ideas_json)
+    job = make_job(dry_run=False)
+    job.trend_data = {"trends": [], "trending_sounds": [], "formats": []}
+    agent = ZoeAgent(make_config())
+    job = agent.run(job)
+    assert job.ideas[0].content_type == ContentType.VIDEO
+
+
 def test_zoe_dry_run_ideas_have_content_type():
     job = make_job(dry_run=True)
     job.trend_data = {"trends": [], "trending_sounds": [], "formats": []}
