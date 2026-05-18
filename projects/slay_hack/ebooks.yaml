@@ -247,15 +247,76 @@ ebooks:
           - "Launch package: sales page, product mockup, checkout copy, delivery email, checkout terms, lead magnet bridge, 7-day content push, post-purchase next step, and tracking plan are approved for the Captain sale-gate decision."
     checkout_setup_gate:
       label: "Checkout setup and delivery test"
-      status: locked
+      status: test_setup_packet_ready_checkout_locked
+      mode: test
+      setup_packet: "docs/monetization/slay_hack/age_like_fine_wine_test_checkout_setup.md"
       boundary: "Test-mode checkout, delivery link, receipt email, support path, and refund handling must be configured and smoked before public checkout can open."
-      next_action: "Create a test-mode checkout setup and record delivery proof; do not enable public checkout."
+      next_action: "Use the test setup packet to create the Stripe test-mode checkout, then record smoke proof; do not enable public checkout."
+      test_checkout:
+        provider: "Stripe Checkout Sessions or Payment Links"
+        mode: "test mode"
+        status: setup_packet_ready
+        product_name: "Age Like Fine Wine"
+        price_label: "Captain price pending before Stripe test product creation"
+        proof_sha256: "59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8"
+        payment_link: ""
+        checkout_session: ""
+        note: "No Stripe test payment link is recorded yet. Create it only in Stripe test mode after price confirmation."
+      secure_delivery:
+        status: prepared_for_internal_smoke
+        proof_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"
+        internal_delivery_route: "/aurora/ebooks/delivery-proof/age_like_fine_wine?project_slug=slay_hack"
+        link_policy: "Protected dashboard proof route for smoke testing only; buyer-facing secure fulfillment still requires a separate delivery provider or signed-link setup."
+      receipt_delivery:
+        status: draft_ready
+        delivery_email_asset: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
+        checkout_terms_asset: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+        support_path: "Approved support inbox must be confirmed before checkout activation."
       requirements:
         - "Test-mode checkout product uses Age Like Fine Wine title, price, and proof SHA."
         - "Delivery email uses the approved download placeholder until a tested secure link exists."
         - "Receipt/support inbox is confirmed before any buyer-facing checkout."
         - "Mobile PDF open, desktop PDF open, failed-download support, and duplicate-purchase refund paths are smoked."
         - "Public checkout requires a separate Captain live checkout gate after test evidence is recorded."
+      smoke_checks:
+        - key: test_mode_checkout_setup
+          label: "Test-mode checkout setup"
+          status: PARTIAL
+          evidence: "Setup packet is ready; Stripe test product/payment link is not created until price and test credentials are available."
+          note: "Use Stripe test mode only. Public checkout remains locked."
+        - key: secure_delivery_link
+          label: "Secure delivery link"
+          status: PARTIAL
+          evidence: "/aurora/ebooks/delivery-proof/age_like_fine_wine?project_slug=slay_hack"
+          note: "Protected Fleet proof route exists for internal smoke; buyer-facing signed delivery remains separate."
+        - key: receipt_delivery_email
+          label: "Receipt and delivery email"
+          status: PENDING
+          evidence: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
+          note: "Send a test receipt/delivery email after Stripe test checkout exists."
+        - key: mobile_pdf_open
+          label: "Mobile PDF open"
+          status: PENDING
+          evidence: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"
+          note: "Open the protected proof route on a phone viewport/device before passing."
+        - key: desktop_pdf_open
+          label: "Desktop PDF open"
+          status: PENDING
+          evidence: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"
+          note: "Open the protected proof route on desktop before passing."
+        - key: support_path
+          label: "Support path"
+          status: PENDING
+          evidence: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+          note: "Confirm the support inbox on receipt and delivery email."
+        - key: refund_path
+          label: "Refund path"
+          status: PENDING
+          evidence: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+          note: "Smoke duplicate-purchase/access-issue refund handling in test mode."
+      public_checkout_gate:
+        status: locked
+        next_action: "Add a separate public checkout/live sale gate only after all test-mode smoke checks pass."
     drive:
       folder: "Ebook Project"
       artifacts:

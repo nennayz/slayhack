@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 
 from routes.deps import templates, verify_auth, _root
 from track_queue import enqueue_track_snapshots
@@ -154,6 +154,7 @@ PM_KNOWLEDGE_SMOKE_CHECKS = [
 EBOOK_QA_STATUSES = {"PASS", "PARTIAL", "FAIL"}
 EBOOK_LAUNCH_ASSET_STATUSES = {"missing", "draft_ready", "review_ready", "approved"}
 EBOOK_SALE_GATE_STATUSES = {"locked", "approved"}
+EBOOK_CHECKOUT_SMOKE_STATUSES = {"PENDING", "PASS", "PARTIAL", "FAIL"}
 
 EBOOK_FACTORY_DEFAULTS = {
     "state": "No e-book registry found",
@@ -226,6 +227,26 @@ def _ebook_launch_status_class(status: object) -> str:
     if normalized == "approved":
         return "badge-ops-ready"
     if normalized == "review_ready":
+        return "badge-ops-missing"
+    return "badge-ops-unavailable"
+
+
+def _ebook_checkout_status_class(status: object) -> str:
+    normalized = str(status or "").upper()
+    if normalized == "PASS":
+        return "badge-ops-ready"
+    if normalized == "FAIL":
+        return "badge-ops-failed"
+    if normalized == "PARTIAL":
+        return "badge-ops-missing"
+    return "badge-ops-unavailable"
+
+
+def _ebook_checkout_gate_status_class(status: object) -> str:
+    normalized = str(status or "").lower()
+    if "passed" in normalized:
+        return "badge-ops-ready"
+    if "progress" in normalized or "ready" in normalized:
         return "badge-ops-missing"
     return "badge-ops-unavailable"
 
@@ -472,6 +493,71 @@ def _ebook_launch_asset_rows(items: object) -> list[dict[str, object]]:
     return [item for item in rows if item.get("name")]
 
 
+def _ebook_checkout_smoke_rows(items: object) -> list[dict[str, object]]:
+    if not isinstance(items, list):
+        return []
+    rows = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "PENDING").strip().upper()
+        if status not in EBOOK_CHECKOUT_SMOKE_STATUSES:
+            status = "PENDING"
+        rows.append(
+            {
+                **item,
+                "key": str(item.get("key") or "").strip(),
+                "label": str(item.get("label") or item.get("key") or "Checkout smoke check").strip(),
+                "status": status,
+                "status_class": _ebook_checkout_status_class(status),
+                "note": str(item.get("note") or "").strip(),
+            }
+        )
+    return [item for item in rows if item.get("key")]
+
+
+def _ebook_checkout_summary(rows: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "passed": sum(1 for item in rows if item.get("status") == "PASS"),
+        "total": len(rows),
+        "failed": sum(1 for item in rows if item.get("status") == "FAIL"),
+        "pending": sum(1 for item in rows if item.get("status") == "PENDING"),
+    }
+
+
+def _ebook_checkout_setup_gate(pilot: dict[str, object]) -> dict[str, object]:
+    gate = pilot.get("checkout_setup_gate") if isinstance(pilot.get("checkout_setup_gate"), dict) else {}
+    rows = _ebook_checkout_smoke_rows(gate.get("smoke_checks"))
+    summary = _ebook_checkout_summary(rows)
+    status = str(gate.get("status") or "locked").strip() or "locked"
+    if rows and summary["passed"] == summary["total"]:
+        status = "test_mode_passed_public_checkout_locked"
+    elif rows and summary["passed"]:
+        status = "test_mode_in_progress_checkout_locked"
+    next_check = next((item for item in rows if item.get("status") != "PASS"), None)
+    return {
+        **gate,
+        "label": str(gate.get("label") or "Checkout setup and delivery test"),
+        "status": status,
+        "status_class": _ebook_checkout_gate_status_class(status),
+        "boundary": str(
+            gate.get("boundary")
+            or "Test-mode checkout and delivery smoke must pass before public checkout can open."
+        ),
+        "next_action": str(gate.get("next_action") or "Record test-mode checkout and delivery smoke evidence."),
+        "requirements": gate.get("requirements") if isinstance(gate.get("requirements"), list) else [],
+        "smoke_checks": rows,
+        "smoke_summary": summary,
+        "next_smoke_check": next_check,
+        "test_checkout": gate.get("test_checkout") if isinstance(gate.get("test_checkout"), dict) else {},
+        "secure_delivery": gate.get("secure_delivery") if isinstance(gate.get("secure_delivery"), dict) else {},
+        "receipt_delivery": gate.get("receipt_delivery") if isinstance(gate.get("receipt_delivery"), dict) else {},
+        "public_checkout_gate": gate.get("public_checkout_gate")
+        if isinstance(gate.get("public_checkout_gate"), dict)
+        else {},
+    }
+
+
 def _read_ebook_registry(registry_path: Path) -> dict[str, object]:
     try:
         raw = yaml.safe_load(registry_path.read_text()) or {}
@@ -576,9 +662,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "monetization_integrity": pilot.get("monetization_integrity")
             if isinstance(pilot.get("monetization_integrity"), dict)
             else {},
-            "checkout_setup_gate": pilot.get("checkout_setup_gate")
-            if isinstance(pilot.get("checkout_setup_gate"), dict)
-            else {},
+            "checkout_setup_gate": _ebook_checkout_setup_gate(pilot),
             "sale_gate": sale_gate,
         }
     )
@@ -715,6 +799,7 @@ def aurora_ebooks(request: Request, _: str = Depends(verify_auth)):
             "ebook_factory": _ebook_factory(_root(request), project_slug),
             "qa_result": request.query_params.get("qa_result", ""),
             "launch_result": request.query_params.get("launch_result", ""),
+            "checkout_result": request.query_params.get("checkout_result", ""),
         },
     )
 
@@ -755,6 +840,33 @@ def aurora_ebook_launch_asset_file(
     if not asset_path.exists():
         raise HTTPException(status_code=404, detail=f"Launch asset file {asset.get('path')!r} not found")
     return PlainTextResponse(asset_path.read_text(), media_type="text/markdown; charset=utf-8")
+
+
+@router.get("/aurora/ebooks/delivery-proof/{ebook_id}", response_class=FileResponse)
+def aurora_ebook_delivery_proof(
+    request: Request,
+    ebook_id: str,
+    project_slug: str = "slay_hack",
+    _: str = Depends(verify_auth),
+):
+    root = _root(request)
+    factory = _ebook_factory(root, project_slug)
+    ebooks = factory.get("ebooks") if isinstance(factory.get("ebooks"), list) else []
+    ebook = next(
+        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
+        None,
+    )
+    if ebook is None:
+        raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
+    source_integrity = ebook.get("source_integrity") if isinstance(ebook.get("source_integrity"), dict) else {}
+    proof_path = _ebook_asset_path(root, source_integrity.get("proof_path", ""), "Delivery proof")
+    if not proof_path.exists():
+        raise HTTPException(status_code=404, detail=f"Delivery proof file {source_integrity.get('proof_path')!r} not found")
+    return FileResponse(
+        proof_path,
+        media_type="application/pdf",
+        filename=f"{ebook_id}-test-delivery-proof.pdf",
+    )
 
 
 @router.post("/aurora/ebooks/qa-gate")
@@ -911,6 +1023,99 @@ def aurora_ebook_record_launch_asset(
 
     message = quote(f"{asset_row['name']}: {status_clean}")
     return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&launch_result={message}", status_code=303)
+
+
+@router.post("/aurora/ebooks/checkout-gate")
+def aurora_ebook_record_checkout_gate(
+    request: Request,
+    project_slug: str = Form("slay_hack"),
+    ebook_id: str = Form(...),
+    check: str = Form(...),
+    status: str = Form(...),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    status_clean = status.strip().upper()
+    if status_clean not in EBOOK_CHECKOUT_SMOKE_STATUSES:
+        raise HTTPException(status_code=400, detail="Checkout smoke status must be PENDING, PASS, PARTIAL, or FAIL")
+
+    resolved_project, registry_path = _ebook_registry_location(root, project_slug.strip() or "slay_hack")
+    if not registry_path.exists():
+        raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
+
+    factory = _ebook_factory(root, resolved_project)
+    sale_gate = factory.get("sale_gate") if isinstance(factory.get("sale_gate"), dict) else {}
+    if not sale_gate.get("approved"):
+        raise HTTPException(status_code=400, detail="Checkout setup is locked until Captain sale approval is recorded")
+
+    try:
+        registry = _read_ebook_registry(registry_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    ebooks = registry.get("ebooks")
+    if not isinstance(ebooks, list):
+        raise HTTPException(status_code=400, detail="E-book registry must contain an ebooks list")
+
+    ebook = next(
+        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
+        None,
+    )
+    if ebook is None:
+        raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
+
+    gate = ebook.get("checkout_setup_gate")
+    if not isinstance(gate, dict):
+        raise HTTPException(status_code=400, detail=f"E-book {ebook_id!r} has no checkout setup gate")
+    smoke_checks = gate.get("smoke_checks")
+    if not isinstance(smoke_checks, list):
+        raise HTTPException(status_code=400, detail=f"E-book {ebook_id!r} has no checkout smoke checks")
+
+    check_clean = check.strip()
+    check_row = next(
+        (
+            item
+            for item in smoke_checks
+            if isinstance(item, dict) and str(item.get("key", "")).strip() == check_clean
+        ),
+        None,
+    )
+    if check_row is None:
+        raise HTTPException(status_code=400, detail=f"Checkout smoke check {check!r} is not registered for this e-book")
+
+    check_row["status"] = status_clean
+    check_row["note"] = note.strip()
+    check_row["reviewed_by"] = user
+    check_row["reviewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    normalized_rows = _ebook_checkout_smoke_rows(smoke_checks)
+    summary = _ebook_checkout_summary(normalized_rows)
+    if normalized_rows and summary["passed"] == summary["total"]:
+        gate["status"] = "test_mode_passed_public_checkout_locked"
+        gate["next_action"] = "All test-mode checkout smoke checks passed; create a separate public checkout/live sale gate next."
+    elif summary["passed"]:
+        gate["status"] = "test_mode_in_progress_checkout_locked"
+        next_check = next((item for item in normalized_rows if item.get("status") != "PASS"), None)
+        if next_check:
+            gate["next_action"] = f"Continue checkout smoke: {next_check['label']}."
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False, allow_unicode=True))
+
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Recorded {status_clean} for e-book checkout smoke check {check_row['label']}",
+        actor=user,
+        result=f"{resolved_project}:{ebook_id}:{check_clean}={status_clean}",
+        next_action="Keep public checkout locked until every test-mode checkout smoke check passes and a separate live gate is approved.",
+        files=[f"projects/{resolved_project}/ebooks.yaml"],
+        metadata={"project": resolved_project, "ebook_id": ebook_id, "check": check_clean, "status": status_clean},
+    )
+
+    message = quote(f"{check_row['label']}: {status_clean}")
+    return RedirectResponse(
+        f"/aurora/ebooks?project={quote(resolved_project)}&checkout_result={message}",
+        status_code=303,
+    )
 
 
 @router.post("/aurora/ebooks/sale-gate")

@@ -24,6 +24,12 @@
   <p>{{ launch_result }}</p>
 </section>
 {% endif %}
+{% if checkout_result %}
+<section class="panel spacious">
+  <span class="badge badge-ops-ready">Checkout smoke result recorded</span>
+  <p>{{ checkout_result }}</p>
+</section>
+{% endif %}
 
 <section class="stat-grid wide">
   <div class="stat-card">
@@ -153,9 +159,31 @@
     <h2>{{ ebook_factory.checkout_setup_gate.label }}</h2>
   </div>
   <div class="learning-gates">
-    <span class="badge badge-ops-unavailable">{{ ebook_factory.checkout_setup_gate.status | replace("_", " ") }}</span>
+    <span class="badge {{ ebook_factory.checkout_setup_gate.status_class }}">{{ ebook_factory.checkout_setup_gate.status | replace("_", " ") }}</span>
     <span>{{ ebook_factory.checkout_setup_gate.boundary }}</span>
     <span>{{ ebook_factory.checkout_setup_gate.next_action }}</span>
+    {% if ebook_factory.checkout_setup_gate.test_checkout.provider %}
+    <span>Test checkout: {{ ebook_factory.checkout_setup_gate.test_checkout.provider }} / {{ ebook_factory.checkout_setup_gate.test_checkout.mode or "test mode" }}</span>
+    {% endif %}
+    {% if ebook_factory.checkout_setup_gate.test_checkout.product_name %}
+    <span>Product: {{ ebook_factory.checkout_setup_gate.test_checkout.product_name }}</span>
+    {% endif %}
+    {% if ebook_factory.checkout_setup_gate.test_checkout.price_label %}
+    <span>Price: {{ ebook_factory.checkout_setup_gate.test_checkout.price_label }}</span>
+    {% endif %}
+    {% if ebook_factory.checkout_setup_gate.secure_delivery.internal_delivery_route %}
+    <span>Secure test delivery: <a href="{{ ebook_factory.checkout_setup_gate.secure_delivery.internal_delivery_route }}">Open protected PDF proof</a></span>
+    {% endif %}
+    {% if ebook_factory.checkout_setup_gate.receipt_delivery.delivery_email_asset %}
+    <span>Delivery email asset: <code>{{ ebook_factory.checkout_setup_gate.receipt_delivery.delivery_email_asset }}</code></span>
+    {% endif %}
+    <span>Checkout smoke: {{ ebook_factory.checkout_setup_gate.smoke_summary.passed }}/{{ ebook_factory.checkout_setup_gate.smoke_summary.total }}</span>
+    {% if ebook_factory.checkout_setup_gate.next_smoke_check %}
+    <span>Next smoke check: {{ ebook_factory.checkout_setup_gate.next_smoke_check.label }}</span>
+    {% endif %}
+    {% if ebook_factory.checkout_setup_gate.public_checkout_gate.status %}
+    <span>Public checkout gate: {{ ebook_factory.checkout_setup_gate.public_checkout_gate.status | replace("_", " ") }}</span>
+    {% endif %}
   </div>
   {% if ebook_factory.checkout_setup_gate.requirements %}
   <div class="manual-learning-list">
@@ -165,6 +193,39 @@
         <span class="badge badge-ops-missing">Required</span>
         <strong>{{ item }}</strong>
       </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if ebook_factory.checkout_setup_gate.smoke_checks %}
+  <div class="manual-learning-list">
+    {% for item in ebook_factory.checkout_setup_gate.smoke_checks %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge {{ item.status_class }}">{{ item.status }}</span>
+        <strong>{{ item.label }}</strong>
+        {% if item.note %}
+        <p>{{ item.note }}</p>
+        {% endif %}
+        {% if item.evidence %}
+        <small>Evidence: {{ item.evidence }}</small>
+        {% endif %}
+        {% if item.reviewed_by %}
+        <small>Reviewed by {{ item.reviewed_by }} / {{ item.reviewed_at }}</small>
+        {% endif %}
+      </div>
+      <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/checkout-gate">
+        <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
+        <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
+        <input name="check" type="hidden" value="{{ item.key }}">
+        <select name="status" aria-label="Checkout smoke status for {{ item.label }}">
+          {% for status in ["PENDING", "PASS", "PARTIAL", "FAIL"] %}
+          <option value="{{ status }}" {% if item.status == status %}selected{% endif %}>{{ status }}</option>
+          {% endfor %}
+        </select>
+        <input name="note" type="text" placeholder="Evidence note" value="{{ item.note }}">
+        <button type="submit" {% if not ebook_factory.sale_gate.approved %}disabled{% endif %}>Record smoke</button>
+      </form>
     </article>
     {% endfor %}
   </div>
