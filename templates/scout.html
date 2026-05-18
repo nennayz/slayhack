@@ -119,6 +119,18 @@
         <button type="submit" class="button button-small" style="width:100%;">Approve for scheduler rotation</button>
       </form>
       {% endif %}
+      {% if review.can_delete %}
+      <details class="evidence-drawer" style="margin-top:0.75rem;">
+        <summary>Project cleanup</summary>
+        <p style="font-size:0.85rem; color:var(--muted);">Remove this Scout test project from active project config. Existing output evidence stays in output.</p>
+        <form method="post" action="/scout/projects/delete" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
+          <input type="hidden" name="project_slug" value="{{ review.slug }}">
+          <label for="confirm_delete_{{ review.slug }}" style="font-size:0.8rem;">Type project slug to confirm</label>
+          <input id="confirm_delete_{{ review.slug }}" name="confirm_slug" type="text" placeholder="{{ review.slug }}" autocomplete="off">
+          <button type="submit" class="button button-small button-danger" style="width:100%; margin-top:0.5rem;">Remove test project</button>
+        </form>
+      </details>
+      {% endif %}
     </article>
     {% endfor %}
   </div>

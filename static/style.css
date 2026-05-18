@@ -835,6 +835,12 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   border: 1px solid var(--line);
   color: var(--navy);
 }
+.button-danger {
+  background: #8a2432;
+}
+.button-danger:hover {
+  background: #6f1c28;
+}
 .button-small {
   font-size: 0.82rem;
   min-height: 36px;
