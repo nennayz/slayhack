@@ -240,7 +240,11 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '        status: review_ready\n'
         '        path: "docs/monetization/slay_hack/age_like_fine_wine_post_purchase_next_step.md"\n'
         '        note: "Post-purchase next step draft exists."\n'
-        '      - tracking plan\n'
+        '      - key: tracking_plan\n'
+        '        name: tracking plan\n'
+        '        status: review_ready\n'
+        '        path: "docs/monetization/slay_hack/age_like_fine_wine_tracking_plan.md"\n'
+        '        note: "Tracking plan draft exists."\n'
     )
     copy_dir = tmp_path / "docs" / "monetization" / "slay_hack"
     copy_dir.mkdir(parents=True, exist_ok=True)
@@ -255,6 +259,9 @@ def _write_ebook_registry(tmp_path: Path) -> None:
     )
     (copy_dir / "age_like_fine_wine_post_purchase_next_step.md").write_text(
         "# Age Like Fine Wine - Post-Purchase Next Step Draft\n\nYour Fine Wine glow-up guide is ready.\n"
+    )
+    (copy_dir / "age_like_fine_wine_tracking_plan.md").write_text(
+        "# Age Like Fine Wine - Tracking Plan Draft\n\nMeasure traffic, conversion, delivery, support, and learning.\n"
     )
 
 
@@ -2513,7 +2520,7 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Record QA" in resp.text
     assert "0/6" in resp.text
     assert "Next missing launch asset: sales page" in resp.text
-    assert "Next non-copy launch asset: tracking plan" in resp.text
+    assert "Next non-copy launch asset:" not in resp.text
     assert "Record asset" in resp.text
     assert "Fine Wine 35-44 Monetization Lane" in resp.text
     assert "Slay Basics: 30 Hacks" in resp.text
@@ -2530,9 +2537,11 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert 'href="/aurora/ebooks/copy/sales_page?project_slug=slay_hack"' in resp.text
     assert 'href="/aurora/ebooks/assets/product_mockup?project_slug=slay_hack"' in resp.text
     assert 'href="/aurora/ebooks/assets/post_purchase_next_step?project_slug=slay_hack"' in resp.text
+    assert 'href="/aurora/ebooks/assets/tracking_plan?project_slug=slay_hack"' in resp.text
     assert "age_like_fine_wine_sales_page.md" in resp.text
     assert "age_like_fine_wine_product_mockup.md" in resp.text
     assert "age_like_fine_wine_post_purchase_next_step.md" in resp.text
+    assert "age_like_fine_wine_tracking_plan.md" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
     assert "tracking plan" in resp.text
@@ -2578,6 +2587,17 @@ def test_aurora_ebooks_post_purchase_asset_route_serves_registered_markdown(tmp_
     assert resp.headers["content-type"].startswith("text/markdown")
     assert "Age Like Fine Wine - Post-Purchase Next Step Draft" in resp.text
     assert "Your Fine Wine glow-up guide is ready." in resp.text
+
+
+def test_aurora_ebooks_tracking_plan_asset_route_serves_registered_markdown(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get("/aurora/ebooks/assets/tracking_plan?project_slug=slay_hack", headers=_auth())
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert "Age Like Fine Wine - Tracking Plan Draft" in resp.text
+    assert "Measure traffic, conversion, delivery, support, and learning." in resp.text
 
 
 def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):

@@ -242,4 +242,8 @@ ebooks:
         status: review_ready
         path: "docs/monetization/slay_hack/age_like_fine_wine_post_purchase_next_step.md"
         note: "Review-ready post-purchase journey exists for thank-you, delivery, start-here, support, and next-step boundaries."
-      - tracking plan
+      - key: tracking_plan
+        name: tracking plan
+        status: review_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_tracking_plan.md"
+        note: "Review-ready launch measurement plan exists for traffic, conversion, delivery, support, and learning checkpoints."
