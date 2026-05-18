@@ -58,6 +58,8 @@ class AnalystAgent:
         return self._run_live(job)
 
     def _run_live(self, job: ScoutJob) -> ScoutJob:
+        if not job.signals:
+            raise ValueError("AnalystAgent._run_live requires job.signals to be non-empty")
         signals_text = "\n\n".join(
             f"Niche: {s.niche_name}\nData: {json.dumps(s.raw_data, ensure_ascii=False)}"
             for s in job.signals
@@ -79,7 +81,14 @@ class AnalystAgent:
         )
         raw = self._call_openai(system, user)
         parsed = self._parse_json(raw)
-        job.opportunities = [NicheOpportunity(**item) for item in parsed]
+        from pydantic import ValidationError
+        opportunities = []
+        for item in parsed:
+            try:
+                opportunities.append(NicheOpportunity(**item))
+            except ValidationError as exc:
+                logger.warning("Analyst: skipping malformed opportunity from OpenAI: %s", exc)
+        job.opportunities = opportunities
         job.status = ScoutJobStatus.AWAITING_APPROVAL
         return job
 
@@ -87,6 +96,7 @@ class AnalystAgent:
         response = self.client.chat.completions.create(
             model=self.model,
             max_tokens=2048,
+            temperature=0,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},

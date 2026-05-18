@@ -59,6 +59,6 @@ def test_analyst_live_calls_openai(mock_openai_cls):
     agent = AnalystAgent(_make_config())
     job = _make_job_with_signals()
     result = agent.run(job, dry_run=False)
-    assert mock_client.chat.completions.create.called
+    mock_client.chat.completions.create.assert_called_once()
     assert len(result.opportunities) == 1
     assert result.opportunities[0].niche_name == "clean beauty"
