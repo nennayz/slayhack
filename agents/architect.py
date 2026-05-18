@@ -80,14 +80,16 @@ class ArchitectAgent:
             logger.info("Architect dry-run: would create projects/%s/", slug)
             return slug
         self._write_project(slug, opp, projects_root)
+        # Record completion message on job for callers who inspect job state after approval
         job.status_message = f"Project {slug} created at projects/{slug}/"
         return slug
 
     def _find_approved_opportunity(self, job: ScoutJob) -> NicheOpportunity:
         if not job.approved_niche:
             raise ValueError("No approved_niche set on ScoutJob")
+        approved_lower = job.approved_niche.lower()
         for opp in job.opportunities:
-            if opp.niche_name == job.approved_niche:
+            if opp.niche_name.lower() == approved_lower:
                 return opp
         raise ValueError(f"Approved niche '{job.approved_niche}' not found in opportunities")
 
