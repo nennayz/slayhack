@@ -2433,6 +2433,8 @@ def test_aurora_crew_pages_render(client):
     assert "Vera Reel" in crew.text
     assert "Iris Gauge" in crew.text
     assert "Sage Ledger" in crew.text
+    assert "Nami" in crew.text
+    assert "Genie" in crew.text
     assert "Video Producer" in crew.text
     assert "/static/crew/captain-nayz.webp" in crew.text
     assert "/static/crew/vera-reel.webp" in crew.text
@@ -2440,12 +2442,17 @@ def test_aurora_crew_pages_render(client):
     assert "/static/crew/stadium.webp" in crew.text
     assert "/static/crew/iris-gauge.webp" in crew.text
     assert "/static/crew/sage-ledger.webp" in crew.text
+    assert "/static/crew/nami.webp" in crew.text
+    assert "/static/crew/genie.webp" in crew.text
+    assert "/static/crew/fleet-crew-group-20260518.webp" in crew.text
     assert "Crew Stations" in crew.text
+    assert "Full Fleet formation" in crew.text
     assert "Aurora route map" in crew.text
     assert "Fleet Command" in crew.text
     assert "Page PMs" in crew.text
     assert "Aurora Production Route" in crew.text
     assert "Learning Loop" in crew.text
+    assert "Concept Ships" in crew.text
     assert "Captain direction" in crew.text
     assert "Island owners" in crew.text
     assert "Mission command" in crew.text
@@ -4260,7 +4267,7 @@ def test_job_detail_records_manual_post_and_queues_tracking(tmp_path, client, mo
         data={
             "platform": "instagram",
             "post_url": "https://www.instagram.com/p/manual123/",
-            "posted_at": "2026-05-17T14:00:00+00:00",
+            "posted_at": "2099-05-17T14:00:00+00:00",
             "note": "Posted by Captain",
         },
         headers=_auth(),
@@ -4277,7 +4284,7 @@ def test_job_detail_records_manual_post_and_queues_tracking(tmp_path, client, mo
     assert saved["stage"] == "publish_done"
     assert saved["status"] == "completed"
     queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
-    assert [item["track_at"] for item in queue] == ["2026-05-18T14:00:00Z", "2026-05-20T14:00:00Z"]
+    assert [item["track_at"] for item in queue] == ["2099-05-18T14:00:00Z", "2099-05-20T14:00:00Z"]
     work_activity = (tmp_path / "logs" / "work_activity.jsonl").read_text()
     assert "Recorded manual post for 20260512_060000" in work_activity
 
@@ -4301,7 +4308,7 @@ def test_manual_queue_record_post_redirects_with_tracking_feedback(tmp_path, cli
         data={
             "platform": "instagram",
             "post_url": "https://www.instagram.com/p/manual123/",
-            "posted_at": "2026-05-17T14:00:00+00:00",
+            "posted_at": "2099-05-17T14:00:00+00:00",
             "note": "Recorded from Manual Posting Queue.",
             "return_path": "/aurora/manual-posting?lane=waiting_tracking",
         },
@@ -4313,7 +4320,7 @@ def test_manual_queue_record_post_redirects_with_tracking_feedback(tmp_path, cli
     assert resp.headers["location"].startswith("/aurora/manual-posting?lane=waiting_tracking&manual_result=")
     assert "Recorded+manual+post+for+20260512_synced" in resp.headers["location"]
     queue = json.loads((tmp_path / "output" / "track_queue.json").read_text())
-    assert [item["track_at"] for item in queue] == ["2026-05-18T14:00:00Z", "2026-05-20T14:00:00Z"]
+    assert [item["track_at"] for item in queue] == ["2099-05-18T14:00:00Z", "2099-05-20T14:00:00Z"]
     page = client.get(resp.headers["location"], headers=_auth())
     assert page.status_code == 200
     assert "Manual post recorded" in page.text
@@ -4388,7 +4395,7 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
                 "instagram": {
                     "status": "posted",
                     "post_url": "https://www.instagram.com/p/waiting/",
-                    "posted_at": "2026-05-17T14:00:00+00:00",
+                    "posted_at": "2099-05-17T14:00:00+00:00",
                 }
             },
         },
@@ -4399,7 +4406,7 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
                 "post_url": "https://www.instagram.com/p/waiting/",
             }
         },
-        published_at="2026-05-17T14:00:00+00:00",
+        published_at="2099-05-17T14:00:00+00:00",
     )
     _write_job(
         tmp_path,
@@ -4453,7 +4460,7 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
         {
             "job_id": "20260512_waiting",
             "page_name": "Slayhack",
-            "track_at": "2026-05-18T14:00:00Z",
+            "track_at": "2099-05-18T14:00:00Z",
             "attempt": 0,
         }
     ]))
@@ -4468,7 +4475,7 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     assert "Live publish locked" in resp.text
     assert "All" in resp.text
     assert "Captain posts from the Drive kit, then records the platform URL." in resp.text
-    assert "Wait for queued tracking snapshot at 2026-05-18T14:00:00Z." in resp.text
+    assert "Wait for queued tracking snapshot at 2099-05-18T14:00:00Z." in resp.text
     assert "Review the performance proof and capture the learning note." in resp.text
     assert "Manual post is recorded, but no snapshot checks are queued." in resp.text
     assert "Learning completion" in resp.text
@@ -4511,7 +4518,7 @@ def test_manual_posting_queue_groups_synced_posted_tracking_and_attention(tmp_pa
     assert "Waiting on 24h / 72h proof" in waiting_lane.text
     assert "Queued 1" in waiting_lane.text
     assert "24h snapshot" in waiting_lane.text
-    assert "2026-05-18T14:00:00Z" in waiting_lane.text
+    assert "2099-05-18T14:00:00Z" in waiting_lane.text
     assert "Run tracking queue now" in waiting_lane.text
 
     complete_lane = client.get("/aurora/manual-posting?lane=tracking_complete", headers=_auth())

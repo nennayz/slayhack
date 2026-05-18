@@ -11,13 +11,32 @@
   </div>
 </section>
 
+<section class="crew-group-showcase" aria-labelledby="crew-group-showcase-title">
+  <div class="section-heading crew-group-showcase-heading">
+    <div>
+      <p class="eyebrow">Updated crew portrait</p>
+      <h2 id="crew-group-showcase-title">Full Fleet formation</h2>
+    </div>
+    <p>Captain Nayz, PMs, Aurora operators, learning specialists, and concept ships in one production-ready view.</p>
+  </div>
+  <figure class="crew-group-figure">
+    <img
+      class="crew-group-image"
+      src="/static/crew/fleet-crew-group-20260518.webp"
+      alt="Updated NayzFreedom Fleet group portrait with Captain Nayz, Slay, Stadium, Robin, Mia Trend, Zoe Spark, Bella Quill, Lila Lens, Vera Reel, Nora Sharp, Roxy Rise, Emma Heart, Iris Gauge, Sage Ledger, Nami, and Genie"
+      decoding="async"
+      fetchpriority="high"
+    >
+  </figure>
+</section>
+
 <section class="panel route-panel">
   <div class="section-heading">
     <p class="eyebrow">Aurora route map</p>
     <h2>Station order</h2>
   </div>
   <div class="crew-chain">
-    {% for member in crew if member.slug not in ["captain-nayz", "slay", "stadium"] %}
+    {% for member in crew if member.slug not in ["captain-nayz", "slay", "stadium", "nami", "genie"] %}
     <a class="crew-chain-step" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
       <span>{{ member.mission_phase }}</span>
       <strong>{{ member.workflow_stage }}</strong>

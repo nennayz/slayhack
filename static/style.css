@@ -2609,6 +2609,43 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 .crew-grid {
   grid-template-columns: repeat(4, 1fr);
 }
+.crew-group-showcase {
+  margin-bottom: 1rem;
+  max-width: 100%;
+}
+.crew-group-showcase-heading {
+  align-items: end;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(220px, 0.45fr) minmax(0, 1fr);
+  margin-bottom: 0.8rem;
+  min-width: 0;
+}
+.crew-group-showcase-heading p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.crew-group-figure {
+  background:
+    linear-gradient(180deg, rgba(7,22,37,0.98), rgba(16,35,63,0.94)),
+    var(--fleet-deep);
+  border: 1px solid rgba(208,160,84,0.28);
+  border-radius: 18px;
+  box-shadow: 0 24px 54px rgba(16,35,63,0.18);
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: clamp(0.35rem, 1vw, 0.75rem);
+}
+.crew-group-image {
+  border-radius: 12px;
+  display: block;
+  height: auto;
+  max-width: 100%;
+  width: 100%;
+}
 .crew-section-stack {
   display: grid;
   gap: 1rem;
@@ -3037,6 +3074,7 @@ a:hover { color: var(--navy-soft); }
   .output-grid,
   .readiness-grid,
   .domain-grid,
+  .crew-group-showcase-heading,
   .crew-section-heading,
   .crew-chain,
   .crew-grid {
@@ -3056,6 +3094,19 @@ a:hover { color: var(--navy-soft); }
   }
   .aurora-crew-strip img {
     width: 100%;
+  }
+  .crew-group-showcase,
+  .crew-group-showcase-heading,
+  .crew-group-figure,
+  .crew-group-image {
+    max-width: calc(100vw - 2rem);
+    width: calc(100vw - 2rem);
+  }
+  .crew-group-showcase {
+    overflow: hidden;
+  }
+  .crew-group-showcase-heading > * {
+    min-width: 0;
   }
   .workflow-card-grid,
   .workflow-lane-grid,
@@ -3149,6 +3200,29 @@ a:hover { color: var(--navy-soft); }
   .crew-section {
     border-radius: 16px;
     padding: 0.85rem;
+  }
+  .crew-group-showcase {
+    width: calc(100vw - 2rem);
+    max-width: calc(100vw - 2rem);
+    overflow: hidden;
+  }
+  .crew-group-showcase-heading {
+    width: calc(100vw - 2rem);
+  }
+  .crew-group-showcase-heading > * {
+    min-width: 0;
+  }
+  .crew-group-figure {
+    border-radius: 16px;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: calc(100vw - 2rem);
+    width: calc(100vw - 2rem);
+  }
+  .crew-group-image {
+    border-radius: 10px;
+    object-fit: contain;
+    width: calc(100vw - 2rem);
   }
   .crew-grid {
     gap: 0.85rem;

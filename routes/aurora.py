@@ -22,7 +22,6 @@ from routes._helpers import (
     _apply_accepted_learning_to_next_mission,
     _approval_queue_rows,
     _aurora_workflow_snapshot,
-    _calendar_slate,
     _captain_action_console,
     _captain_attention_lane,
     _captain_learning_runbook,
@@ -52,9 +51,7 @@ from routes._helpers import (
     _read_asset_audit_note,
     _read_review_note,
     _crew_asset_audit,
-    _readiness_checks,
     _run_ops_action,
-    _weekly_calendar,
     _write_work_event,
     _update_daily_brief_draft_status,
     active_jobs,
@@ -1542,6 +1539,12 @@ def aurora_crew(request: Request, _: str = Depends(verify_auth)):
             "title": "Read, store, and improve",
             "description": "Post-publish intelligence and durable lesson capture for the next cycle.",
             "members": members(["iris-gauge", "sage-ledger"]),
+        },
+        {
+            "eyebrow": "Concept Ships",
+            "title": "Future lanes",
+            "description": "Approved concept portraits for planned ships. These stay visible without implying live private or music workflow access.",
+            "members": members(["nami", "genie"]),
         },
     ]
     return templates.TemplateResponse(request, "crew.html", {"crew": CREW, "crew_groups": crew_groups})
