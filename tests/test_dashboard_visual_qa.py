@@ -32,6 +32,16 @@ def _write_project(root: Path) -> None:
         '  infographic_1: "Save card one"\n'
         '  infographic_2: "Save card two"\n'
     )
+    drive_root = root / "Drive" / "Slay Hack"
+    ebook_drive_dir = drive_root / "Ebook Project"
+    ebook_drive_dir.mkdir(parents=True, exist_ok=True)
+    (ebook_drive_dir / "20260517-Age_Like_Fine_Wine_v1.pdf").write_bytes(b"%PDF-1.4 fine wine proof")
+    (project_dir / "project_bridge.yaml").write_text(
+        f'project: nayzfreedom_fleet\n'
+        f'display_name: "Slay Hack"\n'
+        f'pm: "Slay"\n'
+        f'drive_root: "{drive_root}"\n'
+    )
     (project_dir / "ebooks.yaml").write_text(
         'factory:\n'
         '  state: "Registry-backed governance ready"\n'
@@ -45,6 +55,13 @@ def _write_project(root: Path) -> None:
         '    status: designed_pdf_ready\n'
         '    role: "first paid low-ticket monetization pilot"\n'
         '    proof: "Prior handoff reports 22 generated images."\n'
+        '    drive:\n'
+        '      folder: "Ebook Project"\n'
+        '      artifacts:\n'
+        '        - key: pdf\n'
+        '          label: "Rendered PDF proof"\n'
+        '          path: "20260517-Age_Like_Fine_Wine_v1.pdf"\n'
+        '          expected: "Prior handoff reported 61 pages and 29.9 MB."\n'
         '    qa_gates:\n'
         '      - gate: Content QA\n'
         '        status: PARTIAL\n'

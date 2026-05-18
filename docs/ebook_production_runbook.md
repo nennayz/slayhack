@@ -173,6 +173,14 @@ Required pilot assets:
 - 7-day content push
 - learning and tracking plan
 
+Current local Drive proof is tracked from `projects/slay_hack/project_bridge.yaml` plus `projects/slay_hack/ebooks.yaml`. The dashboard checks the mounted Slay Hack Drive folder for these read-only artifacts before QA:
+
+- `Ebook Project/20260517-Age_Like_Fine_Wine_v1.pdf`
+- `Ebook Project/slay_hack_ebook_updated.docx`
+- `Ebook Project/ebook_universe_map.png`
+- `Ebook Project/20260517-Ebook-Knowledge-Base.md`
+- `Ebook Project/20260517-Slay-Ebook-Visual-Strategy.md`
+
 ## Launch Package Gate
 
 Before launch, the package must include:
