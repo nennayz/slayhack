@@ -1,0 +1,12 @@
+Instagram:
+  content_types: &id001
+  - video
+  - infographic
+  - article
+  primary: true
+TikTok:
+  content_types: *id001
+  primary: true
+YouTube:
+  content_types: *id001
+  primary: true

@@ -1,0 +1,22 @@
+allowed_content_types:
+- video
+- infographic
+- article
+mission: Character-driven personal finance for women content that builds a loyal audience
+  of women, ages 18-44 and converts trust into owned products.
+nora_max_retries: 2
+platforms:
+- TikTok
+- Instagram
+- YouTube
+script_style: English only, casual bestie voice, punchy hook in first three words,
+  no corporate language
+target_audience: women, ages 18-44
+tone: smart, supportive, aspirational, never preachy
+visual:
+  colors:
+  - '#FFFFFF'
+  - '#F5F5DC'
+  - '#D4AF37'
+  style: warm 3D Pixar CGI, expressive lifestyle objects, soft left-side lighting,
+    vertical 9:16

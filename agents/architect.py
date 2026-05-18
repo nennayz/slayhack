@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 
 from config import Config
+from models.content_job import ContentType
 from models.niche_opportunity import NicheOpportunity, ScoutJob
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,27 @@ def _slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
 
+def _normalize_content_formats(formats: list[str]) -> list[str]:
+    normalized: list[str] = []
+    aliases = [
+        (ContentType.VIDEO.value, ("video", "reel", "short form", "shortform", "clip")),
+        (ContentType.INFOGRAPHIC.value, ("infographic", "cheat sheet", "chart", "diagram")),
+        (ContentType.ARTICLE.value, ("article", "blog", "essay", "newsletter", "listicle", "explainer")),
+        (ContentType.IMAGE.value, ("image", "photo", "carousel", "ootd", "post")),
+    ]
+    for raw in formats:
+        text = str(raw or "").strip().lower().replace("_", " ").replace("-", " ")
+        match = next(
+            (content_type for content_type, markers in aliases if any(marker in text for marker in markers)),
+            None,
+        )
+        if match and match not in normalized:
+            normalized.append(match)
+    return normalized or [ContentType.VIDEO.value, ContentType.INFOGRAPHIC.value, ContentType.ARTICLE.value]
+
+
 def _brand_yaml(opp: NicheOpportunity) -> dict:
+    content_formats = _normalize_content_formats(opp.content_formats)
     return {
         "mission": (
             f"Character-driven {opp.niche_name} content that builds a loyal audience "
@@ -35,7 +56,7 @@ def _brand_yaml(opp: NicheOpportunity) -> dict:
             "no corporate language"
         ),
         "nora_max_retries": 2,
-        "allowed_content_types": opp.content_formats,
+        "allowed_content_types": content_formats,
     }
 
 
@@ -54,19 +75,24 @@ def _pm_profile_yaml(opp: NicheOpportunity, slug: str) -> dict:
 
 
 def _platform_specs_yaml(opp: NicheOpportunity) -> dict:
+    content_formats = _normalize_content_formats(opp.content_formats)
     return {
-        platform: {"primary": True, "content_types": opp.content_formats}
+        platform: {"primary": True, "content_types": content_formats}
         for platform in opp.platforms
     }
 
 
 def _weekly_calendar_yaml(opp: NicheOpportunity) -> dict:
-    return {
-        "monday": {"short_video_1": f"{opp.niche_name} hack"},
-        "wednesday": {"image_1": f"{opp.niche_name} aesthetic"},
-        "friday": {"short_video_2": f"{opp.niche_name} trend"},
-        "sunday": {"infographic_1": f"{opp.niche_name} tips"},
-    }
+    formats = set(_normalize_content_formats(opp.content_formats))
+    schedule = {}
+    if ContentType.VIDEO.value in formats:
+        schedule["monday"] = {"short_video_1": f"{opp.niche_name} hack"}
+        schedule["friday"] = {"short_video_2": f"{opp.niche_name} trend"}
+    if ContentType.ARTICLE.value in formats:
+        schedule["wednesday"] = {"article_1": f"{opp.niche_name} story"}
+    if ContentType.INFOGRAPHIC.value in formats:
+        schedule["sunday"] = {"infographic_1": f"{opp.niche_name} tips"}
+    return schedule or {"monday": {"short_video_1": f"{opp.niche_name} hack"}}
 
 
 class ArchitectAgent:
