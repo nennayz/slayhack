@@ -103,6 +103,41 @@
 </section>
 {% endif %}
 
+{% if ebook_factory.drive_artifacts %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">PDF proof artifacts</p>
+    <h2>Drive source verification</h2>
+  </div>
+  <div class="learning-gates">
+    <span>Verified artifacts: {{ ebook_factory.drive_summary.verified }}/{{ ebook_factory.drive_summary.total }}</span>
+    {% if ebook_factory.next_missing_drive_artifact %}
+    <span>Next missing artifact: {{ ebook_factory.next_missing_drive_artifact.label }}</span>
+    {% endif %}
+    <span>Read-only proof check. Checkout, public sales, and live publish remain locked.</span>
+  </div>
+  <div class="manual-learning-list">
+    {% for item in ebook_factory.drive_artifacts %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge {{ item.status_class }}">{{ item.status }}</span>
+        <strong>{{ item.label }}</strong>
+        {% if item.note %}
+        <p>{{ item.note }}</p>
+        {% endif %}
+        {% if item.size %}
+        <small>Size: {{ item.size }}</small>
+        {% endif %}
+        {% if item.resolved_path %}
+        <small>Drive path: <code>{{ item.resolved_path }}</code></small>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if ebook_factory.active_monetization_lane %}
 <section class="panel spacious">
   <div class="section-heading">

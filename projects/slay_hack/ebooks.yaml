@@ -197,9 +197,28 @@ ebooks:
     role: "first paid low-ticket monetization pilot"
     proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."
     drive:
-      folder: "Google Drive / Slay Hack / 20260517-ebook-age-like-fine-wine"
-      pdf: "20260517-Age-Like-Fine-Wine.pdf"
-      cover: "20260517-cover-age-like-fine-wine.png"
+      folder: "Ebook Project"
+      artifacts:
+        - key: pdf
+          label: "Rendered PDF proof"
+          path: "20260517-Age_Like_Fine_Wine_v1.pdf"
+          expected: "Prior handoff reported 61 pages and 29.9 MB."
+        - key: docx_source
+          label: "Editable source document"
+          path: "slay_hack_ebook_updated.docx"
+          expected: "Source document for review edits before any regenerated PDF."
+        - key: universe_map
+          label: "E-book universe map"
+          path: "ebook_universe_map.png"
+          expected: "Visual map for the broader Slay e-book universe."
+        - key: knowledge_base
+          label: "E-book knowledge base"
+          path: "20260517-Ebook-Knowledge-Base.md"
+          expected: "Source knowledge for the product lane and PM review."
+        - key: visual_strategy
+          label: "Visual strategy"
+          path: "20260517-Slay-Ebook-Visual-Strategy.md"
+          expected: "Visual direction before PDF or launch mockup revisions."
     qa_gates:
       - gate: Content QA
         status: PARTIAL

@@ -114,6 +114,20 @@ def _write_stadium_project(tmp_path: Path) -> None:
 def _write_ebook_registry(tmp_path: Path) -> None:
     project_dir = tmp_path / "projects" / "slay_hack"
     project_dir.mkdir(parents=True, exist_ok=True)
+    drive_root = tmp_path / "Drive" / "Slay Hack"
+    ebook_drive_dir = drive_root / "Ebook Project"
+    ebook_drive_dir.mkdir(parents=True, exist_ok=True)
+    (ebook_drive_dir / "20260517-Age_Like_Fine_Wine_v1.pdf").write_bytes(b"%PDF-1.4 fine wine proof")
+    (ebook_drive_dir / "slay_hack_ebook_updated.docx").write_bytes(b"docx source")
+    (ebook_drive_dir / "ebook_universe_map.png").write_bytes(b"png map")
+    (ebook_drive_dir / "20260517-Ebook-Knowledge-Base.md").write_text("# Knowledge Base\n")
+    (ebook_drive_dir / "20260517-Slay-Ebook-Visual-Strategy.md").write_text("# Visual Strategy\n")
+    (project_dir / "project_bridge.yaml").write_text(
+        f'project: slay_hack\n'
+        f'display_name: "Slay Hack"\n'
+        f'pm: "Slay"\n'
+        f'drive_root: "{drive_root}"\n'
+    )
     (project_dir / "ebooks.yaml").write_text(
         'factory:\n'
         '  state: "Registry-backed governance ready"\n'
@@ -204,6 +218,29 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '    status: designed_pdf_ready\n'
         '    role: "first paid low-ticket monetization pilot"\n'
         '    proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."\n'
+        '    drive:\n'
+        '      folder: "Ebook Project"\n'
+        '      artifacts:\n'
+        '        - key: pdf\n'
+        '          label: "Rendered PDF proof"\n'
+        '          path: "20260517-Age_Like_Fine_Wine_v1.pdf"\n'
+        '          expected: "Prior handoff reported 61 pages and 29.9 MB."\n'
+        '        - key: docx_source\n'
+        '          label: "Editable source document"\n'
+        '          path: "slay_hack_ebook_updated.docx"\n'
+        '          expected: "Source document for review edits before any regenerated PDF."\n'
+        '        - key: universe_map\n'
+        '          label: "E-book universe map"\n'
+        '          path: "ebook_universe_map.png"\n'
+        '          expected: "Visual map for the broader Slay e-book universe."\n'
+        '        - key: knowledge_base\n'
+        '          label: "E-book knowledge base"\n'
+        '          path: "20260517-Ebook-Knowledge-Base.md"\n'
+        '          expected: "Source knowledge for the product lane and PM review."\n'
+        '        - key: visual_strategy\n'
+        '          label: "Visual strategy"\n'
+        '          path: "20260517-Slay-Ebook-Visual-Strategy.md"\n'
+        '          expected: "Visual direction before PDF or launch mockup revisions."\n'
         '    qa_gates:\n'
         '      - gate: Content QA\n'
         '        status: PARTIAL\n'
@@ -2508,6 +2545,14 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Age Like Fine Wine" in resp.text
     assert "designed_pdf_ready" in resp.text
     assert "Live publish and checkout stay locked" in resp.text
+    assert "PDF proof artifacts" in resp.text
+    assert "Drive source verification" in resp.text
+    assert "Verified artifacts: 5/5" in resp.text
+    assert "Rendered PDF proof" in resp.text
+    assert "Editable source document" in resp.text
+    assert "E-book knowledge base" in resp.text
+    assert "20260517-Age_Like_Fine_Wine_v1.pdf" in resp.text
+    assert "Read-only proof check. Checkout, public sales, and live publish remain locked." in resp.text
     assert "docs/ebook_production_runbook.md" in resp.text
     assert "2026-05-17-ebook-production-dashboard-design.md" in resp.text
     assert "Content QA" in resp.text
@@ -2556,6 +2601,24 @@ def test_aurora_ebooks_launch_copy_asset_route_serves_registered_markdown(tmp_pa
     assert resp.headers["content-type"].startswith("text/markdown")
     assert "Age Like Fine Wine - Sales Page Draft" in resp.text
     assert "Start your Fine Wine glow-up." in resp.text
+
+
+def test_aurora_ebooks_page_surfaces_missing_drive_artifact(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+    (
+        tmp_path
+        / "Drive"
+        / "Slay Hack"
+        / "Ebook Project"
+        / "20260517-Slay-Ebook-Visual-Strategy.md"
+    ).unlink()
+
+    resp = client.get("/aurora/ebooks", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "Verified artifacts: 4/5" in resp.text
+    assert "Next missing artifact: Visual strategy" in resp.text
+    assert "20260517-Slay-Ebook-Visual-Strategy.md" in resp.text
 
 
 def test_aurora_ebooks_launch_copy_asset_route_rejects_unknown_asset(tmp_path, client):

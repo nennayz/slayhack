@@ -69,6 +69,7 @@ from routes._helpers import (
     load_project,
     project_slug_matches,
 )
+from project_loader import ProjectNotFoundError, load_project_bridge
 
 # Import dashboard at module load time so monkeypatch.setattr(dashboard, "load_performance_all", ...)
 # patches the same object this module references.
@@ -181,6 +182,9 @@ EBOOK_FACTORY_DEFAULTS = {
     "offer_source": {},
     "launch_copy_assets": [],
     "launch_copy_summary": {"review_ready": 0, "total": 0},
+    "drive_artifacts": [],
+    "drive_summary": {"verified": 0, "total": 0},
+    "next_missing_drive_artifact": None,
 }
 
 
@@ -235,6 +239,94 @@ def _ebook_launch_copy_summary(launch_copy_assets: list[dict[str, object]]) -> d
         ),
         "total": len(launch_copy_assets),
     }
+
+
+def _ebook_file_size_label(path: Path) -> str:
+    size = path.stat().st_size
+    if size >= 1024 * 1024:
+        return f"{size / (1024 * 1024):.1f} MB"
+    if size >= 1024:
+        return f"{size / 1024:.1f} KB"
+    return f"{size} bytes"
+
+
+def _ebook_safe_drive_path(drive_root: Path, folder: object, raw_path: object) -> Path:
+    parts = [str(folder or "").strip(), str(raw_path or "").strip()]
+    cleaned_parts = [part for part in parts if part]
+    if not cleaned_parts:
+        raise ValueError("Drive artifact path is not registered")
+    for part in cleaned_parts:
+        path_part = Path(part)
+        if path_part.is_absolute() or ".." in path_part.parts:
+            raise ValueError("Drive artifact path is invalid")
+    return drive_root.joinpath(*cleaned_parts)
+
+
+def _ebook_drive_summary(rows: list[dict[str, object]]) -> dict[str, int]:
+    return {
+        "verified": sum(1 for item in rows if item.get("status") == "verified"),
+        "total": len(rows),
+    }
+
+
+def _ebook_drive_artifact_rows(root: Path, resolved_project: str, pilot: dict[str, object]) -> list[dict[str, object]]:
+    drive = pilot.get("drive") if isinstance(pilot.get("drive"), dict) else {}
+    raw_artifacts = drive.get("artifacts") if isinstance(drive.get("artifacts"), list) else []
+    if not raw_artifacts:
+        raw_artifacts = [
+            {"key": key, "label": key.replace("_", " ").title(), "path": value}
+            for key, value in drive.items()
+            if key not in {"folder", "artifacts"} and isinstance(value, str)
+        ]
+    if not raw_artifacts:
+        return []
+
+    try:
+        bridge = load_project_bridge(resolved_project, root=root)
+    except ProjectNotFoundError:
+        bridge = {}
+    raw_drive_root = str(bridge.get("drive_root") or "").strip()
+    drive_root = Path(raw_drive_root).expanduser() if raw_drive_root else None
+    if drive_root and not drive_root.is_absolute():
+        drive_root = root / drive_root
+
+    rows = []
+    for item in raw_artifacts:
+        if isinstance(item, str):
+            artifact = {"label": item, "path": item}
+        elif isinstance(item, dict):
+            artifact = item
+        else:
+            continue
+        label = str(artifact.get("label") or artifact.get("key") or artifact.get("path") or "").strip()
+        if not label:
+            continue
+        row = {
+            **artifact,
+            "label": label,
+            "status": "missing",
+            "status_class": "badge-ops-unavailable",
+            "size": "",
+            "resolved_path": "",
+            "note": str(artifact.get("note") or artifact.get("expected") or "").strip(),
+        }
+        if drive_root is None:
+            row["note"] = "Drive root is not configured in project_bridge.yaml."
+            rows.append(row)
+            continue
+        try:
+            artifact_path = _ebook_safe_drive_path(drive_root, drive.get("folder", ""), artifact.get("path", ""))
+        except ValueError as exc:
+            row["note"] = str(exc)
+            rows.append(row)
+            continue
+        row["resolved_path"] = str(artifact_path)
+        if artifact_path.exists():
+            row["status"] = "verified"
+            row["status_class"] = "badge-ops-ready"
+            row["size"] = _ebook_file_size_label(artifact_path)
+        rows.append(row)
+    return rows
 
 
 def _ebook_asset_path(root: Path, raw_path: object, label: str) -> Path:
@@ -348,6 +440,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         ),
         None,
     )
+    drive_artifacts = _ebook_drive_artifact_rows(root, resolved_project, pilot)
     factory.update(
         {
             "has_registry": True,
@@ -370,6 +463,12 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "launch_copy_assets": launch_copy_assets,
             "launch_copy_summary": _ebook_launch_copy_summary(
                 [item for item in launch_copy_assets if isinstance(item, dict)]
+            ),
+            "drive_artifacts": drive_artifacts,
+            "drive_summary": _ebook_drive_summary(drive_artifacts),
+            "next_missing_drive_artifact": next(
+                (item for item in drive_artifacts if item.get("status") != "verified"),
+                None,
             ),
         }
     )

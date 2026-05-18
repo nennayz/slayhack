@@ -27,6 +27,7 @@ The page should show:
 - production stages
 - role ownership
 - QA certification gates
+- Drive artifact proof for the rendered PDF and source documents
 - pipeline hardening checklist
 - launch package readiness
 - documentation paths
@@ -102,6 +103,20 @@ Show:
 - 22 images, 61 pages, 29.9 MB, about 57.7 minutes, about 0.88 USD
 - current state: `designed_pdf_ready`
 - next action: Fleet QA and launch package
+
+### PDF Proof Artifacts
+
+Resolve `projects/<slug>/project_bridge.yaml` `drive_root`, then verify the artifact paths registered under the pilot `drive.artifacts` list in `projects/<slug>/ebooks.yaml`.
+
+For the SlayHack pilot, show read-only verified/missing status for:
+
+- rendered PDF proof
+- editable source document
+- e-book universe map
+- e-book knowledge base
+- visual strategy
+
+Missing artifacts should block QA confidence, not activate generation or checkout.
 
 ### Production Stages
 
