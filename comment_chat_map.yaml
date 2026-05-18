@@ -1,0 +1,22 @@
+# Map each Telegram group chat_id to a project.
+# To find a chat_id: add @userinfobot to the group, it will report the group ID.
+# Group IDs are negative numbers e.g. -1001234567890
+chats:
+  "-1001111111111":
+    project: slay_hack
+    default_platform: instagram
+  "-1002222222222":
+    project: stadium_sweethearts
+    default_platform: tiktok
+  "-1003333333333":
+    project: personal_finance_for_women
+    default_platform: instagram
+
+# Global fallback chain — tried in order when the active provider fails (429 / quota)
+fallback_chain:
+  - provider: anthropic
+    model: claude-sonnet-4-6
+  - provider: openai
+    model: gpt-4o
+  - provider: gemini
+    model: gemini-2.0-flash
