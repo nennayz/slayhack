@@ -10,6 +10,7 @@ def test_niche_signal_stores_raw_data():
 
 
 def test_niche_opportunity_reach_score_bounds():
+    # Valid score passes
     opp = NicheOpportunity(
         niche_name="clean beauty",
         target_audience="Women USA 25-35",
@@ -20,8 +21,22 @@ def test_niche_opportunity_reach_score_bounds():
         monetization_notes="High affiliate potential",
         signals={"google_trends": "rising"},
     )
-    assert 0 <= opp.reach_score <= 100
-    assert opp.trend_direction == "rising"
+    assert opp.reach_score == 85.0
+
+def test_niche_opportunity_reach_score_rejects_out_of_range():
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        NicheOpportunity(
+            niche_name="bad",
+            target_audience="x",
+            platforms=[],
+            reach_score=150.0,
+            trend_direction="rising",
+            content_formats=[],
+            monetization_notes="",
+            signals={},
+        )
 
 
 def test_scout_job_defaults():

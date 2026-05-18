@@ -22,7 +22,7 @@ class NicheOpportunity(BaseModel):
     niche_name: str
     target_audience: str
     platforms: list[str]
-    reach_score: float          # 0-100
+    reach_score: float = Field(..., ge=0, le=100)
     trend_direction: str        # "rising" | "stable" | "declining"
     content_formats: list[str]
     monetization_notes: str
