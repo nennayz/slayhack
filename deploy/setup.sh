@@ -88,6 +88,7 @@ DEPLOY_DIR="$(dirname "$0")"
 for unit in \
     nayzfreedom-dashboard.service \
     nayzfreedom-bot.service \
+    nayzfreedom-comment-reply-bot.service \
     nayzfreedom-scheduler.service \
     nayzfreedom-scheduler.timer \
     nayzfreedom-reporter.service \
@@ -127,6 +128,15 @@ if grep -q '^TELEGRAM_BOT_TOKEN=.\+' "$INSTALL_DIR/.env" && grep -q '^TELEGRAM_C
 else
     systemctl disable --now nayzfreedom-bot.service 2>/dev/null || true
     echo "  Telegram bot not started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is empty."
+fi
+
+comment_chat_map_path="$(grep -E '^COMMENT_CHAT_MAP_PATH=.' "$INSTALL_DIR/.env" | tail -n 1 | cut -d= -f2-)"
+comment_chat_map_path="${comment_chat_map_path:-$INSTALL_DIR/secrets/comment_chat_map.yaml}"
+if grep -q '^COMMENT_BOT_TOKEN=.\+' "$INSTALL_DIR/.env" && grep -q '^GEMINI_API_KEY=.\+' "$INSTALL_DIR/.env" && [ -f "$comment_chat_map_path" ]; then
+    systemctl enable --now nayzfreedom-comment-reply-bot.service
+else
+    systemctl disable --now nayzfreedom-comment-reply-bot.service 2>/dev/null || true
+    echo "  Comment reply bot not started: COMMENT_BOT_TOKEN, GEMINI_API_KEY, or COMMENT_CHAT_MAP_PATH is missing."
 fi
 
 if grep -q '^OPENAI_API_KEY=.\+' "$INSTALL_DIR/.env"; then

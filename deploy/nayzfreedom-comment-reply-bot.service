@@ -1,0 +1,18 @@
+[Unit]
+Description=NayzFreedom Comment Reply Bot
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=nayzfreedom
+WorkingDirectory=/opt/nayzfreedom
+EnvironmentFile=/opt/nayzfreedom/.env
+ExecStart=/opt/nayzfreedom/.venv/bin/python comment_reply_bot.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

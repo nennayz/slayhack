@@ -53,6 +53,11 @@ check_unit nayzfreedom-production-summary.timer
 check_unit nayzfreedom-log-retention.timer
 check_unit nayzfreedom-ops-report.timer
 check_unit nayzfreedom-track-scheduler.timer
+if [ -n "${COMMENT_BOT_TOKEN:-}" ] && [ -n "${GEMINI_API_KEY:-}" ] && [ -f "${COMMENT_CHAT_MAP_PATH:-/opt/nayzfreedom/secrets/comment_chat_map.yaml}" ]; then
+    check_unit nayzfreedom-comment-reply-bot.service
+else
+    echo "unit_skipped=nayzfreedom-comment-reply-bot.service"
+fi
 
 disk_used="$(df -P "$DISK_PATH" | awk 'NR == 2 {gsub("%", "", $5); print $5}')"
 if [ "$disk_used" -ge "$DISK_LIMIT" ]; then
@@ -79,6 +84,7 @@ for unit in \
     nayzfreedom-log-retention.service \
     nayzfreedom-ops-report.service \
     nayzfreedom-track-scheduler.service \
+    nayzfreedom-comment-reply-bot.service \
     nayzfreedom-reporter.service; do
     hits="$(journalctl -u "$unit" --since "$ERROR_WINDOW" --no-pager 2>/dev/null | { grep -E "Traceback|ERROR|CRITICAL" || true; } | wc -l | tr -d " ")"
     if [ "$hits" != "0" ]; then
