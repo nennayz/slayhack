@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero compact-hero mission-hero fleet-hero-command">
+  <p class="eyebrow">Monetization assets</p>
+  <h1>E-book Product Factory</h1>
+  <p class="hero-copy">Turn page knowledge into a governed product package: source audit, content architecture, visual system, designed PDF, QA proof, launch assets, and learning review.</p>
+  <div class="hero-actions">
+    <a class="button" href="/aurora/learning">Learning desk</a>
+    <a class="button button-secondary" href="/aurora">Aurora hub</a>
+  </div>
+</section>
+
+{% include "_aurora_flow.html" %}
+
+<section class="stat-grid wide">
+  <div class="stat-card">
+    <span>Pilot</span>
+    <strong>{{ ebook_factory.pilot.title }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Current state</span>
+    <strong>{{ ebook_factory.pilot.status }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>QA gates</span>
+    <strong>{{ ebook_factory.qa_gates | length }}</strong>
+  </div>
+  <div class="stat-card">
+    <span>Boundary</span>
+    <strong>Locked</strong>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Factory posture</p>
+    <h2>{{ ebook_factory.state }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span>{{ ebook_factory.safe_boundary }}</span>
+    <span>{{ ebook_factory.next_action }}</span>
+    <span>Runbook: <code>{{ ebook_factory.runbook_path }}</code></span>
+    <span>Dashboard spec: <code>{{ ebook_factory.spec_path }}</code></span>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">SlayHack pilot</p>
+    <h2>{{ ebook_factory.pilot.title }}</h2>
+  </div>
+  <div class="approval-queue-list">
+    <article class="approval-queue-row">
+      <div class="approval-row-main">
+        <span class="badge badge-ops-ready">{{ ebook_factory.pilot.status }}</span>
+        <strong>{{ ebook_factory.pilot.project }} / PM {{ ebook_factory.pilot.pm }}</strong>
+        <p>{{ ebook_factory.pilot.role }} for {{ ebook_factory.pilot.audience }}.</p>
+        <small>{{ ebook_factory.pilot.proof }}</small>
+      </div>
+      <div class="approval-row-actions">
+        <a class="button button-secondary button-small" href="/aurora/learning">Open PM Knowledge</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Production stages</p>
+    <h2>From idea to learning review</h2>
+  </div>
+  <div class="approval-lane-board">
+    {% for stage in ebook_factory.stages %}
+    <article class="approval-lane">
+      <div class="approval-lane-heading">
+        <div>
+          <p class="eyebrow">{{ stage.state }}</p>
+          <h3>{{ stage.label }}</h3>
+        </div>
+        <strong>{{ loop.index }}</strong>
+      </div>
+      <p><code>{{ stage.key }}</code></p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">QA certification</p>
+      <h2>Review before sale</h2>
+    </div>
+    <div class="manual-learning-list">
+      {% for item in ebook_factory.qa_gates %}
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge badge-ops-missing">{{ item.status }}</span>
+          <strong>{{ item.gate }}</strong>
+          <p>{{ item.check }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Role ownership</p>
+      <h2>Who checks what</h2>
+    </div>
+    <div class="manual-learning-list">
+      {% for item in ebook_factory.roles %}
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge badge-ops-ready">{{ item.owner }}</span>
+          <strong>{{ item.role }}</strong>
+          <p>{{ item.responsibility }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="content-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Pipeline hardening</p>
+      <h2>Before Fleet-native runs</h2>
+    </div>
+    <div class="learning-gates">
+      {% for item in ebook_factory.hardening %}
+      <span>{{ item }}</span>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Launch package</p>
+      <h2>Assets before public sale</h2>
+    </div>
+    <div class="tag-list">
+      {% for item in ebook_factory.launch_assets %}
+      <span class="island-chip">
+        <span>{{ item }}</span>
+        <small>required</small>
+      </span>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

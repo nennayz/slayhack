@@ -24,16 +24,28 @@
     <strong>Manual posting</strong>
     <small>Proof</small>
   </a>
-  <a class="workflow-rail-step {{ 'active' if path == '/aurora/workflow' else '' }} station-workflow" href="/aurora/workflow">
-    <span class="station-icon" aria-hidden="true"></span>
-    <span class="station-index">05</span>
-    <strong>Operating workflow</strong>
-    <small>Map</small>
-  </a>
   <a class="workflow-rail-step {{ 'active' if path == '/aurora/learning' else '' }} station-learning" href="/aurora/learning">
     <span class="station-icon" aria-hidden="true"></span>
-    <span class="station-index">06</span>
+    <span class="station-index">05</span>
     <strong>Learning</strong>
     <small>Store</small>
   </a>
+  <details class="workflow-rail-step workflow-more {{ 'active' if path in ['/aurora/workflow', '/aurora/ebooks'] else '' }} station-workflow">
+    <summary>
+      <span class="station-icon" aria-hidden="true"></span>
+      <span class="station-index">06</span>
+      <strong>More</strong>
+      <small>Map + monetize</small>
+    </summary>
+    <div class="workflow-more-menu">
+      <a class="{{ 'active' if path == '/aurora/workflow' else '' }}" href="/aurora/workflow">
+        <strong>Operating workflow</strong>
+        <small>Map</small>
+      </a>
+      <a class="{{ 'active' if path == '/aurora/ebooks' else '' }}" href="/aurora/ebooks">
+        <strong>E-books</strong>
+        <small>Monetize</small>
+      </a>
+    </div>
+  </details>
 </section>
