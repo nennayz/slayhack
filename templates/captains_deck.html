@@ -1,9 +1,28 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="hero hero-fleet fleet-hero-command">
-  <p class="eyebrow">Slayhack</p>
-  <h1>Captain's Deck</h1>
-  <p class="hero-copy">A clear view of the ships under your command, the missions in motion, and what deserves your attention next.</p>
+<section class="hero hero-fleet fleet-hero-command captain-deck-hero">
+  <div class="captain-deck-copy">
+    <p class="eyebrow">Slayhack</p>
+    <h1>Captain's Deck</h1>
+    <p class="hero-copy">A clear view of the ships under your command, the missions in motion, and what deserves your attention next.</p>
+  </div>
+  <div class="captain-command-instruments" aria-label="Captain command instruments">
+    <div class="command-instrument">
+      <span class="instrument-icon instrument-wheel" aria-hidden="true"></span>
+      <strong>Command wheel</strong>
+      <small>Captain attention</small>
+    </div>
+    <div class="command-instrument">
+      <span class="instrument-icon instrument-compass" aria-hidden="true"></span>
+      <strong>Route compass</strong>
+      <small>Next best action</small>
+    </div>
+    <div class="command-instrument">
+      <span class="instrument-icon instrument-lock" aria-hidden="true"></span>
+      <strong>Live publish locked</strong>
+      <small>Safe approval gate</small>
+    </div>
+  </div>
 </section>
 
 <section class="command-brief">
