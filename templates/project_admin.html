@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Project Admin — NayzFreedom Fleet{% endblock %}
+
+{% block content %}
+<section class="hero hero-fleet compact-hero fleet-hero-readiness">
+  <p class="eyebrow">Project Admin</p>
+  <h1>Projects</h1>
+  <p class="hero-copy">Minimal control surface for active projects, archived test projects, Telegram group wiring, and output-only cleanup candidates.</p>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Source of truth</p>
+    <h2>Active projects</h2>
+  </div>
+  <div class="content-grid">
+    {% for project in active_projects %}
+    <article class="panel">
+      <p class="eyebrow">{{ project.slug }}</p>
+      <h3>{{ project.page_name }}</h3>
+      <p>PM: <strong>{{ project.pm or "n/a" }}</strong></p>
+      <p>Source: {{ project.source }} &nbsp;&middot;&nbsp; Rotation: {{ project.rotation }}</p>
+      <p style="color:var(--muted); font-size:0.88rem;">{{ project.platforms | join(', ') }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Cleanup candidates</p>
+    <h2>Output-only records</h2>
+  </div>
+  {% if output_only_rows %}
+  <div class="manual-learning-list">
+    {% for row in output_only_rows %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-missing">Output only</span>
+        <strong>{{ row.page_name }}</strong>
+        <p>{{ row.jobs }} job directories remain at <code>{{ row.path }}</code>.</p>
+        <small>Purge requires separate explicit approval and a manifest.</small>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No output-only project records detected.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Telegram wiring</p>
+    <h2>Comment reply bot groups</h2>
+  </div>
+  {% if comment_chat_rows %}
+  <div class="manual-learning-list">
+    {% for row in comment_chat_rows %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-ready">{{ row.default_platform }}</span>
+        <strong>{{ row.project }}</strong>
+        <p>Chat: <code>{{ row.chat_id }}</code></p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No comment reply bot groups are configured.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Comment logs</p>
+    <h2>Reply history</h2>
+  </div>
+  {% if comment_log_rows %}
+  <div class="manual-learning-list">
+    {% for row in comment_log_rows %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-ready">{{ row.entries }}</span>
+        <strong>{{ row.project }}</strong>
+        <p>Last entry: {{ row.last_timestamp or "n/a" }}</p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No comment reply history has been recorded yet.</p>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Archived</p>
+    <h2>Deleted test projects</h2>
+  </div>
+  {% if archived_projects %}
+  <div class="manual-learning-list">
+    {% for project in archived_projects %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-missing">{{ project.status }}</span>
+        <strong>{{ project.page_name }}</strong>
+        <p>{{ project.slug }} / {{ project.source }}</p>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No archived test projects in the vault.</p>
+  {% endif %}
+</section>
+{% endblock %}
