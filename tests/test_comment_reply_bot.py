@@ -372,3 +372,50 @@ def test_build_router_from_map_uses_fallback_chain():
 
     router = _build_router_from_map({"fallback_chain": [{"provider": "openai", "model": "gpt-4o"}]})
     assert router.fallback_chain == [ProviderConfig(provider="openai", model="gpt-4o")]
+
+
+def test_get_bot_info_returns_result():
+    from comment_reply_bot import _get_bot_info
+
+    with patch("comment_reply_bot._api", return_value={"result": {"username": "Comment4U_bot"}}) as mock_api:
+        result = _get_bot_info("token")
+    mock_api.assert_called_once_with("token", "getMe")
+    assert result["username"] == "Comment4U_bot"
+
+
+def test_format_status_message_reports_privacy_mode_on():
+    from comment_reply_bot import _format_status_message
+
+    result = _format_status_message(
+        "-100123",
+        {"project": "slay_hack", "default_platform": "instagram"},
+        {"username": "Comment4U_bot", "can_read_all_group_messages": False},
+    )
+    assert "Chat map: ✅ registered" in result
+    assert "Project: <code>slay_hack</code>" in result
+    assert "Privacy mode: ❌ ON" in result
+    assert "/setprivacy" in result
+
+
+def test_format_status_message_reports_unknown_chat():
+    from comment_reply_bot import _format_status_message
+
+    result = _format_status_message(
+        "-999",
+        None,
+        {"username": "Comment4U_bot", "can_read_all_group_messages": True},
+    )
+    assert "Chat ID: <code>-999</code>" in result
+    assert "Chat map: ❌ not registered" in result
+    assert "Privacy mode: ✅ OFF" in result
+
+
+def test_handle_status_command_replies_even_for_unknown_chat():
+    from comment_reply_bot import _handle_status_command
+
+    with (
+        patch("comment_reply_bot._get_bot_info", return_value={"username": "Comment4U_bot"}),
+        patch("comment_reply_bot._send_message") as mock_send,
+    ):
+        _handle_status_command(_make_msg("/status", chat_id="-999"), "token", {"chats": {}})
+    assert "Chat map: ❌ not registered" in mock_send.call_args[0][2]

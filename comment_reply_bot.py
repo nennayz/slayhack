@@ -49,6 +49,7 @@ _HELP_TEXT = (
     "🤖 <b>Comment Reply Bot</b>\n\n"
     "ส่งรูป screenshot → ได้ draft reply ทันที\n\n"
     "<b>Commands:</b>\n"
+    "/status  ← ตรวจ group/project/privacy mode\n"
     "/model anthropic claude-sonnet-4-6\n"
     "/model anthropic claude-opus-4-7\n"
     "/model openai gpt-4o\n"
@@ -188,6 +189,14 @@ def _send_message(token: str, chat_id: str, text: str) -> None:
         _api(token, "sendMessage", chat_id=chat_id, text=text, parse_mode="HTML")
     except Exception as exc:
         logger.warning("sendMessage failed: %s", exc)
+
+
+def _get_bot_info(token: str) -> dict[str, Any]:
+    try:
+        return _api(token, "getMe").get("result", {})
+    except Exception as exc:
+        logger.warning("getMe failed: %s", exc)
+        return {}
 
 
 def _download_photo(token: str, file_id: str) -> bytes:
@@ -354,6 +363,49 @@ def _handle_help_command(msg: dict[str, Any], token: str, chat_map_data: dict[st
     _send_message(token, chat_id, _HELP_TEXT)
 
 
+def _format_status_message(chat_id: str, chat_config: dict[str, Any] | None, bot_info: dict[str, Any]) -> str:
+    project = chat_config.get("project") if chat_config else None
+    platform = chat_config.get("default_platform") if chat_config else None
+    can_read_all = bot_info.get("can_read_all_group_messages")
+    username = bot_info.get("username") or "unknown"
+
+    lines = [
+        "🧭 <b>Comment Helper status</b>",
+        f"Bot: @{username}",
+        f"Chat ID: <code>{chat_id}</code>",
+    ]
+    if chat_config:
+        lines.extend(
+            [
+                "Chat map: ✅ registered",
+                f"Project: <code>{project}</code>",
+                f"Default platform: <code>{platform}</code>",
+            ]
+        )
+    else:
+        lines.append("Chat map: ❌ not registered")
+
+    if can_read_all is False:
+        lines.extend(
+            [
+                "Privacy mode: ❌ ON",
+                "Fix: BotFather → /setprivacy → Comment4U_bot → Disable",
+            ]
+        )
+    elif can_read_all is True:
+        lines.append("Privacy mode: ✅ OFF")
+    else:
+        lines.append("Privacy mode: unknown")
+
+    return "\n".join(lines)
+
+
+def _handle_status_command(msg: dict[str, Any], token: str, chat_map_data: dict[str, Any]) -> None:
+    chat_id = str(msg["chat"]["id"])
+    chat_config = chat_map_data.get("chats", {}).get(chat_id)
+    _send_message(token, chat_id, _format_status_message(chat_id, chat_config, _get_bot_info(token)))
+
+
 def _load_chat_map(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -383,6 +435,13 @@ def run_bot(token: str, chat_map_path: Path, root: Path) -> None:
     chat_map_data = _load_chat_map(chat_map_path)
     router = _build_router_from_map(chat_map_data)
     logger.info("Comment reply bot started with %d registered chats.", len(chat_map_data.get("chats", {})))
+    bot_info = _get_bot_info(token)
+    if bot_info.get("can_read_all_group_messages") is False:
+        logger.warning(
+            "Telegram privacy mode is ON for @%s. The bot can send messages but will not see normal group photos/messages. "
+            "Disable it in BotFather with /setprivacy.",
+            bot_info.get("username", "unknown"),
+        )
 
     while True:
         for update in _get_updates(token, offset=offset, timeout=5):
@@ -396,6 +455,8 @@ def run_bot(token: str, chat_map_path: Path, root: Path) -> None:
                 text = (msg.get("text") or "").strip()
                 if text.startswith("/help"):
                     _handle_help_command(msg, token, chat_map_data)
+                elif text.startswith("/status"):
+                    _handle_status_command(msg, token, chat_map_data)
                 elif text.startswith("/model"):
                     _handle_model_command(msg, token, text.split(), _MODEL_STATE_FILE, chat_map_data)
                 elif msg.get("photo"):
