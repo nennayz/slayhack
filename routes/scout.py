@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+
+_JOB_ID_RE = re.compile(r"^\d{8}_\d{6}$")
 
 from config import Config
 from models.niche_opportunity import ScoutJob
@@ -62,11 +65,17 @@ async def scout_approve(
 ):
     root = _root(request)
 
+    if not _JOB_ID_RE.match(job_id):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+    reports_dir = (root / "output" / "scout_reports").resolve()
+    report_path = (reports_dir / f"{job_id}-scout-report.json").resolve()
+    if not str(report_path).startswith(str(reports_dir) + "/"):
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+
     def _background() -> None:
         try:
             cfg = Config.from_env()
             from scout_pipeline import approve_niche
-            report_path = root / "output" / "scout_reports" / f"{job_id}-scout-report.json"
             job = ScoutJob.model_validate_json(report_path.read_text())
             approve_niche(job, niche_name, cfg, projects_root=root / "projects")
         except Exception as exc:
