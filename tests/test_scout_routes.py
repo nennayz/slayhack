@@ -15,7 +15,7 @@ os.environ.setdefault("DASHBOARD_USER", "admin")
 os.environ.setdefault("DASHBOARD_PASSWORD", "8888")
 
 import dashboard as _dm  # noqa: E402
-from models.niche_opportunity import NicheOpportunity, ScoutJob, ScoutJobStatus  # noqa: E402
+from models.niche_opportunity import NicheOpportunity, NicheSignal, ScoutJob, ScoutJobStatus  # noqa: E402
 
 
 def _auth() -> dict:
@@ -38,12 +38,28 @@ def _saved_job(tmp_path: Path) -> ScoutJob:
             NicheOpportunity(
                 niche_name="clean beauty",
                 target_audience="Women USA 22-38",
-                platforms=["instagram"],
+                platforms=["instagram", "tiktok"],
                 reach_score=91.0,
                 trend_direction="rising",
-                content_formats=["reel"],
-                monetization_notes="High affiliate",
-                signals={},
+                content_formats=["reel", "infographic"],
+                monetization_notes="High affiliate, e-book",
+                signals={"summary": "strong beauty signal"},
+            )
+        ],
+        signals=[
+            NicheSignal(
+                niche_name="clean beauty",
+                raw_data={
+                    "brave": [
+                        {
+                            "title": "Clean beauty routine goes viral",
+                            "description": "Ingredient-aware shoppers are saving simple routines.",
+                        }
+                    ],
+                    "google_trends": {"trend_direction": "rising", "recent": 80, "start": 45},
+                    "reddit": {"subreddits": [{"name": "CleanBeauty", "subscribers": 120000}]},
+                    "meta_ads": {"active_ads": 4},
+                },
             )
         ],
     )
@@ -102,6 +118,35 @@ def test_scout_index_shows_report(tmp_path):
     assert resp.status_code == 200
     assert job.job_id in resp.text
     assert "clean beauty" in resp.text
+    assert "Open full report" in resp.text
+    assert "Activate This Niche" not in resp.text
+
+
+def test_scout_report_detail_shows_interactive_analysis(tmp_path):
+    job = _saved_job(tmp_path)
+    client = _client(tmp_path)
+    resp = client.get(f"/scout/reports/{job.job_id}/clean_beauty", headers=_auth())
+    assert resp.status_code == 200
+    assert "Scout Report" in resp.text
+    assert "Decision Signals" in resp.text
+    assert "Viral potential" in resp.text
+    assert "Who This Page Serves" in resp.text
+    assert "How It Can Make Money" in resp.text
+    assert "Clean beauty routine goes viral" in resp.text
+    assert "Approve to create project" in resp.text
+
+
+def test_scout_report_detail_blocks_bad_job_id(tmp_path):
+    client = _client(tmp_path)
+    resp = client.get("/scout/reports/../../evil/clean_beauty", headers=_auth())
+    assert resp.status_code in (400, 404)
+
+
+def test_scout_report_detail_requires_auth(tmp_path):
+    job = _saved_job(tmp_path)
+    client = _client(tmp_path)
+    resp = client.get(f"/scout/reports/{job.job_id}/clean_beauty")
+    assert resp.status_code == 401
 
 
 def test_scout_index_shows_activation_review_with_dry_run_proof(tmp_path):
