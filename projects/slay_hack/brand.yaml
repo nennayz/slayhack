@@ -1,4 +1,4 @@
-mission: "Character-driven beauty and lifestyle hacks for Gen Z women in the USA."
+mission: "Character-driven beauty and lifestyle hacks that turn social trust into e-book products, owned audience, and repeatable revenue."
 visual:
   colors:
     - "#F06292"
@@ -12,7 +12,7 @@ platforms:
   - facebook
   - youtube
 tone: "sassy, smart, supportive, slightly smug, dry humor"
-target_audience: "Gen Z females, age 18-24, primarily in the USA"
+target_audience: "Women in the USA, ages 18-44, evolved from the original Gen Z positioning"
 script_style: "English only, casual Gen Z bestie voice, punchy hook in the first three words, no corporate language"
 nora_max_retries: 2
 allowed_content_types:

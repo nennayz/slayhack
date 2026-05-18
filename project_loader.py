@@ -109,3 +109,17 @@ def load_platform_specs(project_slug: str, root: Path | None = None) -> dict[str
     except yaml.YAMLError as e:
         raise ProjectNotFoundError(f"Invalid YAML in platform_specs.yaml for '{project_slug}': {e}")
     return {platform: data["editorial"] for platform, data in raw.items()}
+
+
+def load_project_bridge(project_slug: str, root: Path | None = None) -> dict:
+    resolved_slug = resolve_project_slug(project_slug, root=root)
+    base = (root or Path(".")) / "projects" / resolved_slug
+    if not base.exists():
+        raise ProjectNotFoundError(f"Project '{project_slug}' not found in projects/")
+    bridge_path = base / "project_bridge.yaml"
+    if not bridge_path.exists():
+        return {}
+    try:
+        return yaml.safe_load(bridge_path.read_text()) or {}
+    except yaml.YAMLError as e:
+        raise ProjectNotFoundError(f"Invalid YAML in project_bridge.yaml for '{project_slug}': {e}")
