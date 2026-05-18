@@ -2940,6 +2940,18 @@ def test_aurora_ebooks_records_sale_gate_approval_when_ready(tmp_path, client):
 
     approved_page = client.get("/aurora/ebooks", headers=_auth())
     assert "Sale approved by admin" in approved_page.text
+    assert "Sale approval recorded" in approved_page.text
+
+    repeated = client.post(
+        "/aurora/ebooks/sale-gate",
+        headers=_auth(),
+        data={"project_slug": "slay_hack", "ebook_id": "age_like_fine_wine"},
+        follow_redirects=False,
+    )
+    assert repeated.status_code == 303
+    assert repeated.headers["location"].startswith(
+        "/aurora/ebooks?project=slay_hack&launch_result=Captain%20sale%20approval%3A%20already%20approved"
+    )
 
 
 def test_aurora_ebooks_page_renders_empty_state_without_registry(client):

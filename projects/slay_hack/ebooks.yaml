@@ -3,7 +3,7 @@ factory:
   safe_boundary: "Live publish and checkout stay locked until Captain approval."
   runbook_path: "docs/ebook_production_runbook.md"
   spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
-  next_action: "Captain can review the sale approval package; checkout activation remains locked until the Captain sale gate is explicitly approved."
+  next_action: "Captain sale approval is recorded; next step is test-mode checkout setup and delivery smoke. Public checkout remains locked."
 
 stages:
   - key: idea
@@ -103,10 +103,10 @@ monetization_lanes:
   - id: fine_wine_35_44
     label: "Fine Wine 35-44 Monetization Lane"
     audience: "women 35-44"
-    status: strategy_locked_checkout_locked
+    status: captain_sale_approved_checkout_locked
     strategy: "Start with the strongest real audience before expanding the full 22-SKU universe."
     boundary: "Checkout, live publish, and public sales stay locked until QA gates, launch assets, and Captain approval are complete."
-    next_action: "Use this lane as the approved sale package for Captain review; checkout remains locked until the Captain sale gate is clicked."
+    next_action: "Set up test-mode checkout and delivery smoke before any public sale."
     products:
       - role: lead_magnet
         title: "Slay Basics: 30 Hacks"
@@ -115,9 +115,9 @@ monetization_lanes:
         next_action: "Bridge readers into Age Like Fine Wine without duplicating the paid promise."
       - role: paid_pilot
         title: "Age Like Fine Wine"
-        status: sale_gate_ready_checkout_locked
+        status: captain_sale_approved_checkout_locked
         purpose: "First paid low-ticket product for the 35-44 audience."
-        next_action: "Ready for Captain sale-gate review; checkout remains locked until explicit approval."
+        next_action: "Build checkout setup in test mode; public checkout remains locked."
       - role: order_bump
         title: "Fine Wine 7-Day Glow Routine"
         status: planned
@@ -199,7 +199,7 @@ ebooks:
     project: SlayHack
     pm: Slay
     audience: "women 35-44"
-    status: sale_gate_ready_checkout_locked
+    status: captain_sale_approved_checkout_locked
     role: "first paid low-ticket monetization pilot"
     proof: "Visual proof v3 is versioned in repo: 28 pages, 1383434 bytes, text-extractable, title/author/subject metadata present, embedded product hero and character tip-card pages, and SHA-256 59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8. The older 20260517 Drive proof remains historical source evidence."
     source_integrity:
@@ -215,7 +215,7 @@ ebooks:
       proof_pages: 28
       proof_size_bytes: 1383434
       render_note: "Visual proof pages rendered cleanly from local PNG exports; DOCX render QA remains unavailable because LibreOffice is not installed."
-      required_next_action: "Captain review sale approval package before any checkout activation."
+      required_next_action: "Use this approved proof for test-mode checkout setup and delivery smoke only."
     monetization_integrity:
       status: ready
       qa_report: "docs/monetization/slay_hack/age_like_fine_wine_monetization_qa_report.md"
@@ -226,9 +226,14 @@ ebooks:
       activation_boundary: "No payment link, public checkout, live publish, paid traffic, or automatic fulfillment is active."
     captain_sale_gate:
       label: "Captain sale approval"
-      status: locked
+      status: approved
       action_label: "Captain Approve E-book For Sale"
       locked_label: "Sale approval locked"
+      approved_label: "Sale approval recorded"
+      approved_by: "Nayz"
+      approved_at: "2026-05-18T06:58:17Z"
+      approval_note: "Captain approved Age Like Fine Wine for sale setup. This does not activate checkout, payment processing, public sale, live publish, paid traffic, or automatic fulfillment."
+      approval_report: "docs/monetization/slay_hack/age_like_fine_wine_captain_sale_approval.md"
       boundary: "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until all QA gates, launch assets, source integrity, and Captain approval are complete."
       approval_summary:
         heading: "Captain approval package"
@@ -240,6 +245,17 @@ ebooks:
           - "Monetization QA report: docs/monetization/slay_hack/age_like_fine_wine_monetization_qa_report.md"
           - "Terms: support within 2 business days, access/duplicate-purchase refund coverage, no medical or dermatology promise, and no general change-of-mind refund unless Nayz separately approves it."
           - "Launch package: sales page, product mockup, checkout copy, delivery email, checkout terms, lead magnet bridge, 7-day content push, post-purchase next step, and tracking plan are approved for the Captain sale-gate decision."
+    checkout_setup_gate:
+      label: "Checkout setup and delivery test"
+      status: locked
+      boundary: "Test-mode checkout, delivery link, receipt email, support path, and refund handling must be configured and smoked before public checkout can open."
+      next_action: "Create a test-mode checkout setup and record delivery proof; do not enable public checkout."
+      requirements:
+        - "Test-mode checkout product uses Age Like Fine Wine title, price, and proof SHA."
+        - "Delivery email uses the approved download placeholder until a tested secure link exists."
+        - "Receipt/support inbox is confirmed before any buyer-facing checkout."
+        - "Mobile PDF open, desktop PDF open, failed-download support, and duplicate-purchase refund paths are smoked."
+        - "Public checkout requires a separate Captain live checkout gate after test evidence is recorded."
     drive:
       folder: "Ebook Project"
       artifacts:

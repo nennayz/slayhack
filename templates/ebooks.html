@@ -107,6 +107,9 @@
     {% if ebook_factory.sale_gate.approved_at %}
     <span>Sale approved by {{ ebook_factory.sale_gate.approved_by or "unknown" }} / {{ ebook_factory.sale_gate.approved_at }}</span>
     {% endif %}
+    {% if ebook_factory.sale_gate.approval_report %}
+    <span>Sale approval report: <code>{{ ebook_factory.sale_gate.approval_report }}</code></span>
+    {% endif %}
     {% for blocker in ebook_factory.sale_gate.blockers %}
     <span>{{ blocker }}</span>
     {% endfor %}
@@ -130,14 +133,42 @@
   <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/sale-gate">
     <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
     <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
-    <button type="submit" {% if not ebook_factory.sale_gate.ready %}disabled{% endif %}>
-      {% if ebook_factory.sale_gate.ready %}
+    <button type="submit" {% if not ebook_factory.sale_gate.ready or ebook_factory.sale_gate.approved %}disabled{% endif %}>
+      {% if ebook_factory.sale_gate.approved %}
+      {{ ebook_factory.sale_gate.approved_label }}
+      {% elif ebook_factory.sale_gate.ready %}
       {{ ebook_factory.sale_gate.action_label }}
       {% else %}
       {{ ebook_factory.sale_gate.locked_label }}
       {% endif %}
     </button>
   </form>
+</section>
+{% endif %}
+
+{% if ebook_factory.checkout_setup_gate %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Checkout gate</p>
+    <h2>{{ ebook_factory.checkout_setup_gate.label }}</h2>
+  </div>
+  <div class="learning-gates">
+    <span class="badge badge-ops-unavailable">{{ ebook_factory.checkout_setup_gate.status | replace("_", " ") }}</span>
+    <span>{{ ebook_factory.checkout_setup_gate.boundary }}</span>
+    <span>{{ ebook_factory.checkout_setup_gate.next_action }}</span>
+  </div>
+  {% if ebook_factory.checkout_setup_gate.requirements %}
+  <div class="manual-learning-list">
+    {% for item in ebook_factory.checkout_setup_gate.requirements %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-missing">Required</span>
+        <strong>{{ item }}</strong>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% endif %}
 </section>
 {% endif %}
 
