@@ -3,7 +3,7 @@ factory:
   safe_boundary: "Live publish and checkout stay locked until Captain approval."
   runbook_path: "docs/ebook_production_runbook.md"
   spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
-  next_action: "Repair source integrity and visual QA before Captain sale activation."
+  next_action: "Review the rebuilt source proof, finish visual asset embedding, then approve remaining launch assets before Captain sale activation."
 
 stages:
   - key: idea
@@ -199,15 +199,23 @@ ebooks:
     project: SlayHack
     pm: Slay
     audience: "women 35-44"
-    status: qa_blocked
+    status: source_repaired_visual_partial
     role: "first paid low-ticket monetization pilot"
-    proof: "Current verified PDF proof is 39 pages, 6 x 8 inches, about 9.5 MB, text-extractable, bookmarked, and SHA-256 92b6baa2e0bc7cc53ed3d33d9aabe4e33f5d70680dd9b4e96391c5807e236e63. Earlier 61-page/29.9 MB handoff language is historical and no longer treated as current proof."
+    proof: "Rebuilt source proof v2 is versioned in repo: 25 pages, 129003 bytes, text-extractable, title/author/subject metadata present, and SHA-256 d3b494daf2dd8d297e03bdea78d83cc46b9131bd7f8c7cbf166301d2573e570b. The older 20260517 Drive proof remains historical source evidence."
     source_integrity:
-      status: blocked
-      current_source_of_truth: "Rendered PDF proof only; matching editable source was not found in the Drive folder."
-      blocker: "Registered DOCX is a different 40 Life Hacks product, not Age Like Fine Wine."
+      status: ready
+      current_source_of_truth: "Repo-versioned rebuilt DOCX and regenerated PDF proof v2."
+      blocker: ""
       repair_packet: "docs/monetization/slay_hack/age_like_fine_wine_source_repair_packet.md"
-      required_next_action: "Create or replace the editable source with a matching Age Like Fine Wine source document, then regenerate the PDF."
+      repair_report: "docs/monetization/slay_hack/age_like_fine_wine_source_repair_report.md"
+      source_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2_source.docx"
+      proof_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2.pdf"
+      manifest_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v2_manifest.json"
+      proof_sha256: "d3b494daf2dd8d297e03bdea78d83cc46b9131bd7f8c7cbf166301d2573e570b"
+      proof_pages: 25
+      proof_size_bytes: 129003
+      render_note: "DOCX text extraction verified; LibreOffice page-image render QA is unavailable on this host."
+      required_next_action: "Embed or regenerate final visual mockup pages in the designed PDF before Visual QA can pass."
     captain_sale_gate:
       label: "Captain sale approval"
       status: locked
@@ -239,11 +247,11 @@ ebooks:
           expected: "Visual direction before PDF or launch mockup revisions."
     qa_gates:
       - gate: Content QA
-        status: PARTIAL
+        status: PASS
         check: "Promise, chapter value, exercises, filler, and risky claims."
-        note: "Useful 10-chapter 35+ beauty guide with clear routine value, but skincare/retinol/SPF/collagen claims still need the source repair packet's disclaimer/citation patch applied to the actual editable source and regenerated PDF. Registered editable DOCX is a different 40 Life Hacks product, so source integrity remains blocked."
+        note: "Rebuilt matching editable source exists, the non-medical disclaimer is near the front, and claims-sensitive skincare/supplement caution language is included. Content is coherent for the 35-44 Fine Wine lane."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T03:19:25Z"
+        reviewed_at: "2026-05-18T04:22:36Z"
       - gate: Brand QA
         status: PASS
         check: "SlayHack voice, PM direction, vocabulary, and target-reader match."
@@ -251,23 +259,23 @@ ebooks:
         reviewed_by: codex
         reviewed_at: "2026-05-18T03:19:25Z"
       - gate: Visual QA
-        status: FAIL
-        check: "Cover, palette, typography, image consistency, and character usage."
-        note: "Cover and palette are polished, but interior is mostly text and tip boxes. It does not meet the visual-first B+C Hybrid strategy, lacks character portraits/icons/panels, and includes a near-blank page before the final CTA."
-        reviewed_by: codex
-        reviewed_at: "2026-05-18T03:19:25Z"
-      - gate: PDF Technical QA
         status: PARTIAL
-        check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
-        note: "PDF is 39 pages, 6x8 inches, text-extractable, bookmarked, and 9.5 MB. Blockers: missing title/author metadata, no active links despite a shop CTA button, and no matching editable source for a regenerated proof."
+        check: "Cover, palette, typography, image consistency, and character usage."
+        note: "Rebuilt source now includes B+C Hybrid chapter host cards, character-card directions, and visual reference labels; regenerated PDF removes the near-blank CTA issue. Keep PARTIAL because Drive mockup PNGs could not be embedded in the proof during this pass, so final character portrait/panel execution is still pending."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T03:19:25Z"
+        reviewed_at: "2026-05-18T04:22:36Z"
+      - gate: PDF Technical QA
+        status: PASS
+        check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
+        note: "Rebuilt proof is 25 pages, text-extractable, 129003 bytes, has title/author/subject metadata, uses locked CTA copy instead of a live-looking shop CTA, and has matching repo-versioned DOCX source."
+        reviewed_by: codex
+        reviewed_at: "2026-05-18T04:22:36Z"
       - gate: Monetization QA
         status: PARTIAL
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
-        note: "Sales, checkout, delivery, checkout terms, bridge, content-push, post-purchase, and tracking drafts exist. Keep PARTIAL because checkout terms are review-ready but not Captain-approved, and the PDF contains a live-looking slayhack.com/shop CTA before checkout is approved."
+        note: "Sales, checkout, delivery, checkout terms, bridge, content-push, post-purchase, and tracking drafts exist, and the rebuilt proof uses locked CTA copy. Keep PARTIAL because checkout terms and launch assets are review-ready but not Captain-approved."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T03:19:25Z"
+        reviewed_at: "2026-05-18T04:22:36Z"
     launch_assets:
       - name: sales page
         status: review_ready

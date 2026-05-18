@@ -80,6 +80,21 @@
     {% if ebook_factory.source_integrity.repair_packet %}
     <span>Repair packet: <code>{{ ebook_factory.source_integrity.repair_packet }}</code></span>
     {% endif %}
+    {% if ebook_factory.source_integrity.repair_report %}
+    <span>Repair report: <code>{{ ebook_factory.source_integrity.repair_report }}</code></span>
+    {% endif %}
+    {% if ebook_factory.source_integrity.source_path %}
+    <span>Editable source: <code>{{ ebook_factory.source_integrity.source_path }}</code></span>
+    {% endif %}
+    {% if ebook_factory.source_integrity.proof_path %}
+    <span>Regenerated proof: <code>{{ ebook_factory.source_integrity.proof_path }}</code></span>
+    {% endif %}
+    {% if ebook_factory.source_integrity.proof_sha256 %}
+    <span>Proof SHA-256: <code>{{ ebook_factory.source_integrity.proof_sha256 }}</code></span>
+    {% endif %}
+    {% if ebook_factory.source_integrity.render_note %}
+    <span>{{ ebook_factory.source_integrity.render_note }}</span>
+    {% endif %}
     {% if ebook_factory.sale_gate.approved_at %}
     <span>Sale approved by {{ ebook_factory.sale_gate.approved_by or "unknown" }} / {{ ebook_factory.sale_gate.approved_at }}</span>
     {% endif %}
