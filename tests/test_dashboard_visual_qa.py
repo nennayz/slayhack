@@ -32,6 +32,24 @@ def _write_project(root: Path) -> None:
         '  infographic_1: "Save card one"\n'
         '  infographic_2: "Save card two"\n'
     )
+    (project_dir / "ebooks.yaml").write_text(
+        'factory:\n'
+        '  state: "Registry-backed governance ready"\n'
+        '  safe_boundary: "Live publish and checkout stay locked until Captain approval."\n'
+        '  next_action: "Run Fleet QA."\n'
+        'ebooks:\n'
+        '  - title: "Age Like Fine Wine"\n'
+        '    project: SlayHack\n'
+        '    pm: Slay\n'
+        '    audience: "women 35-44"\n'
+        '    status: designed_pdf_ready\n'
+        '    role: "first paid low-ticket monetization pilot"\n'
+        '    proof: "Prior handoff reports 22 generated images."\n'
+        '    qa_gates:\n'
+        '      - gate: Content QA\n'
+        '        status: PARTIAL\n'
+        '        check: "Promise and chapter value."\n'
+    )
 
 
 def _write_job(root: Path) -> None:
