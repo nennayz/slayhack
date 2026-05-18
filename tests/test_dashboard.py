@@ -122,6 +122,9 @@ def _write_ebook_registry(tmp_path: Path) -> None:
     (ebook_drive_dir / "ebook_universe_map.png").write_bytes(b"png map")
     (ebook_drive_dir / "20260517-Ebook-Knowledge-Base.md").write_text("# Knowledge Base\n")
     (ebook_drive_dir / "20260517-Slay-Ebook-Visual-Strategy.md").write_text("# Visual Strategy\n")
+    proof_path = tmp_path / "docs" / "monetization" / "slay_hack" / "artifacts"
+    proof_path.mkdir(parents=True, exist_ok=True)
+    (proof_path / "20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf").write_bytes(b"%PDF-1.4 fine wine v3 proof")
     (project_dir / "project_bridge.yaml").write_text(
         f'project: slay_hack\n'
         f'display_name: "Slay Hack"\n'
@@ -218,6 +221,35 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '    status: designed_pdf_ready\n'
         '    role: "first paid low-ticket monetization pilot"\n'
         '    proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."\n'
+        '    source_integrity:\n'
+        '      status: pending\n'
+        '      proof_path: "docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"\n'
+        '      proof_sha256: "59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8"\n'
+        '    checkout_setup_gate:\n'
+        '      label: "Checkout setup and delivery test"\n'
+        '      status: test_setup_packet_ready_checkout_locked\n'
+        '      boundary: "Test-mode checkout and delivery smoke must pass before public checkout can open."\n'
+        '      next_action: "Record test-mode checkout and delivery smoke evidence."\n'
+        '      test_checkout:\n'
+        '        provider: "Stripe Checkout Sessions or Payment Links"\n'
+        '        mode: "test mode"\n'
+        '        product_name: "Age Like Fine Wine"\n'
+        '        price_label: "Captain price pending"\n'
+        '      secure_delivery:\n'
+        '        internal_delivery_route: "/aurora/ebooks/delivery-proof/age_like_fine_wine?project_slug=slay_hack"\n'
+        '      receipt_delivery:\n'
+        '        delivery_email_asset: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"\n'
+        '      public_checkout_gate:\n'
+        '        status: locked\n'
+        '      smoke_checks:\n'
+        '        - key: test_mode_checkout_setup\n'
+        '          label: "Test-mode checkout setup"\n'
+        '          status: PARTIAL\n'
+        '          note: "Setup packet is ready."\n'
+        '        - key: secure_delivery_link\n'
+        '          label: "Secure delivery link"\n'
+        '          status: PENDING\n'
+        '          note: ""\n'
         '    drive:\n'
         '      folder: "Ebook Project"\n'
         '      artifacts:\n'
@@ -2595,6 +2627,14 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Captain sale approval" in resp.text
     assert "Sale approval locked" in resp.text
     assert "Source integrity must be ready with a matching editable source and PDF proof." in resp.text
+    assert "Checkout setup and delivery test" in resp.text
+    assert "test setup packet ready checkout locked" in resp.text
+    assert "Stripe Checkout Sessions or Payment Links" in resp.text
+    assert "Captain price pending" in resp.text
+    assert "Open protected PDF proof" in resp.text
+    assert "Checkout smoke: 0/2" in resp.text
+    assert "Next smoke check: Test-mode checkout setup" in resp.text
+    assert "Public checkout gate: locked" in resp.text
 
 
 def test_aurora_ebooks_launch_copy_asset_route_serves_registered_markdown(tmp_path, client):
@@ -2687,6 +2727,19 @@ def test_aurora_ebooks_tracking_plan_asset_route_serves_registered_markdown(tmp_
     assert resp.headers["content-type"].startswith("text/markdown")
     assert "Age Like Fine Wine - Tracking Plan Draft" in resp.text
     assert "Measure traffic, conversion, delivery, support, and learning." in resp.text
+
+
+def test_aurora_ebooks_delivery_proof_route_serves_protected_pdf(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get(
+        "/aurora/ebooks/delivery-proof/age_like_fine_wine?project_slug=slay_hack",
+        headers=_auth(),
+    )
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/pdf")
+    assert resp.content.startswith(b"%PDF-1.4 fine wine v3 proof")
 
 
 def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):
@@ -2836,6 +2889,70 @@ def test_aurora_ebooks_records_approved_launch_asset_count(tmp_path, client):
     page = client.get("/aurora/ebooks", headers=_auth())
     assert "1/6" in page.text
     assert "Next missing launch asset: product mockup" in page.text
+
+
+def test_aurora_ebooks_records_checkout_smoke_when_sale_approved(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+    registry_path = tmp_path / "projects" / "slay_hack" / "ebooks.yaml"
+    registry = yaml.safe_load(registry_path.read_text())
+    ebook = registry["ebooks"][0]
+    ebook["source_integrity"]["status"] = "ready"
+    ebook["captain_sale_gate"] = {"status": "approved", "approved_by": "Nayz"}
+    for gate in ebook["qa_gates"]:
+        gate["status"] = "PASS"
+    for asset in ebook["launch_assets"]:
+        asset["status"] = "approved"
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False))
+
+    resp = client.post(
+        "/aurora/ebooks/checkout-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "check": "secure_delivery_link",
+            "status": "PASS",
+            "note": "Protected proof route opened.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith(
+        "/aurora/ebooks?project=slay_hack&checkout_result=Secure%20delivery%20link%3A%20PASS"
+    )
+    updated = yaml.safe_load(registry_path.read_text())
+    checks = updated["ebooks"][0]["checkout_setup_gate"]["smoke_checks"]
+    delivery_check = next(item for item in checks if item["key"] == "secure_delivery_link")
+    assert delivery_check["status"] == "PASS"
+    assert delivery_check["note"] == "Protected proof route opened."
+    assert delivery_check["reviewed_by"] == "admin"
+    assert delivery_check["reviewed_at"]
+    assert updated["ebooks"][0]["checkout_setup_gate"]["status"] == "test_mode_in_progress_checkout_locked"
+
+    page = client.get("/aurora/ebooks", headers=_auth())
+    assert page.status_code == 200
+    assert "Checkout smoke: 1/2" in page.text
+    assert "Protected proof route opened." in page.text
+
+
+def test_aurora_ebooks_rejects_checkout_smoke_before_sale_approval(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/checkout-gate",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "check": "secure_delivery_link",
+            "status": "PASS",
+            "note": "Too early.",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Checkout setup is locked until Captain sale approval is recorded"
 
 
 def test_aurora_ebooks_rejects_invalid_launch_asset_status(tmp_path, client):
