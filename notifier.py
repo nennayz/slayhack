@@ -1,10 +1,14 @@
 """notifier.py — sends scheduler and report alerts."""
 from __future__ import annotations
 
+import logging
 import os
 import sys
+from html import escape
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 def _post_slack(message: str, missing_label: str) -> bool:
@@ -115,3 +119,37 @@ def send_healthcheck_alert(message: str, dry_run: bool = False) -> None:
         return
 
     _send_alert(message, "health-check alert")
+
+
+def send_telegram_scout_report(config, job) -> None:
+    """Send top 3 scout opportunities to Telegram with Approve/Skip buttons."""
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+    if not token or not chat_id:
+        logger.warning("Telegram not configured — skipping scout report notification")
+        return
+
+    top3 = job.opportunities[:3]
+    lines = [f"🔍 <b>Scout Report</b> — {job.job_id}\n"]
+    for i, opp in enumerate(top3, 1):
+        lines.append(
+            f"{i}. <b>{escape(opp.niche_name)}</b> — Score: {opp.reach_score:.0f}\n"
+            f"   {escape(opp.target_audience)} | {escape(opp.trend_direction)} | "
+            f"{escape(', '.join(opp.platforms))}\n"
+        )
+    if not top3:
+        lines.append("No opportunities found in this scan.\n")
+    lines.append("\nApprove a niche to generate project files:")
+
+    keyboard = {
+        "inline_keyboard": [
+            [{"text": f"✅ {opp.niche_name}", "callback_data": f"scout_approve:{job.job_id}:{opp.niche_name}"}]
+            for opp in top3
+        ] + [[{"text": "⏭ Skip this report", "callback_data": f"scout_skip:{job.job_id}"}]]
+    }
+
+    try:
+        from telegram_bot import _api
+        _api(token, "sendMessage", chat_id=chat_id, text="".join(lines), parse_mode="HTML", reply_markup=keyboard)
+    except Exception as exc:
+        logger.warning("send_telegram_scout_report failed: %s", exc)

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 import telegram_bot as tb
+from models.niche_opportunity import NicheOpportunity, ScoutJob
 
 TOKEN = "test-token"
 CHAT_ID = "123456"
@@ -36,6 +37,30 @@ def _cb_update(update_id: int, data: str, chat_id: str = CHAT_ID) -> dict:
             "data": data,
         },
     }
+
+
+class _ImmediateThread:
+    def __init__(self, target, args=(), kwargs=None, daemon=None):
+        self.target = target
+        self.args = args
+        self.kwargs = kwargs or {}
+        self.daemon = daemon
+
+    def start(self):
+        self.target(*self.args, **self.kwargs)
+
+
+def _scout_opportunity(name: str = "clean beauty") -> NicheOpportunity:
+    return NicheOpportunity(
+        niche_name=name,
+        target_audience="Women USA 25-40",
+        platforms=["instagram"],
+        reach_score=91.0,
+        trend_direction="rising",
+        content_formats=["reel"],
+        monetization_notes="Low-ticket guide candidate",
+        signals={"source": "dry-run"},
+    )
 
 
 def test_load_state_missing(tmp_path):
@@ -136,6 +161,113 @@ def test_status_running(tmp_path):
             lock_file=lock_file,
         )
     assert any("already running" in str(k) or "running" in str(k).lower() for k in sent)
+
+
+def test_scout_command_starts_safe_dry_run_thread(tmp_path):
+    sent = []
+    ran = []
+
+    def fake_post(*args, **kwargs):
+        sent.append(kwargs)
+        return _resp({"message_id": 1})
+
+    def fake_run_scout_report(token, chat_id):
+        ran.append((token, chat_id))
+
+    with patch("telegram_bot.requests.post", side_effect=fake_post), \
+        patch("telegram_bot.threading.Thread", _ImmediateThread), \
+        patch("telegram_bot._run_scout_report", side_effect=fake_run_scout_report):
+        tb._handle_update(
+            _msg_update(1, "/scout"),
+            TOKEN,
+            CHAT_ID,
+            root=tmp_path,
+            state_file=tmp_path / "state.json",
+            lock_file=tmp_path / "lock",
+        )
+
+    assert ran == [(TOKEN, CHAT_ID)]
+    assert any("Scout dry-run" in str(item) for item in sent)
+
+
+def test_run_scout_report_uses_dry_run(monkeypatch):
+    cfg = object()
+    job = ScoutJob(job_id="scout-1", triggered_by="telegram")
+    run_pipeline = MagicMock(return_value=job)
+    send_report = MagicMock()
+
+    with patch("config.Config.from_env", return_value=cfg), \
+        patch("scout_pipeline.run_scout_pipeline", run_pipeline), \
+        patch("notifier.send_telegram_scout_report", send_report):
+        tb._run_scout_report(TOKEN, CHAT_ID)
+
+    run_pipeline.assert_called_once_with(cfg, triggered_by="telegram", dry_run=True)
+    send_report.assert_called_once_with(cfg, job)
+
+
+def test_run_scout_report_reports_errors():
+    sent = []
+    with patch("config.Config.from_env", side_effect=RuntimeError("boom")), \
+        patch("telegram_bot._send_message", side_effect=lambda *args: sent.append(args)):
+        tb._run_scout_report(TOKEN, CHAT_ID)
+
+    assert sent == [(TOKEN, CHAT_ID, "❌ Scout failed: boom")]
+
+
+def test_scout_approve_callback_loads_report_and_runs_before_lock(tmp_path):
+    report_dir = tmp_path / "output" / "scout_reports"
+    report_dir.mkdir(parents=True)
+    job = ScoutJob(
+        job_id="scout-1",
+        triggered_by="telegram",
+        opportunities=[_scout_opportunity()],
+    )
+    (report_dir / "scout-1-scout-report.json").write_text(job.model_dump_json())
+    lock_file = tmp_path / "lock"
+    lock_file.write_text(str(time.time()))
+    sent = []
+    approve = MagicMock(return_value="clean_beauty")
+
+    def fake_post(*args, **kwargs):
+        sent.append(kwargs)
+        return _resp({"message_id": 1})
+
+    with patch("telegram_bot.requests.post", side_effect=fake_post), \
+        patch("telegram_bot.threading.Thread", _ImmediateThread), \
+        patch("config.Config.from_env", return_value=object()), \
+        patch("scout_pipeline.approve_niche", approve):
+        tb._handle_update(
+            _cb_update(1, "scout_approve:scout-1:clean beauty"),
+            TOKEN,
+            CHAT_ID,
+            root=tmp_path,
+            state_file=tmp_path / "state.json",
+            lock_file=lock_file,
+        )
+
+    approve.assert_called_once()
+    assert approve.call_args.args[1] == "clean beauty"
+    assert any("Generating project files" in str(item) for item in sent)
+    assert any("Project <b>clean_beauty</b> created" in str(item) for item in sent)
+    assert not any("already running" in str(item).lower() for item in sent)
+
+
+def test_scout_skip_callback_runs_before_lock(tmp_path):
+    lock_file = tmp_path / "lock"
+    lock_file.write_text(str(time.time()))
+    sent = []
+    with patch("telegram_bot.requests.post", side_effect=lambda *a, **kw: (sent.append(kw), _resp({"message_id": 1}))[-1]):
+        tb._handle_update(
+            _cb_update(1, "scout_skip:scout-1"),
+            TOKEN,
+            CHAT_ID,
+            root=tmp_path,
+            state_file=tmp_path / "state.json",
+            lock_file=lock_file,
+        )
+
+    assert any("Scout report skipped" in str(item) for item in sent)
+    assert not any("already running" in str(item).lower() for item in sent)
 
 
 def test_cancel_clears_state(tmp_path):
