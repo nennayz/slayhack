@@ -8,7 +8,9 @@
   <p class="hero-copy">{{ report.summary }}</p>
   <div class="hero-actions">
     <a class="button button-secondary" href="/scout/">Back to Scout</a>
-    {% if job.status == 'awaiting_approval' %}
+    {% if report.project_status.exists %}
+    <span class="badge badge-ops-{{ 'ready' if report.project_status.rotation_approved else 'missing' }}">{{ report.project_status.label }}</span>
+    {% elif job.status == 'awaiting_approval' %}
     <form method="post" action="/scout/approve" style="background:none; border:none; border-radius:0; box-shadow:none; padding:0; max-width:none;">
       <input type="hidden" name="job_id" value="{{ job.job_id }}">
       <input type="hidden" name="niche_name" value="{{ report.opportunity.niche_name }}">

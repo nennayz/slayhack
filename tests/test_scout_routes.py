@@ -136,6 +136,20 @@ def test_scout_report_detail_shows_interactive_analysis(tmp_path):
     assert "Approve to create project" in resp.text
 
 
+def test_scout_report_detail_marks_existing_project_instead_of_duplicate_approval(tmp_path):
+    job = _saved_job(tmp_path)
+    project_dir = tmp_path / "projects" / "clean_beauty"
+    project_dir.mkdir(parents=True)
+    (project_dir / "scout_activation.yaml").write_text(
+        yaml.dump({"scheduler_rotation_approved": True})
+    )
+    client = _client(tmp_path)
+    resp = client.get(f"/scout/reports/{job.job_id}/clean_beauty", headers=_auth())
+    assert resp.status_code == 200
+    assert "Project in scheduler rotation" in resp.text
+    assert 'action="/scout/approve"' not in resp.text
+
+
 def test_scout_report_detail_blocks_bad_job_id(tmp_path):
     client = _client(tmp_path)
     resp = client.get("/scout/reports/../../evil/clean_beauty", headers=_auth())
