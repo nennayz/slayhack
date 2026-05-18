@@ -2418,6 +2418,9 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "0/5" in resp.text
     assert "Next missing QA gate: Content QA" in resp.text
     assert "Record QA" in resp.text
+    assert "0/2" in resp.text
+    assert "Next missing launch asset: sales page" in resp.text
+    assert "Record asset" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
 
@@ -2510,6 +2513,102 @@ def test_aurora_ebooks_record_requires_registry(client):
 
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"]
+
+
+def test_aurora_ebooks_records_launch_asset_result(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/launch-asset",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "asset": "sales page",
+            "status": "review_ready",
+            "note": "Offer stack draft is ready for review.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith(
+        "/aurora/ebooks?project=slay_hack&launch_result=sales%20page%3A%20review_ready"
+    )
+    registry = yaml.safe_load((tmp_path / "projects" / "slay_hack" / "ebooks.yaml").read_text())
+    assets = registry["ebooks"][0]["launch_assets"]
+    sales_page = next(item for item in assets if isinstance(item, dict) and item["name"] == "sales page")
+    assert sales_page["status"] == "review_ready"
+    assert sales_page["note"] == "Offer stack draft is ready for review."
+    assert sales_page["reviewed_by"] == "admin"
+    assert sales_page["reviewed_at"]
+    assert "7-day content push" in assets
+
+    page = client.get("/aurora/ebooks", headers=_auth())
+    assert page.status_code == 200
+    assert "0/2" in page.text
+    assert "Next missing launch asset: sales page" in page.text
+    assert "Offer stack draft is ready for review." in page.text
+
+
+def test_aurora_ebooks_records_approved_launch_asset_count(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/launch-asset",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "asset": "sales page",
+            "status": "approved",
+            "note": "Sales page approved.",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    page = client.get("/aurora/ebooks", headers=_auth())
+    assert "1/2" in page.text
+    assert "Next missing launch asset: 7-day content push" in page.text
+
+
+def test_aurora_ebooks_rejects_invalid_launch_asset_status(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/launch-asset",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "asset": "sales page",
+            "status": "live",
+            "note": "Invalid state.",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "Launch asset status must be missing, draft_ready, review_ready, or approved"
+
+
+def test_aurora_ebooks_rejects_unknown_launch_asset(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/launch-asset",
+        headers=_auth(),
+        data={
+            "project_slug": "slay_hack",
+            "ebook_id": "age_like_fine_wine",
+            "asset": "checkout activation",
+            "status": "approved",
+            "note": "Unknown asset.",
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "is not registered" in resp.json()["detail"]
 
 
 def test_aurora_ebooks_page_renders_empty_state_without_registry(client):

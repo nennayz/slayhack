@@ -18,6 +18,12 @@
   <p>{{ qa_result }}</p>
 </section>
 {% endif %}
+{% if launch_result %}
+<section class="panel spacious">
+  <span class="badge badge-ops-ready">Launch asset result recorded</span>
+  <p>{{ launch_result }}</p>
+</section>
+{% endif %}
 
 <section class="stat-grid wide">
   <div class="stat-card">
@@ -33,8 +39,8 @@
     <strong>{{ ebook_factory.qa_summary.passed }}/{{ ebook_factory.qa_summary.total }}</strong>
   </div>
   <div class="stat-card">
-    <span>Next QA</span>
-    <strong>{{ ebook_factory.next_missing_qa_gate.gate if ebook_factory.next_missing_qa_gate else "Ready" }}</strong>
+    <span>Launch assets</span>
+    <strong>{{ ebook_factory.launch_summary.approved }}/{{ ebook_factory.launch_summary.total }}</strong>
   </div>
 </section>
 
@@ -50,6 +56,9 @@
     <span>Runbook: <code>{{ ebook_factory.runbook_path }}</code></span>
     <span>Dashboard spec: <code>{{ ebook_factory.spec_path }}</code></span>
     <span>Live boundary: checkout and publish remain locked.</span>
+    {% if ebook_factory.next_missing_launch_asset %}
+    <span>Next launch asset: {{ ebook_factory.next_missing_launch_asset.name }}</span>
+    {% endif %}
   </div>
 </section>
 
@@ -204,12 +213,43 @@
       <p class="eyebrow">Launch package</p>
       <h2>Assets before public sale</h2>
     </div>
-    <div class="tag-list">
+    {% if ebook_factory.next_missing_launch_asset %}
+    <div class="learning-gates">
+      <span>Next missing launch asset: {{ ebook_factory.next_missing_launch_asset.name }}</span>
+    </div>
+    {% endif %}
+    <div class="manual-learning-list">
       {% for item in ebook_factory.launch_assets %}
-      <span class="island-chip">
-        <span>{{ item }}</span>
-        <small>required</small>
-      </span>
+      <article class="manual-learning-row">
+        <div>
+          <span class="badge {{ item.status_class }}">{{ item.status | replace("_", " ") }}</span>
+          <strong>{{ item.name }}</strong>
+          {% if item.reviewed_at %}
+          <small>Last review: {{ item.reviewed_by or "unknown" }} / {{ item.reviewed_at }}</small>
+          {% endif %}
+          {% if item.note %}
+          <p>{{ item.note }}</p>
+          {% endif %}
+          <details class="action-drawer">
+            <summary>Record asset</summary>
+            <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/launch-asset">
+              <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
+              <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
+              <input name="asset" type="hidden" value="{{ item.name }}">
+              <label for="launch_status_{{ loop.index }}">Status</label>
+              <select id="launch_status_{{ loop.index }}" name="status">
+                <option value="missing" {% if item.status == "missing" %}selected{% endif %}>missing</option>
+                <option value="draft_ready" {% if item.status == "draft_ready" %}selected{% endif %}>draft_ready</option>
+                <option value="review_ready" {% if item.status == "review_ready" %}selected{% endif %}>review_ready</option>
+                <option value="approved" {% if item.status == "approved" %}selected{% endif %}>approved</option>
+              </select>
+              <label for="launch_note_{{ loop.index }}">Asset note</label>
+              <textarea id="launch_note_{{ loop.index }}" name="note" rows="3">{{ item.note or "" }}</textarea>
+              <button type="submit">Record asset</button>
+            </form>
+          </details>
+        </div>
+      </article>
       {% else %}
       <p class="muted">No launch package assets are registered yet.</p>
       {% endfor %}

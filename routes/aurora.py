@@ -151,6 +151,7 @@ PM_KNOWLEDGE_SMOKE_CHECKS = [
 ]
 
 EBOOK_QA_STATUSES = {"PASS", "PARTIAL", "FAIL"}
+EBOOK_LAUNCH_ASSET_STATUSES = {"missing", "draft_ready", "review_ready", "approved"}
 
 EBOOK_FACTORY_DEFAULTS = {
     "state": "No e-book registry found",
@@ -171,6 +172,8 @@ EBOOK_FACTORY_DEFAULTS = {
     "next_missing_qa_gate": None,
     "hardening": [],
     "launch_assets": [],
+    "launch_summary": {"approved": 0, "total": 0},
+    "next_missing_launch_asset": None,
 }
 
 
@@ -195,11 +198,56 @@ def _ebook_qa_status_class(status: object) -> str:
     return "badge-ops-missing"
 
 
+def _ebook_launch_status_class(status: object) -> str:
+    normalized = str(status or "").lower()
+    if normalized == "approved":
+        return "badge-ops-ready"
+    if normalized == "review_ready":
+        return "badge-ops-missing"
+    return "badge-ops-unavailable"
+
+
 def _ebook_qa_summary(qa_gates: list[dict[str, object]]) -> dict[str, int]:
     return {
         "passed": sum(1 for item in qa_gates if str(item.get("status", "")).upper() == "PASS"),
         "total": len(qa_gates),
     }
+
+
+def _ebook_launch_summary(launch_assets: list[dict[str, object]]) -> dict[str, int]:
+    return {
+        "approved": sum(1 for item in launch_assets if str(item.get("status", "")).lower() == "approved"),
+        "total": len(launch_assets),
+    }
+
+
+def _ebook_launch_asset_rows(items: object) -> list[dict[str, object]]:
+    if not isinstance(items, list):
+        return []
+    rows = []
+    for item in items:
+        if isinstance(item, str):
+            rows.append(
+                {
+                    "name": item,
+                    "status": "missing",
+                    "status_class": _ebook_launch_status_class("missing"),
+                    "note": "",
+                    "reviewed_by": "",
+                    "reviewed_at": "",
+                }
+            )
+        elif isinstance(item, dict):
+            status = str(item.get("status") or "missing").lower()
+            rows.append(
+                {
+                    **item,
+                    "name": str(item.get("name") or item.get("asset") or item.get("label") or "").strip(),
+                    "status": status,
+                    "status_class": _ebook_launch_status_class(status),
+                }
+            )
+    return [item for item in rows if item.get("name")]
 
 
 def _read_ebook_registry(registry_path: Path) -> dict[str, object]:
@@ -241,6 +289,15 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         if isinstance(item, dict)
     ]
     next_missing = next((item for item in qa_gates if str(item.get("status", "")).upper() != "PASS"), None)
+    launch_assets = _ebook_launch_asset_rows(
+        pilot.get("launch_assets")
+        if isinstance(pilot.get("launch_assets"), list)
+        else raw.get("launch_assets")
+    )
+    next_missing_launch = next(
+        (item for item in launch_assets if str(item.get("status", "")).lower() != "approved"),
+        None,
+    )
     factory.update(
         {
             "has_registry": True,
@@ -252,13 +309,9 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "qa_summary": _ebook_qa_summary(qa_gates),
             "next_missing_qa_gate": next_missing,
             "hardening": raw.get("hardening") if isinstance(raw.get("hardening"), list) else [],
-            "launch_assets": (
-                pilot.get("launch_assets")
-                if isinstance(pilot.get("launch_assets"), list)
-                else raw.get("launch_assets")
-                if isinstance(raw.get("launch_assets"), list)
-                else []
-            ),
+            "launch_assets": launch_assets,
+            "launch_summary": _ebook_launch_summary(launch_assets),
+            "next_missing_launch_asset": next_missing_launch,
         }
     )
     return factory
@@ -369,6 +422,7 @@ def aurora_ebooks(request: Request, _: str = Depends(verify_auth)):
         {
             "ebook_factory": _ebook_factory(_root(request), project_slug),
             "qa_result": request.query_params.get("qa_result", ""),
+            "launch_result": request.query_params.get("launch_result", ""),
         },
     )
 
@@ -438,6 +492,95 @@ def aurora_ebook_record_qa_gate(
 
     message = quote(f"{gate_row['gate']}: {status_clean}")
     return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&qa_result={message}", status_code=303)
+
+
+@router.post("/aurora/ebooks/launch-asset")
+def aurora_ebook_record_launch_asset(
+    request: Request,
+    project_slug: str = Form("slay_hack"),
+    ebook_id: str = Form(...),
+    asset: str = Form(...),
+    status: str = Form(...),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    status_clean = status.strip().lower()
+    if status_clean not in EBOOK_LAUNCH_ASSET_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="Launch asset status must be missing, draft_ready, review_ready, or approved",
+        )
+
+    resolved_project, registry_path = _ebook_registry_location(root, project_slug.strip() or "slay_hack")
+    if not registry_path.exists():
+        raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
+
+    try:
+        registry = _read_ebook_registry(registry_path)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    ebooks = registry.get("ebooks")
+    if not isinstance(ebooks, list):
+        raise HTTPException(status_code=400, detail="E-book registry must contain an ebooks list")
+
+    ebook = next(
+        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
+        None,
+    )
+    if ebook is None:
+        raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
+
+    launch_assets = ebook.get("launch_assets")
+    if not isinstance(launch_assets, list):
+        raise HTTPException(status_code=400, detail=f"E-book {ebook_id!r} has no launch assets")
+
+    asset_clean = asset.strip()
+    matched_index = None
+    for index, item in enumerate(launch_assets):
+        if isinstance(item, str) and item.strip() == asset_clean:
+            matched_index = index
+            break
+        if isinstance(item, dict):
+            item_name = str(item.get("name") or item.get("asset") or item.get("label") or "").strip()
+            if item_name == asset_clean:
+                matched_index = index
+                break
+    if matched_index is None:
+        raise HTTPException(status_code=400, detail=f"Launch asset {asset!r} is not registered for this e-book")
+
+    current = launch_assets[matched_index]
+    if isinstance(current, dict):
+        asset_row = current
+        asset_row["name"] = str(asset_row.get("name") or asset_row.get("asset") or asset_row.get("label") or asset_clean)
+    else:
+        asset_row = {"name": asset_clean}
+    asset_row["status"] = status_clean
+    asset_row["note"] = note.strip()
+    asset_row["reviewed_by"] = user
+    asset_row["reviewed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    launch_assets[matched_index] = asset_row
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False, allow_unicode=True))
+
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Recorded {status_clean} for e-book launch asset {asset_row['name']}",
+        actor=user,
+        result=f"{resolved_project}:{ebook_id}:{asset_row['name']}={status_clean}",
+        next_action="Continue launch package recording until all assets are approved; checkout and live publish remain locked.",
+        files=[f"projects/{resolved_project}/ebooks.yaml"],
+        metadata={
+            "project": resolved_project,
+            "ebook_id": ebook_id,
+            "asset": asset_row["name"],
+            "status": status_clean,
+        },
+    )
+
+    message = quote(f"{asset_row['name']}: {status_clean}")
+    return RedirectResponse(f"/aurora/ebooks?project={quote(resolved_project)}&launch_result={message}", status_code=303)
 
 
 @router.get("/aurora/daily-slate", response_class=HTMLResponse)
