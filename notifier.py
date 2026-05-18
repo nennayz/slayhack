@@ -1,4 +1,5 @@
 """notifier.py — sends scheduler and report alerts."""
+
 from __future__ import annotations
 
 import logging
@@ -82,7 +83,10 @@ def send_slack_alert(
         dry_run:  If True, print the message to stdout instead of posting.
     """
     n = len(failures)
-    lines = [f":rotating_light: NayzFreedom Scheduler — {n}/{total} jobs failed ({run_date})", ""]
+    lines = [
+        f":rotating_light: NayzFreedom Scheduler — {n}/{total} jobs failed ({run_date})",
+        "",
+    ]
     for f in failures:
         label = "timeout" if f["exit_code"] is None else f"exit {f['exit_code']}"
         lines.append(f"• {f['project']} | {f['brief']} | {f['content_type']} → {label}")
@@ -143,13 +147,34 @@ def send_telegram_scout_report(config, job) -> None:
 
     keyboard = {
         "inline_keyboard": [
-            [{"text": f"✅ {opp.niche_name}", "callback_data": f"scout_approve:{job.job_id}:{opp.niche_name}"}]
+            [
+                {
+                    "text": f"✅ {opp.niche_name}"[:64],
+                    "callback_data": f"scout_approve:{job.job_id}:{opp.niche_name[:30]}",
+                }
+            ]
             for opp in top3
-        ] + [[{"text": "⏭ Skip this report", "callback_data": f"scout_skip:{job.job_id}"}]]
+        ]
+        + [
+            [
+                {
+                    "text": "⏭ Skip this report",
+                    "callback_data": f"scout_skip:{job.job_id}",
+                }
+            ]
+        ]
     }
 
     try:
         from telegram_bot import _api
-        _api(token, "sendMessage", chat_id=chat_id, text="".join(lines), parse_mode="HTML", reply_markup=keyboard)
+
+        _api(
+            token,
+            "sendMessage",
+            chat_id=chat_id,
+            text="".join(lines),
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
     except Exception as exc:
         logger.warning("send_telegram_scout_report failed: %s", exc)

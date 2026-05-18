@@ -41,6 +41,12 @@
       </div>
     </div>
     <div class="nav-group">
+      <span class="nav-group-label">Discover</span>
+      <div class="nav-group-links">
+        <a class="{{ 'active' if request.url.path.startswith('/scout') else '' }}" href="/scout/">Scout</a>
+      </div>
+    </div>
+    <div class="nav-group">
       <span class="nav-group-label">Ops</span>
       <div class="nav-group-links">
         <a class="{{ 'active' if request.url.path == '/readiness' else '' }}" href="/readiness">Readiness</a>

@@ -57,6 +57,39 @@ def get_tool_definitions() -> list[dict]:
             },
         },
         {
+            "name": "run_scout",
+            "description": "Scan 4 data sources (Brave, Google Trends, Reddit, Meta Ads) for niche opportunities. Call first in scout pipeline.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "dry_run": {"type": "boolean", "description": "If true, use mock data. Default false."}
+                },
+                "required": [],
+            },
+        },
+        {
+            "name": "run_analyst",
+            "description": "Score and rank niche signals from Scout. Returns top 5 NicheOpportunity ranked by reach potential.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "dry_run": {"type": "boolean", "description": "If true, use mock data. Default false."}
+                },
+                "required": [],
+            },
+        },
+        {
+            "name": "run_architect",
+            "description": "Generate project YAML files for the approved niche. Call only after Captain has set approved_niche.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "dry_run": {"type": "boolean", "description": "If true, log only. Do not write files. Default false."}
+                },
+                "required": [],
+            },
+        },
+        {
             "name": "request_checkpoint",
             "description": (
                 "Pause pipeline and ask the user for input or approval. "

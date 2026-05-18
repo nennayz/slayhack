@@ -403,6 +403,7 @@ from routes.jobs import router as _jobs_router
 from routes.ships import router as _ships_router
 from routes.readiness import router as _readiness_router
 from routes.ops import router as _ops_router
+from routes.scout import router as _scout_router
 
 app.include_router(_ops_router)      # includes healthz, media, privacy, data-deletion first
 app.include_router(_captain_router)
@@ -410,6 +411,7 @@ app.include_router(_aurora_router)
 app.include_router(_jobs_router)
 app.include_router(_ships_router)
 app.include_router(_readiness_router)
+app.include_router(_scout_router)
 
 
 if __name__ == "__main__":
