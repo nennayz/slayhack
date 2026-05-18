@@ -93,6 +93,21 @@ def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_typ
                 "exit_code": None, "failed": True}
 
 
+def _run_daily_scout(dry_run: bool = False) -> None:
+    if not os.environ.get("BRAVE_SEARCH_API_KEY"):
+        logger.debug("BRAVE_SEARCH_API_KEY not set — skipping daily scout")
+        return
+    try:
+        from config import Config
+        from scout_pipeline import run_scout_pipeline
+        from notifier import send_telegram_scout_report
+        cfg = Config.from_env()
+        job = run_scout_pipeline(cfg, triggered_by="scheduler", dry_run=dry_run)
+        send_telegram_scout_report(cfg, job)
+    except Exception as exc:
+        logger.error("Daily scout failed: %s", exc)
+
+
 def run_scheduler(
     dry_run: bool = False,
     root: Path | None = None,
@@ -117,6 +132,7 @@ def run_scheduler(
     failures: list[dict] = []
 
     log_action("scheduler_start", {"run_date": run_date, "dry_run": dry_run})
+    _run_daily_scout(dry_run=dry_run)
 
     # Collect all jobs to run today across all projects
     pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)
