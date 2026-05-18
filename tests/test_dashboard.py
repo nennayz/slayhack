@@ -2434,12 +2434,12 @@ def test_aurora_crew_pages_render(client):
     assert "Iris Gauge" in crew.text
     assert "Sage Ledger" in crew.text
     assert "Video Producer" in crew.text
-    assert "/static/crew/captain-nayz.png" in crew.text
-    assert "/static/crew/vera-reel.png" in crew.text
-    assert "/static/crew/slay.png" in crew.text
-    assert "/static/crew/stadium.png" in crew.text
-    assert "/static/crew/iris-gauge.png" in crew.text
-    assert "/static/crew/sage-ledger.png" in crew.text
+    assert "/static/crew/captain-nayz.webp" in crew.text
+    assert "/static/crew/vera-reel.webp" in crew.text
+    assert "/static/crew/slay.webp" in crew.text
+    assert "/static/crew/stadium.webp" in crew.text
+    assert "/static/crew/iris-gauge.webp" in crew.text
+    assert "/static/crew/sage-ledger.webp" in crew.text
     assert "Crew Stations" in crew.text
     assert "Aurora route map" in crew.text
     assert "Fleet Command" in crew.text
@@ -2459,7 +2459,7 @@ def test_aurora_crew_pages_render(client):
     vera = client.get("/aurora/crew/video-producer", headers=_auth())
     assert vera.status_code == 200
     assert "camera harness" in vera.text
-    assert "/static/crew/vera-reel.png" in vera.text
+    assert "/static/crew/vera-reel.webp" in vera.text
     slay = client.get("/aurora/crew/slay", headers=_auth())
     assert slay.status_code == 200
     assert "American superstar fashion PM" in slay.text
@@ -2518,7 +2518,7 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     png_bytes = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
     )
-    static_crew = tmp_path / "static" / "crew"
+    static_crew = tmp_path / "static" / "crew" / "original"
     static_crew.mkdir(parents=True)
     (static_crew / "mia.png").write_bytes(png_bytes)
     (static_crew / "nami.png").write_bytes(png_bytes)
@@ -2539,7 +2539,7 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "workflow-rail-step active" in resp.text
     assert "Current crew asset provenance" in resp.text
     assert "2 PNG production assets; 1 match the v7 review folder by hash." in resp.text
-    assert "static/crew/mia.png" in resp.text
+    assert "static/crew/original/mia.png" in resp.text
     assert "Matches v7 review" in resp.text
     assert "Approved concept portrait" in resp.text
     assert "Crew Static Production Asset Audit" in resp.text
@@ -3341,12 +3341,12 @@ def test_placeholder_ship_pages_render(client):
     assert freedom.status_code == 200
     assert "Freedom Five" in freedom.text
     assert "Nami" in freedom.text
-    assert "/static/crew/nami.png" in freedom.text
+    assert "/static/crew/nami.webp" in freedom.text
     assert "privacy and memory boundaries" in freedom.text
     assert lyra.status_code == 200
     assert "Song voyage" in lyra.text
     assert "Genie" in lyra.text
-    assert "/static/crew/genie.png" in lyra.text
+    assert "/static/crew/genie.webp" in lyra.text
     assert "blonde American musician" in lyra.text
     assert "electric guitar" in lyra.text
     assert "music workflow data" in lyra.text
@@ -3370,7 +3370,7 @@ def test_readiness_page_renders_private_preflight(tmp_path, client):
     (tmp_path / "static" / "ships").mkdir(parents=True)
     (tmp_path / "static" / "style.css").write_text("css")
     (tmp_path / "static" / "htmx.min.js").write_text("htmx")
-    (tmp_path / "static" / "ships" / "aurora-hero.png").write_bytes(b"png")
+    (tmp_path / "static" / "ships" / "aurora-hero.webp").write_bytes(b"png")
 
     resp = client.get("/readiness", headers=_auth())
 

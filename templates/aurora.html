@@ -1,7 +1,8 @@
 {% extends "base.html" %}
+{% block body_class %}aurora-page{% endblock %}
 {% block content %}
 <section class="hero aurora-hero fleet-hero-command">
-  <img class="ship-hero-art" src="/static/ships/aurora-hero.png" alt="The Aurora crew aboard the ship under aurora lights">
+  <img class="ship-hero-art" src="/static/ships/aurora-hero.webp" alt="The Aurora crew aboard the ship under aurora lights" loading="lazy" decoding="async">
   <div>
     <p class="eyebrow">Work ship</p>
     <h1>The Aurora</h1>
@@ -15,7 +16,7 @@
   </div>
   <div class="aurora-crew-strip" aria-label="Aurora crew preview">
     {% for member in crew %}
-    <img src="{{ member.image }}" alt="{{ member.name }}">
+    <img src="{{ member.image | replace('/crew/', '/crew/thumb/') }}" alt="{{ member.name }}" loading="lazy" decoding="async" width="78" height="104">
     {% endfor %}
   </div>
 </section>
@@ -103,9 +104,10 @@
     </div>
     <div class="tag-list">
       {% for project in projects %}
-      <a class="island-chip" href="/aurora/islands/{{ project.slug }}">
-        <span>{{ project.label }}</span>
-        <small>View island</small>
+      <a class="island-card" href="/aurora/islands/{{ project.slug }}">
+        <span class="island-card-name">{{ project.label }}</span>
+        {% if project.pm_name %}<small class="island-card-pm">PM · {{ project.pm_name }}</small>{% endif %}
+        <span class="island-card-cta">Open island →</span>
       </a>
       {% else %}
       <span class="muted">No projects configured.</span>

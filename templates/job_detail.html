@@ -219,7 +219,7 @@
       {% for item in voyage_steps %}
       <div class="timeline-step {{ item.state }}" style="--member-accent: {{ item.member.accent_color if item.member else '#b08a3a' }}">
         {% if item.member %}
-        <img src="{{ item.member.image }}" alt="{{ item.member.name }}">
+        <img src="{{ item.member.image | replace('/crew/', '/crew/thumb/') }}" alt="{{ item.member.name }}" loading="lazy" decoding="async">
         {% else %}
         <span></span>
         {% endif %}

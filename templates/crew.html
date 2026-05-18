@@ -40,7 +40,7 @@
     <div class="crew-grid crew-grid-{{ group.members | length }}">
       {% for member in group.members %}
       <a class="crew-card" href="/aurora/crew/{{ member.slug }}" style="--member-accent: {{ member.accent_color }}">
-        <img class="crew-portrait" src="{{ member.image }}" alt="{{ member.name }}">
+        <img class="crew-portrait" src="{{ member.image }}" alt="{{ member.name }}" loading="lazy" decoding="async">
         <p class="eyebrow">{{ member.ship_role }}</p>
         <h2>{{ member.name }}</h2>
         <span class="role-pill">{{ member.operational_role }}</span>

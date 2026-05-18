@@ -125,9 +125,13 @@ def _assistant_message_from_openai(message) -> dict:
 
 
 def _is_rate_limit_error(exc: Exception) -> bool:
+    if exc.__class__.__name__ in ("RateLimitError", "APIStatusError"):
+        status = getattr(exc, "status_code", None)
+        if status in (429, 529):
+            return True
     if exc.__class__.__name__ == "RateLimitError":
         return True
-    return getattr(exc, "status_code", None) == 429
+    return getattr(exc, "status_code", None) in (429, 529)
 
 
 class Orchestrator:
@@ -157,7 +161,7 @@ class Orchestrator:
             except Exception as exc:
                 if not _is_rate_limit_error(exc) or attempt == attempts - 1:
                     raise
-                sleep_seconds = self._rate_limit_sleep_seconds * (attempt + 1)
+                sleep_seconds = self._rate_limit_sleep_seconds * (2 ** attempt)
                 log_action("orchestrator_rate_limit_retry", {
                     "model": kwargs.get("model", self.model),
                     "attempt": attempt + 1,

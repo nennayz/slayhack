@@ -97,6 +97,7 @@ To upgrade an existing venv: `rm -rf .venv && python3.12 -m venv .venv && source
 
 Required env vars:
 ```
+# Pipeline
 OPENAI_API_KEY=
 OPENAI_ROBIN_MODEL=gpt-4o
 OPENAI_AGENT_MODEL=gpt-4o-mini
@@ -105,8 +106,29 @@ GOOGLE_CLOUD_PROJECT=
 GOOGLE_APPLICATION_CREDENTIALS=
 GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID=
 META_ACCESS_TOKEN=
+META_PAGE_ID=
+META_IG_USER_ID=
 TIKTOK_ACCESS_TOKEN=
 YOUTUBE_API_KEY=
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+
+# Dashboard (both required — dashboard.py raises RuntimeError on import if missing)
+DASHBOARD_USER=
+DASHBOARD_PASSWORD=
+PUBLIC_BASE_URL=https://fleet.nayzfreedom.cloud   # also read as OPS_PUBLIC_BASE_URL
+
+# Comment Reply Bot
+COMMENT_BOT_TOKEN=          # separate Telegram bot for the comment bot
+COMMENT_CHAT_MAP_PATH=      # path to comment_chat_map.yaml (default: repo root)
+ANTHROPIC_API_KEY=          # used by comment bot fallback chain
+GEMINI_API_KEY=             # used by comment bot fallback chain
+
+# Notifications / reporting
+SLACK_WEBHOOK_URL=          # reporter.py weekly digest
+TELEGRAM_BOT_TOKEN=         # pipeline checkpoint approval
+TELEGRAM_CHAT_ID=
+TELEGRAM_TIMEOUT_MINUTES=30
 ```
 
 ---
@@ -211,6 +233,22 @@ The Freedom and Lyra should stay clearly marked as planned until their data mode
 - **`job.dry_run: bool`** controls whether agents call real APIs or return mock data. Use `--dry-run` during development.
 - **Bella has no hardcoded style** — `script_style` and `target_audience` in `brand.yaml` fully control her output.
 - **Nora can send work back** to Bella or Lila. `nora_max_retries` in `brand.yaml` controls the limit (default: 2).
+- **`BaseAgent._call_claude()` calls OpenAI**, not Claude/Anthropic — the name is misleading. All pipeline agents use the OpenAI SDK via `BaseAgent`.
+- **Project slug alias**: `project_loader.py` resolves `nayzfreedom_fleet` → the `slay_hack` folder on disk via `_PROJECT_ALIASES`. Grep for `slay_hack` in `projects/` when a file search by slug returns nothing.
+- **Scheduler rotation gate**: a project added by Scout won't run in the scheduler until `scout_activation.yaml` in its project dir contains `scheduler_rotation_approved: true`. `list_project_slugs()` silently skips unapproved projects.
+- **Dashboard is FastAPI**, split into `routes/` modules. `dashboard.py` is a thin re-exporter for test-compatibility; route logic lives in `routes/{captain,aurora,jobs,ships,ops,project_admin,readiness,scout}.py`. Shared app/auth/templates are in `routes/deps.py`.
+- **Deploy** (`deploy/`) contains systemd `.service` and `.timer` unit files plus `setup.sh` / `update.sh` for VPS deployment.
+
+---
+
+## Comment Reply Bot
+
+A separate Telegram-based vision bot (`comment_reply_bot.py`) for drafting replies to social comments. It receives screenshot images from Telegram group chats and returns AI-generated draft replies.
+
+- **`comment_chat_map.yaml`** maps each Telegram group `chat_id` to a project slug and default platform. Group IDs are negative numbers (e.g. `-1001234567890`).
+- Uses a multi-provider fallback chain (Anthropic → OpenAI → Gemini) via `comment_model_router.py`. Chain is configured in `comment_chat_map.yaml` under `fallback_chain`.
+- Run: `python comment_reply_bot.py` (requires `COMMENT_BOT_TOKEN` and `COMMENT_CHAT_MAP_PATH`).
+- Systemd unit: `deploy/nayzfreedom-comment-reply-bot.service`.
 
 ---
 

@@ -46,6 +46,15 @@ body {
     var(--navy);
   color: #fff;
 }
+.topbar-brand-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  width: auto;
+}
+.nav-toggle {
+  display: none;
+}
 
 .brand {
   color: #fff;
@@ -311,7 +320,6 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   border-radius: 18px;
   box-shadow: 0 18px 36px rgba(16,35,63,0.16);
   display: block;
-  grid-column: 1 / -1;
   height: 320px;
   object-fit: cover;
   object-position: center;
@@ -322,6 +330,11 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .fleet-hero-command .ship-hero-art {
   border: 1px solid rgba(255,255,255,0.24);
   box-shadow: 0 22px 48px rgba(0,0,0,0.28);
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  height: 100%;
+  min-height: 280px;
+  width: 320px;
 }
 .compact-hero {
   display: block;
@@ -542,7 +555,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   z-index: 1;
 }
 .aurora-crew-strip img {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 3 / 4;
   border: 2px solid rgba(255,255,255,0.8);
   border-radius: 18px;
   box-shadow: 0 10px 24px rgba(16,35,63,0.12);
@@ -2497,6 +2510,42 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 }
 .island-chip span { font-weight: 700; }
 .island-chip small { color: var(--muted); margin-top: 0.2rem; }
+.island-card {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.18), rgba(185,131,255,0.14)),
+    rgba(255,255,255,0.82);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: 0 6px 18px rgba(16,35,63,0.07);
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 200px;
+  padding: 1rem 1.15rem;
+  text-decoration: none;
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.island-card:hover {
+  box-shadow: 0 14px 32px rgba(16,35,63,0.13);
+  transform: translateY(-2px);
+}
+.island-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.island-card-pm {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.1rem;
+}
+.island-card-cta {
+  color: var(--aurora);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.55rem;
+}
 .island-status-panel {
   background: rgba(255,255,255,0.78);
   border: 1px solid var(--line);
@@ -2645,9 +2694,10 @@ button[type="submit"]:hover { background: var(--navy-soft); }
 }
 .crew-card p { color: var(--muted); }
 .crew-portrait {
+  aspect-ratio: 3 / 4;
   border-radius: 16px;
   display: block;
-  height: 220px;
+  height: auto;
   margin-bottom: 0.9rem;
   object-fit: cover;
   object-position: center top;
@@ -2668,9 +2718,10 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   margin-bottom: 1rem;
 }
 .character-portrait {
+  aspect-ratio: 3 / 4;
   border-radius: 18px;
   display: block;
-  height: 280px;
+  height: auto;
   object-fit: cover;
   object-position: center top;
   width: 220px;
@@ -2860,50 +2911,95 @@ a { color: var(--navy); }
 a:hover { color: var(--navy-soft); }
 
 @media (max-width: 860px) {
-  .topbar,
   .hero-actions,
   .ops-header {
     align-items: flex-start;
     flex-direction: column;
   }
   .topbar {
-    gap: 0.85rem;
-    padding: 0.85rem 1rem;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
   }
-  nav {
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding-bottom: 0.15rem;
+  .topbar-brand-row {
+    padding: 0.85rem 1rem;
     width: 100%;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
+  }
+  .nav-toggle {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 10px;
+  }
+  .nav-toggle span {
+    background: #fff;
+    border-radius: 2px;
+    display: block;
+    height: 2px;
+    transition: transform 0.2s, opacity 0.2s;
+    width: 20px;
+  }
+  .topbar.nav-open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .topbar.nav-open .nav-toggle span:nth-child(2) { opacity: 0; }
+  .topbar.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  nav {
+    background: rgba(7,22,37,0.98);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: none;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.75rem 1rem 1rem;
+    width: 100%;
+  }
+  .topbar.nav-open nav {
+    display: flex;
   }
   .nav-group {
     align-items: flex-start;
-    flex: 0 0 auto;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0;
+    width: 100%;
+  }
+  .nav-group-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: 100%;
+  }
+  nav a {
+    border-radius: 10px;
+    font-size: 0.95rem;
+    padding: 0.55rem 0.75rem;
+    width: 100%;
   }
   .nav-dropdown {
-    align-items: flex-start;
+    width: 100%;
+  }
+  .nav-dropdown summary {
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem 0.55rem 0.75rem;
+    width: 100%;
   }
   .nav-dropdown .nav-group-links {
+    border-radius: 10px;
+    box-shadow: none;
     left: 0;
+    min-width: unset;
+    position: static;
     right: auto;
+    top: auto;
+    width: 100%;
   }
   .workflow-more-menu {
     min-width: 100%;
     position: static;
     right: auto;
     top: auto;
-  }
-  .nav-group-links {
-    flex-wrap: nowrap;
-  }
-  nav a {
-    flex: 0 0 auto;
-    font-size: 0.9rem;
-    padding: 0.45rem 0.7rem;
   }
   main {
     padding: 1rem 1rem 5rem;
@@ -3116,4 +3212,171 @@ a:hover { color: var(--navy-soft); }
   .ship-hero-art {
     height: 160px;
   }
+  .fleet-hero-command .ship-hero-art {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    height: 160px;
+    min-height: unset;
+    width: 100%;
+  }
+}
+
+/* ─── Micro-animations (global) ─── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(94,214,186,0.5); }
+  60%       { box-shadow: 0 0 0 5px rgba(94,214,186,0); }
+}
+
+main {
+  animation: fadeInUp 0.22s ease both;
+}
+
+.badge-running {
+  animation: badge-pulse 2.4s ease infinite;
+}
+
+.mission-row {
+  transition: background 0.14s;
+}
+
+/* ─── Aurora dark theme (body.aurora-page) ─── */
+
+body.aurora-page {
+  background: #071625;
+  color: rgba(255,255,255,0.88);
+}
+
+body.aurora-page h1,
+body.aurora-page h2,
+body.aurora-page h3 { color: rgba(255,255,255,0.93); }
+
+body.aurora-page p { color: rgba(255,255,255,0.6); }
+body.aurora-page .hero-copy { color: rgba(255,255,255,0.72); }
+body.aurora-page .eyebrow { color: #e8d07a; }
+body.aurora-page .muted { color: rgba(255,255,255,0.48); }
+
+/* links in main content */
+body.aurora-page main a:not(.button):not([class*="badge"]):not(.mission-row):not(.island-card):not(.nav-toggle):not(.brand) {
+  color: #7de2d1;
+}
+body.aurora-page main a:not(.button):not([class*="badge"]):not(.mission-row):not(.island-card):not(.nav-toggle):not(.brand):hover {
+  color: #b983ff;
+}
+
+/* panels & stat-cards */
+body.aurora-page .panel,
+body.aurora-page .stat-card {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+}
+body.aurora-page .panel::before,
+body.aurora-page .stat-card::before {
+  background: linear-gradient(90deg, transparent, rgba(125,226,209,0.25), transparent);
+}
+
+/* aurora-command / island-command */
+body.aurora-page .aurora-command article,
+body.aurora-page .island-command article {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+}
+body.aurora-page .aurora-command article:first-child,
+body.aurora-page .island-command article:first-child {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.12), rgba(185,131,255,0.09)),
+    rgba(255,255,255,0.06);
+}
+body.aurora-page .aurora-command span,
+body.aurora-page .aurora-command small,
+body.aurora-page .island-command span,
+body.aurora-page .island-command small { color: rgba(255,255,255,0.48); }
+body.aurora-page .aurora-command strong,
+body.aurora-page .island-command strong { color: rgba(255,255,255,0.92); }
+
+/* captain cards */
+body.aurora-page .captain-pulse-card,
+body.aurora-page .captain-focus-card,
+body.aurora-page .captain-action-card {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.1);
+}
+body.aurora-page .captain-focus-card {
+  background:
+    linear-gradient(135deg, rgba(94,214,186,0.1), rgba(125,226,209,0.06)),
+    rgba(255,255,255,0.07);
+}
+body.aurora-page .captain-pulse-card small,
+body.aurora-page .captain-action-card p:not(.eyebrow) { color: rgba(255,255,255,0.5); }
+body.aurora-page .captain-pulse-card span { color: rgba(255,255,255,0.44); }
+body.aurora-page .captain-pulse-card strong { color: rgba(255,255,255,0.9); }
+body.aurora-page .captain-action-meter {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+body.aurora-page .captain-action-meter strong { color: rgba(255,255,255,0.9); }
+body.aurora-page .captain-action-meter span { color: rgba(255,255,255,0.44); }
+
+/* mission rows */
+body.aurora-page .mission-row {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.88);
+}
+body.aurora-page .mission-row:hover {
+  background: rgba(255,255,255,0.1);
+}
+body.aurora-page .mission-row span { color: rgba(255,255,255,0.46); }
+body.aurora-page .mission-row strong { color: rgba(255,255,255,0.9); }
+
+/* learning-gates & proof-grid */
+body.aurora-page .learning-gates span,
+body.aurora-page .manual-proof-grid span {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.68);
+}
+
+/* island card */
+body.aurora-page .island-card {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.1), rgba(185,131,255,0.08)),
+    rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+body.aurora-page .island-card:hover {
+  background:
+    linear-gradient(135deg, rgba(125,226,209,0.18), rgba(185,131,255,0.14)),
+    rgba(255,255,255,0.1);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.4);
+}
+body.aurora-page .island-card-name { color: rgba(255,255,255,0.92); }
+body.aurora-page .island-card-pm { color: rgba(255,255,255,0.48); }
+
+/* section headings */
+body.aurora-page .section-heading h2 { color: rgba(255,255,255,0.92); }
+body.aurora-page .section-heading p { color: rgba(255,255,255,0.5); }
+
+/* evidence drawer */
+body.aurora-page .evidence-drawer {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* inline-actions buttons on dark bg */
+body.aurora-page .button-secondary {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.85);
+}
+body.aurora-page .button-secondary:hover {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.28);
+  color: #fff;
 }

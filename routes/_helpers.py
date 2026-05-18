@@ -1816,7 +1816,16 @@ def _ops_snapshot(root: Path, smoke_results: list[dict[str, str]] | None = None)
 def _project_options(root: Path) -> list[dict]:
     options = []
     for slug in list_project_slugs(root):
-        options.append({"slug": slug, "label": load_project_page_name(slug, root=root)})
+        page_name = load_project_page_name(slug, root=root)
+        resolved = resolve_project_slug(slug, root=root)
+        base = (root or Path(".")) / "projects" / resolved
+        pm_name = ""
+        try:
+            pm_data = yaml.safe_load((base / "pm_profile.yaml").read_text()) or {}
+            pm_name = pm_data.get("name") or ""
+        except Exception:
+            pass
+        options.append({"slug": slug, "label": page_name, "pm_name": pm_name})
     return options
 
 
@@ -1880,7 +1889,7 @@ def _sha256(path: Path) -> str | None:
 
 
 def _crew_asset_audit(root: Path) -> dict[str, object]:
-    static_root = root / "static" / "crew"
+    static_root = root / "static" / "crew" / "original"
     review_root = root / "review" / "crew_final_style_v7"
     rows = []
     matched_review = 0
@@ -2866,7 +2875,7 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
     static_required = [
         root / "static" / "style.css",
         root / "static" / "htmx.min.js",
-        root / "static" / "ships" / "aurora-hero.png",
+        root / "static" / "ships" / "aurora-hero.webp",
     ]
     missing_static = [path.name for path in static_required if not path.exists()]
 
