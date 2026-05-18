@@ -10,7 +10,7 @@
     {% for item in captain_action_console %}
     <article class="captain-action-card station-{{ item.station_key }}">
       <div class="captain-action-heading">
-        <span class="station-icon" aria-hidden="true"></span>
+        <span class="station-icon station-icon-{{ item.station_key }}" data-station-icon="{{ item.station_key }}" aria-hidden="true"></span>
         <div>
           <p class="eyebrow">{{ item.station }}</p>
           <h3>{{ item.title }}</h3>

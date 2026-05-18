@@ -431,6 +431,11 @@ def test_captains_deck_empty(client):
     assert "Aurora / SlayHack" in resp.text
     assert "Captain's Deck" in resp.text
     assert "fleet-hero-command" in resp.text
+    assert "captain-deck-hero" in resp.text
+    assert "captain-command-instruments" in resp.text
+    assert "Command wheel" in resp.text
+    assert "Route compass" in resp.text
+    assert "Live publish locked" in resp.text
     assert "Ready for first mission" in resp.text
     assert "Nami comes after privacy and memory boundaries are clear" in resp.text
     assert "Genie comes after the Fleet shell is stable" in resp.text
@@ -442,6 +447,10 @@ def test_captains_deck_empty(client):
     assert "Shipyard" in resp.text
     assert "Harbor Gate" in resp.text
     assert "Captain Log" in resp.text
+    assert 'data-station-icon="route-map"' in resp.text
+    assert 'data-station-icon="shipyard"' in resp.text
+    assert 'data-station-icon="harbor-gate"' in resp.text
+    assert 'data-station-icon="captain-log"' in resp.text
     assert "Captain Attention Lane" in resp.text
     assert "Captain lane clear" in resp.text
     assert "Do now" in resp.text
@@ -1346,6 +1355,10 @@ def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
     assert "Shipyard" in deck.text
     assert "Harbor Gate" in deck.text
     assert "Captain Log" in deck.text
+    assert 'data-station-icon="route-map"' in deck.text
+    assert 'data-station-icon="shipyard"' in deck.text
+    assert 'data-station-icon="harbor-gate"' in deck.text
+    assert 'data-station-icon="captain-log"' in deck.text
     assert "Slay Hack next course" in deck.text
     assert "waiting" in deck.text
     assert "safe mission create" in deck.text
@@ -1362,6 +1375,7 @@ def test_captain_action_console_surfaces_safe_next_moves(tmp_path, client):
     assert "Captain Action Console" in aurora.text
     assert "safe mission create" in aurora.text
     assert "Filtered ship log" in aurora.text
+    assert 'data-station-icon="harbor-gate"' in aurora.text
     assert "Captain approval needed for handoff mission" in filtered.text
     assert 'value="harbor-gate" selected' in filtered.text
     assert 'value="nora" selected' in filtered.text

@@ -345,6 +345,112 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .mission-hero .hero-copy {
   max-width: 820px;
 }
+.captain-deck-hero {
+  align-items: center;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.46fr);
+}
+.captain-deck-copy {
+  position: relative;
+  z-index: 1;
+}
+.captain-command-instruments {
+  display: grid;
+  gap: 0.55rem;
+  position: relative;
+  z-index: 1;
+}
+.command-instrument {
+  align-items: center;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.2rem 0.7rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  padding: 0.7rem;
+}
+.command-instrument strong,
+.command-instrument small {
+  overflow-wrap: anywhere;
+}
+.command-instrument strong {
+  color: rgba(255,255,255,0.94);
+  font-size: 0.92rem;
+  line-height: 1.2;
+}
+.command-instrument small {
+  color: rgba(255,255,255,0.66);
+  font-size: 0.74rem;
+  font-weight: 800;
+  grid-column: 2;
+  text-transform: uppercase;
+}
+.instrument-icon {
+  align-items: center;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.22), transparent 60%),
+    rgba(7,22,37,0.42);
+  border: 1px solid rgba(232,208,122,0.42);
+  border-radius: 999px;
+  display: inline-flex;
+  grid-row: span 2;
+  height: 42px;
+  justify-content: center;
+  position: relative;
+  width: 42px;
+}
+.instrument-icon::before,
+.instrument-icon::after {
+  content: "";
+  position: absolute;
+}
+.instrument-wheel::before {
+  border: 2px solid var(--gold-soft);
+  border-radius: 999px;
+  box-shadow:
+    0 -12px 0 -10px var(--gold-soft),
+    0 12px 0 -10px var(--gold-soft),
+    12px 0 0 -10px var(--gold-soft),
+    -12px 0 0 -10px var(--gold-soft);
+  height: 22px;
+  width: 22px;
+}
+.instrument-wheel::after {
+  background: var(--gold-soft);
+  border-radius: 999px;
+  height: 7px;
+  width: 7px;
+}
+.instrument-compass::before {
+  border: 1px solid rgba(255,255,255,0.72);
+  border-radius: 999px;
+  height: 24px;
+  width: 24px;
+}
+.instrument-compass::after {
+  background: var(--gold-soft);
+  clip-path: polygon(50% 0, 62% 45%, 100% 50%, 62% 56%, 50% 100%, 38% 56%, 0 50%, 38% 45%);
+  height: 22px;
+  transform: rotate(28deg);
+  width: 22px;
+}
+.instrument-lock::before {
+  border: 2px solid var(--gold-soft);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  height: 14px;
+  top: 8px;
+  width: 16px;
+}
+.instrument-lock::after {
+  background: var(--gold-soft);
+  border-radius: 4px;
+  height: 15px;
+  top: 21px;
+  width: 22px;
+}
 
 .hero::after {
   content: "";
@@ -472,31 +578,118 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   font-size: 0.76rem;
 }
 .station-icon {
+  --station-accent: var(--fleet-brass);
   align-items: center;
   background:
-    linear-gradient(135deg, rgba(208,160,84,0.26), rgba(94,214,186,0.16)),
+    radial-gradient(circle at 30% 22%, rgba(255,255,255,0.72), transparent 38%),
+    linear-gradient(135deg, rgba(208,160,84,0.2), rgba(94,214,186,0.14)),
     rgba(255,255,255,0.72);
-  border: 1px solid rgba(208,160,84,0.28);
+  border: 1px solid color-mix(in srgb, var(--station-accent) 40%, transparent);
   border-radius: 999px;
   display: inline-flex;
+  flex: 0 0 32px;
   height: 30px;
   justify-content: center;
+  overflow: hidden;
   position: relative;
   width: 30px;
 }
 .station-icon::before,
 .station-icon::after {
-  background: var(--fleet-brass);
   content: "";
   position: absolute;
 }
 .station-icon::before {
+  background: var(--station-accent);
   height: 14px;
   width: 2px;
 }
 .station-icon::after {
+  background: var(--station-accent);
   height: 2px;
   width: 14px;
+}
+.station-route-map .station-icon,
+.station-icon-route-map {
+  --station-accent: #2f9b83;
+}
+.station-route-map .station-icon::before,
+.station-icon-route-map::before {
+  background: transparent;
+  border: 1px solid var(--station-accent);
+  border-radius: 999px;
+  height: 17px;
+  width: 17px;
+}
+.station-route-map .station-icon::after,
+.station-icon-route-map::after {
+  background: var(--station-accent);
+  clip-path: polygon(50% 0, 62% 42%, 100% 50%, 62% 58%, 50% 100%, 38% 58%, 0 50%, 38% 42%);
+  height: 16px;
+  transform: rotate(26deg);
+  width: 16px;
+}
+.station-shipyard .station-icon,
+.station-icon-shipyard {
+  --station-accent: #745a2b;
+}
+.station-shipyard .station-icon::before,
+.station-icon-shipyard::before {
+  background: transparent;
+  border: 2px solid var(--station-accent);
+  border-radius: 999px;
+  height: 14px;
+  width: 14px;
+}
+.station-shipyard .station-icon::after,
+.station-icon-shipyard::after {
+  background: var(--station-accent);
+  box-shadow: 0 0 0 3px rgba(116,90,43,0.14);
+  height: 2px;
+  transform: rotate(-35deg);
+  width: 20px;
+}
+.station-harbor-gate .station-icon,
+.station-icon-harbor-gate {
+  --station-accent: #8a5a24;
+}
+.station-harbor-gate .station-icon::before,
+.station-icon-harbor-gate::before {
+  background: transparent;
+  border: 2px solid var(--station-accent);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  height: 12px;
+  top: 6px;
+  width: 14px;
+}
+.station-harbor-gate .station-icon::after,
+.station-icon-harbor-gate::after {
+  background: var(--station-accent);
+  border-radius: 3px;
+  height: 11px;
+  top: 17px;
+  width: 18px;
+}
+.station-captain-log .station-icon,
+.station-icon-captain-log {
+  --station-accent: #4d6b83;
+}
+.station-captain-log .station-icon::before,
+.station-icon-captain-log::before {
+  background: transparent;
+  border: 2px solid var(--station-accent);
+  border-radius: 3px;
+  height: 16px;
+  width: 13px;
+}
+.station-captain-log .station-icon::after,
+.station-icon-captain-log::after {
+  background: var(--station-accent);
+  box-shadow: 0 5px 0 -1px var(--station-accent);
+  height: 2px;
+  transform: translateX(1px);
+  width: 8px;
 }
 .station-approval .station-icon::before {
   height: 18px;
@@ -652,6 +845,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   border: 1px solid rgba(208,160,84,0.2);
   border-radius: 16px;
   margin-top: 0.9rem;
+  overflow: hidden;
   padding: 0.9rem;
 }
 .captain-history-filters {
@@ -703,6 +897,7 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 .captain-history-list {
   display: grid;
   gap: 0.55rem;
+  min-width: 0;
 }
 .captain-history-row {
   background: rgba(255,255,255,0.72);
@@ -710,6 +905,8 @@ h2 { font-size: 1.1rem; margin-bottom: 0.75rem; }
   border-radius: 12px;
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 0.65rem 0.75rem;
 }
 .captain-history-row span,
@@ -3053,6 +3250,7 @@ a:hover { color: var(--navy-soft); }
   .ship-grid,
   .daily-slate-grid,
   .captain-attention-grid,
+  .captain-deck-hero,
   .captain-action-grid,
   .captain-minimal-grid,
   .next-action-panel,
