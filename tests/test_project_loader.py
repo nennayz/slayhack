@@ -21,6 +21,8 @@ def test_load_slay_hack():
     assert pm.brand.nora_max_retries == 2
     assert "#F06292" in pm.brand.visual.colors
     assert "18-44" in pm.brand.target_audience
+    assert "Slay Hack Commenting Guideline" in pm.brand.comment_reply_style
+    assert "No Gatekeeping" in pm.brand.comment_reply_style
 
 
 def test_load_missing_project_raises():

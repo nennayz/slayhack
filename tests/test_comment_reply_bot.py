@@ -147,6 +147,7 @@ def test_build_system_prompt_contains_brand_fields():
         tone = "sassy and smart"
         target_audience = "women 18-44"
         script_style = "casual Gen Z"
+        comment_reply_style = ""
 
     result = build_system_prompt(FakeBrand(), max_chars=150)
     assert "sassy and smart" in result
@@ -155,6 +156,28 @@ def test_build_system_prompt_contains_brand_fields():
     assert "150" in result
     assert "COMMENT_1:" in result
     assert "REPLY_1:" in result
+
+
+def test_build_system_prompt_includes_comment_reply_style():
+    from comment_reply_bot import build_system_prompt
+
+    class FakeBrand:
+        tone = "sassy and smart"
+        target_audience = "female Gen Z USA"
+        script_style = "English only"
+        comment_reply_style = (
+            "Slay Hack Commenting Guideline:\n"
+            "- No Gatekeeping.\n"
+            "- Avoid: Thank you so much.\n"
+            "- Good reply example: Same, and we came back prettier. Periodt 💅"
+        )
+
+    result = build_system_prompt(FakeBrand(), max_chars=150)
+    assert "Comment reply style guide:" in result
+    assert "No Gatekeeping" in result
+    assert "Avoid: Thank you so much" in result
+    assert "Same, and we came back prettier" in result
+    assert "unless the style guide gives a stricter language rule" in result
 
 
 def test_find_in_log_returns_none_when_log_missing(tmp_path):
