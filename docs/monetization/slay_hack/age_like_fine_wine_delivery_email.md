@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Delivery Email Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Boundary: Delivery link, support terms, and refund terms are drafted but inactive until Captain approval.
 
 ## Subject Options
@@ -49,3 +49,7 @@ Age Like Fine Wine provides general beauty education and routine planning. It is
 ## Closing
 
 You are not trying to look younger. You are learning how to look more like the version of you that finally knows what works.
+
+## Approval Gate
+
+This delivery email is approved for the Captain sale-gate decision, but the download link, support inbox, checkout, public sale, and fulfillment automation remain inactive until Captain approval and checkout setup testing are complete.

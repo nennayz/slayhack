@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Post-Purchase Next Step Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Owner: Roxy Rise
 Audience: women 35-44
 Boundary: post-purchase journey draft only; checkout, fulfillment links, refunds, and public sales remain locked until Captain approval.
@@ -90,4 +90,4 @@ Do not:
 
 ## Approval Gate
 
-This draft is ready for review, but it does not approve checkout activation, live sales, live publishing, refund policy, or delivery automation.
+This post-purchase journey is approved for the Captain sale-gate decision, but it does not activate checkout, live sales, live publishing, refund policy publication, or delivery automation.

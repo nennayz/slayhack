@@ -3,7 +3,7 @@ factory:
   safe_boundary: "Live publish and checkout stay locked until Captain approval."
   runbook_path: "docs/ebook_production_runbook.md"
   spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
-  next_action: "Review the visual proof v3 and approve monetization terms before Captain sale activation."
+  next_action: "Captain can review the sale approval package; checkout activation remains locked until the Captain sale gate is explicitly approved."
 
 stages:
   - key: idea
@@ -106,7 +106,7 @@ monetization_lanes:
     status: strategy_locked_checkout_locked
     strategy: "Start with the strongest real audience before expanding the full 22-SKU universe."
     boundary: "Checkout, live publish, and public sales stay locked until QA gates, launch assets, and Captain approval are complete."
-    next_action: "Use this lane as the source of truth for sales page, checkout copy, delivery email, checkout terms, lead magnet bridge, and the 7-day content push."
+    next_action: "Use this lane as the approved sale package for Captain review; checkout remains locked until the Captain sale gate is clicked."
     products:
       - role: lead_magnet
         title: "Slay Basics: 30 Hacks"
@@ -115,9 +115,9 @@ monetization_lanes:
         next_action: "Bridge readers into Age Like Fine Wine without duplicating the paid promise."
       - role: paid_pilot
         title: "Age Like Fine Wine"
-        status: visual_proof_ready_sale_locked
+        status: sale_gate_ready_checkout_locked
         purpose: "First paid low-ticket product for the 35-44 audience."
-        next_action: "Review monetization terms and keep checkout locked until Captain approval."
+        next_action: "Ready for Captain sale-gate review; checkout remains locked until explicit approval."
       - role: order_bump
         title: "Fine Wine 7-Day Glow Routine"
         status: planned
@@ -199,7 +199,7 @@ ebooks:
     project: SlayHack
     pm: Slay
     audience: "women 35-44"
-    status: visual_proof_ready_sale_locked
+    status: sale_gate_ready_checkout_locked
     role: "first paid low-ticket monetization pilot"
     proof: "Visual proof v3 is versioned in repo: 28 pages, 1383434 bytes, text-extractable, title/author/subject metadata present, embedded product hero and character tip-card pages, and SHA-256 59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8. The older 20260517 Drive proof remains historical source evidence."
     source_integrity:
@@ -215,13 +215,31 @@ ebooks:
       proof_pages: 28
       proof_size_bytes: 1383434
       render_note: "Visual proof pages rendered cleanly from local PNG exports; DOCX render QA remains unavailable because LibreOffice is not installed."
-      required_next_action: "Review monetization terms and launch copy before Captain sale approval."
+      required_next_action: "Captain review sale approval package before any checkout activation."
+    monetization_integrity:
+      status: ready
+      qa_report: "docs/monetization/slay_hack/age_like_fine_wine_monetization_qa_report.md"
+      delivery_asset: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
+      checkout_terms: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
+      checkout_copy: "docs/monetization/slay_hack/age_like_fine_wine_checkout_copy.md"
+      tracking_plan: "docs/monetization/slay_hack/age_like_fine_wine_tracking_plan.md"
+      activation_boundary: "No payment link, public checkout, live publish, paid traffic, or automatic fulfillment is active."
     captain_sale_gate:
       label: "Captain sale approval"
       status: locked
       action_label: "Captain Approve E-book For Sale"
       locked_label: "Sale approval locked"
       boundary: "Checkout, public sale, live publish, paid traffic, and automatic fulfillment remain locked until all QA gates, launch assets, source integrity, and Captain approval are complete."
+      approval_summary:
+        heading: "Captain approval package"
+        note: "Approving this gate approves Age Like Fine Wine for sale-readiness review only; checkout links, payment processing, live publish, paid traffic, and automatic fulfillment still require their own activation steps."
+        items:
+          - "Product: Age Like Fine Wine, the first paid low-ticket SlayHack e-book for women 35-44."
+          - "File: docs/monetization/slay_hack/artifacts/20260518-Age_Like_Fine_Wine_v3_visual_proof.pdf"
+          - "Proof SHA-256: 59a2559db88baea300303778be24fcc43a387842ef476065aa30b2df94e410e8"
+          - "Monetization QA report: docs/monetization/slay_hack/age_like_fine_wine_monetization_qa_report.md"
+          - "Terms: support within 2 business days, access/duplicate-purchase refund coverage, no medical or dermatology promise, and no general change-of-mind refund unless Nayz separately approves it."
+          - "Launch package: sales page, product mockup, checkout copy, delivery email, checkout terms, lead magnet bridge, 7-day content push, post-purchase next step, and tracking plan are approved for the Captain sale-gate decision."
     drive:
       folder: "Ebook Project"
       artifacts:
@@ -271,44 +289,44 @@ ebooks:
         reviewed_by: codex
         reviewed_at: "2026-05-18T05:03:12Z"
       - gate: Monetization QA
-        status: PARTIAL
+        status: PASS
         check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
-        note: "Sales, checkout, delivery, checkout terms, bridge, content-push, post-purchase, and tracking drafts exist, and the rebuilt proof uses locked CTA copy. Keep PARTIAL because checkout terms and launch assets are review-ready but not Captain-approved."
+        note: "Sales page, checkout copy, delivery email, checkout terms, lead magnet bridge, 7-day content push, post-purchase next step, and tracking plan are review-complete for the Captain sale-gate decision. Support/refund boundaries, delivery expectations, buyer disclaimer, and tracking checkpoints are documented; no payment link, live checkout, public publish, paid traffic, or automatic fulfillment is active."
         reviewed_by: codex
-        reviewed_at: "2026-05-18T04:22:36Z"
+        reviewed_at: "2026-05-18T14:34:12Z"
     launch_assets:
       - name: sales page
-        status: review_ready
-        note: "Sales page draft exists in the Fine Wine launch copy asset pack."
+        status: approved
+        note: "Sales page copy is approved for the Captain sale-gate decision; no public page or payment link is live."
       - key: product_mockup
         name: product mockup
-        status: review_ready
+        status: approved
         path: "docs/monetization/slay_hack/age_like_fine_wine_product_mockup.md"
         note: "Visual proof v3 includes a repo-controlled product hero, device/page stack, and character card system; final sale still requires Captain approval."
       - name: checkout copy
-        status: review_ready
-        note: "Checkout copy draft exists; no payment link is live."
+        status: approved
+        note: "Checkout copy is approved for sale-gate review; no payment link is live."
       - name: delivery email
-        status: review_ready
-        note: "Delivery email draft includes support, refund, and buyer expectation boundaries; delivery link remains locked until final file delivery is approved."
+        status: approved
+        note: "Delivery email includes support, refund, and buyer expectation boundaries; delivery link remains locked until checkout setup is separately tested."
       - key: checkout_terms
         name: checkout terms
-        status: review_ready
+        status: approved
         path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md"
-        note: "Review-ready support, refund, delivery, buyer expectation, and checkout activation terms exist; they are not live."
+        note: "Support, refund, delivery, buyer expectation, and checkout activation terms are approved for sale-gate review; they are not live."
       - name: lead magnet
-        status: review_ready
-        note: "Lead magnet bridge draft connects Slay Basics to Age Like Fine Wine."
+        status: approved
+        note: "Lead magnet bridge connects Slay Basics to Age Like Fine Wine without duplicating the paid promise."
       - name: 7-day content push
-        status: review_ready
-        note: "Manual publish handoff draft exists; live posting remains locked."
+        status: approved
+        note: "Manual publish handoff is approved for sale-gate review; live posting remains locked."
       - key: post_purchase_next_step
         name: post-purchase next step
-        status: review_ready
+        status: approved
         path: "docs/monetization/slay_hack/age_like_fine_wine_post_purchase_next_step.md"
-        note: "Review-ready post-purchase journey exists for thank-you, delivery, start-here, support, and next-step boundaries."
+        note: "Post-purchase journey is approved for thank-you, delivery, start-here, support, and next-step boundaries."
       - key: tracking_plan
         name: tracking plan
-        status: review_ready
+        status: approved
         path: "docs/monetization/slay_hack/age_like_fine_wine_tracking_plan.md"
-        note: "Review-ready launch measurement plan exists for traffic, conversion, delivery, support, and learning checkpoints."
+        note: "Launch measurement plan is approved for traffic, conversion, delivery, support, and learning checkpoints."

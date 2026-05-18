@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Checkout Terms Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Boundary: Draft checkout policy only. No payment link, public checkout, live sale, live publish, paid traffic, or automatic fulfillment is active.
 
 ## Product
@@ -48,4 +48,4 @@ Before checkout can go live:
 
 ## Approval Gate
 
-This terms draft is review-ready, but it does not approve checkout activation, public sales, platform publishing, paid promotion, refund policy, or delivery automation.
+These terms are approved for the Captain sale-gate decision, but they do not activate checkout, public sales, platform publishing, paid promotion, refund policy publication, or delivery automation.

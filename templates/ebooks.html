@@ -95,6 +95,15 @@
     {% if ebook_factory.source_integrity.render_note %}
     <span>{{ ebook_factory.source_integrity.render_note }}</span>
     {% endif %}
+    {% if ebook_factory.monetization_integrity.status %}
+    <span>Monetization integrity: {{ ebook_factory.monetization_integrity.status | replace("_", " ") }}</span>
+    {% endif %}
+    {% if ebook_factory.monetization_integrity.qa_report %}
+    <span>Monetization QA report: <code>{{ ebook_factory.monetization_integrity.qa_report }}</code></span>
+    {% endif %}
+    {% if ebook_factory.monetization_integrity.activation_boundary %}
+    <span>{{ ebook_factory.monetization_integrity.activation_boundary }}</span>
+    {% endif %}
     {% if ebook_factory.sale_gate.approved_at %}
     <span>Sale approved by {{ ebook_factory.sale_gate.approved_by or "unknown" }} / {{ ebook_factory.sale_gate.approved_at }}</span>
     {% endif %}
@@ -102,6 +111,22 @@
     <span>{{ blocker }}</span>
     {% endfor %}
   </div>
+  {% if ebook_factory.sale_gate.approval_summary %}
+  <div class="manual-learning-list">
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-missing">Captain review</span>
+        <strong>{{ ebook_factory.sale_gate.approval_summary.heading or "Captain approval package" }}</strong>
+        {% if ebook_factory.sale_gate.approval_summary.note %}
+        <p>{{ ebook_factory.sale_gate.approval_summary.note }}</p>
+        {% endif %}
+        {% for item in ebook_factory.sale_gate.approval_summary["items"] %}
+        <small>{{ item }}</small>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+  {% endif %}
   <form class="inline-form approval-inline-form" method="post" action="/aurora/ebooks/sale-gate">
     <input name="project_slug" type="hidden" value="{{ ebook_factory.registry_project }}">
     <input name="ebook_id" type="hidden" value="{{ ebook_factory.pilot.id }}">
