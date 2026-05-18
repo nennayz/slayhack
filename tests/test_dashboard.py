@@ -182,6 +182,19 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '      guarantee: "Refund policy is not active until checkout terms are approved."\n'
         '      cta: "Start your Fine Wine glow-up"\n'
         '      checkout_boundary: "Checkout copy is draft-only and cannot be activated until Captain approval."\n'
+        '    launch_copy_assets:\n'
+        '      - key: sales_page\n'
+        '        label: "Sales page draft"\n'
+        '        launch_asset: sales page\n'
+        '        status: draft_ready\n'
+        '        path: "docs/monetization/slay_hack/age_like_fine_wine_sales_page.md"\n'
+        '        review_note: "Use as the first reviewable sales page source; checkout remains locked."\n'
+        '      - key: checkout_copy\n'
+        '        label: "Checkout copy draft"\n'
+        '        launch_asset: checkout copy\n'
+        '        status: draft_ready\n'
+        '        path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_copy.md"\n'
+        '        review_note: "Draft checkout and order-bump copy only; no payment link is live."\n'
         'ebooks:\n'
         '  - id: age_like_fine_wine\n'
         '    title: "Age Like Fine Wine"\n'
@@ -210,6 +223,14 @@ def _write_ebook_registry(tmp_path: Path) -> None:
         '    launch_assets:\n'
         '      - sales page\n'
         '      - 7-day content push\n'
+    )
+    copy_dir = tmp_path / "docs" / "monetization" / "slay_hack"
+    copy_dir.mkdir(parents=True, exist_ok=True)
+    (copy_dir / "age_like_fine_wine_sales_page.md").write_text(
+        "# Age Like Fine Wine - Sales Page Draft\n\nStart your Fine Wine glow-up.\n"
+    )
+    (copy_dir / "age_like_fine_wine_checkout_copy.md").write_text(
+        "# Age Like Fine Wine - Checkout Copy Draft\n\nCheckout copy is draft-only.\n"
     )
 
 
@@ -2477,8 +2498,33 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Sales source of truth" in resp.text
     assert "Start your Fine Wine glow-up" in resp.text
     assert "Checkout copy is draft-only and cannot be activated until Captain approval." in resp.text
+    assert "Launch copy asset pack" in resp.text
+    assert "Sales page draft" in resp.text
+    assert "Checkout copy draft" in resp.text
+    assert 'href="/aurora/ebooks/copy/sales_page?project_slug=slay_hack"' in resp.text
+    assert "age_like_fine_wine_sales_page.md" in resp.text
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
+
+
+def test_aurora_ebooks_launch_copy_asset_route_serves_registered_markdown(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get("/aurora/ebooks/copy/sales_page?project_slug=slay_hack", headers=_auth())
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/markdown")
+    assert "Age Like Fine Wine - Sales Page Draft" in resp.text
+    assert "Start your Fine Wine glow-up." in resp.text
+
+
+def test_aurora_ebooks_launch_copy_asset_route_rejects_unknown_asset(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.get("/aurora/ebooks/copy/not_registered?project_slug=slay_hack", headers=_auth())
+
+    assert resp.status_code == 404
+    assert "not_registered" in resp.json()["detail"]
 
 
 def test_aurora_ebooks_records_qa_gate_result(tmp_path, client):

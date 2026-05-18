@@ -155,6 +155,37 @@ monetization_lanes:
       guarantee: "Low-risk digital product framing; refund policy is not active until checkout terms are explicitly approved by Nayz."
       cta: "Start your Fine Wine glow-up"
       checkout_boundary: "Checkout copy is draft-only and cannot be activated until Captain approval."
+    launch_copy_assets:
+      - key: sales_page
+        label: "Sales page draft"
+        launch_asset: sales page
+        status: draft_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_sales_page.md"
+        review_note: "Use as the first reviewable sales page source; checkout remains locked."
+      - key: checkout_copy
+        label: "Checkout copy draft"
+        launch_asset: checkout copy
+        status: draft_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_checkout_copy.md"
+        review_note: "Draft checkout and order-bump copy only; no payment link is live."
+      - key: delivery_email
+        label: "Delivery email draft"
+        launch_asset: delivery email
+        status: draft_ready
+        path: "docs/monetization/slay_hack/age_like_fine_wine_delivery_email.md"
+        review_note: "Delivery copy uses placeholders until file delivery and support terms are approved."
+      - key: lead_magnet_bridge
+        label: "Lead magnet bridge copy"
+        launch_asset: lead magnet
+        status: draft_ready
+        path: "docs/monetization/slay_hack/slay_basics_to_fine_wine_bridge.md"
+        review_note: "Bridge from Slay Basics into Age Like Fine Wine without duplicating the free offer."
+      - key: seven_day_content_push
+        label: "7-day content push draft"
+        launch_asset: 7-day content push
+        status: draft_ready
+        path: "docs/monetization/slay_hack/fine_wine_7_day_content_push.md"
+        review_note: "Manual publish handoff draft; live posting remains locked."
 
 ebooks:
   - id: age_like_fine_wine

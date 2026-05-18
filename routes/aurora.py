@@ -8,7 +8,7 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from routes.deps import templates, verify_auth, _root
 from track_queue import enqueue_track_snapshots
@@ -178,6 +178,7 @@ EBOOK_FACTORY_DEFAULTS = {
     "active_monetization_lane": {},
     "lane_products": [],
     "offer_source": {},
+    "launch_copy_assets": [],
 }
 
 
@@ -306,6 +307,9 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
     active_lane = next((item for item in monetization_lanes if isinstance(item, dict)), {})
     lane_products = active_lane.get("products") if isinstance(active_lane.get("products"), list) else []
     offer_source = active_lane.get("offer_source") if isinstance(active_lane.get("offer_source"), dict) else {}
+    launch_copy_assets = (
+        active_lane.get("launch_copy_assets") if isinstance(active_lane.get("launch_copy_assets"), list) else []
+    )
     factory.update(
         {
             "has_registry": True,
@@ -324,9 +328,28 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "active_monetization_lane": active_lane,
             "lane_products": lane_products,
             "offer_source": offer_source,
+            "launch_copy_assets": launch_copy_assets,
         }
     )
     return factory
+
+
+def _ebook_launch_copy_asset(root: Path, project_slug: str, asset_key: str) -> tuple[dict[str, object], Path]:
+    factory = _ebook_factory(root, project_slug)
+    for item in factory.get("launch_copy_assets", []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("key", "")).strip() != asset_key.strip():
+            continue
+        relative_path = Path(str(item.get("path", "")).strip())
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError("Launch copy asset path is invalid")
+        asset_path = (root / relative_path).resolve()
+        root_path = root.resolve()
+        if root_path not in asset_path.parents and asset_path != root_path:
+            raise ValueError("Launch copy asset path escapes the project root")
+        return item, asset_path
+    raise FileNotFoundError(f"Launch copy asset {asset_key!r} is not registered")
 
 
 def _manual_posted_at(job) -> datetime | None:
@@ -437,6 +460,25 @@ def aurora_ebooks(request: Request, _: str = Depends(verify_auth)):
             "launch_result": request.query_params.get("launch_result", ""),
         },
     )
+
+
+@router.get("/aurora/ebooks/copy/{asset_key}", response_class=PlainTextResponse)
+def aurora_ebook_launch_copy_asset(
+    request: Request,
+    asset_key: str,
+    project_slug: str = "slay_hack",
+    _: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        asset, asset_path = _ebook_launch_copy_asset(root, project_slug, asset_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    if not asset_path.exists():
+        raise HTTPException(status_code=404, detail=f"Launch copy asset file {asset.get('path')!r} not found")
+    return PlainTextResponse(asset_path.read_text(), media_type="text/markdown; charset=utf-8")
 
 
 @router.post("/aurora/ebooks/qa-gate")

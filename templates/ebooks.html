@@ -183,6 +183,30 @@
 </section>
 {% endif %}
 
+{% if ebook_factory.launch_copy_assets %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">Launch copy asset pack</p>
+    <h2>Reviewable drafts from the Fine Wine lane</h2>
+  </div>
+  <div class="manual-learning-list">
+    {% for item in ebook_factory.launch_copy_assets %}
+    <article class="manual-learning-row">
+      <div>
+        <span class="badge badge-ops-missing">{{ item.status | replace("_", " ") }}</span>
+        <strong>{{ item.label }}</strong>
+        <p>{{ item.review_note }}</p>
+        <small><code>{{ item.path }}</code></small>
+      </div>
+      <div class="approval-row-actions">
+        <a class="button button-secondary button-small" href="/aurora/ebooks/copy/{{ item.key }}?project_slug={{ ebook_factory.registry_project }}">Open draft</a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 {% if ebook_factory.stages %}
 <section class="panel spacious">
   <div class="section-heading">
