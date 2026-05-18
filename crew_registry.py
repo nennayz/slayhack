@@ -38,7 +38,7 @@ CREW = (
     CrewMember(
         slug="captain-nayz",
         name="Captain Nayz",
-        image="/static/crew/captain-nayz.png",
+        image="/static/crew/captain-nayz.webp",
         ship_role="Fleet Captain",
         operational_role="NayzFreedom Owner",
         station="Captain's Deck",
@@ -57,7 +57,7 @@ CREW = (
     CrewMember(
         slug="slay",
         name="Slay",
-        image="/static/crew/slay.png",
+        image="/static/crew/slay.webp",
         ship_role="Island PM",
         operational_role="SlayHack Project Manager",
         station="Island Command",
@@ -76,7 +76,7 @@ CREW = (
     CrewMember(
         slug="stadium",
         name="Stadium",
-        image="/static/crew/stadium.png",
+        image="/static/crew/stadium.webp",
         ship_role="Island PM",
         operational_role="Stadium Sweethearts Project Manager",
         station="Game-Day Command",
@@ -95,7 +95,7 @@ CREW = (
     CrewMember(
         slug="robin",
         name="Robin",
-        image="/static/crew/robin.png",
+        image="/static/crew/robin.webp",
         ship_role="Chief Officer",
         operational_role="Orchestrator",
         station="Captain's Bridge",
@@ -114,7 +114,7 @@ CREW = (
     CrewMember(
         slug="mia",
         name="Mia Trend",
-        image="/static/crew/mia.png",
+        image="/static/crew/mia.webp",
         ship_role="Lookout",
         operational_role="Trend Researcher",
         station="Crow's Nest",
@@ -133,7 +133,7 @@ CREW = (
     CrewMember(
         slug="zoe",
         name="Zoe Spark",
-        image="/static/crew/zoe.png",
+        image="/static/crew/zoe.webp",
         ship_role="Cartographer of Ideas",
         operational_role="Idea Generator",
         station="Map Room",
@@ -152,7 +152,7 @@ CREW = (
     CrewMember(
         slug="bella",
         name="Bella Quill",
-        image="/static/crew/bella.png",
+        image="/static/crew/bella.webp",
         ship_role="Scribe",
         operational_role="Script Writer",
         station="Captain's Library",
@@ -171,7 +171,7 @@ CREW = (
     CrewMember(
         slug="lila",
         name="Lila Lens",
-        image="/static/crew/lila.png",
+        image="/static/crew/lila.webp",
         ship_role="Visual Director",
         operational_role="Visual Creator",
         station="Studio Deck",
@@ -190,7 +190,7 @@ CREW = (
     CrewMember(
         slug="video-producer",
         name="Vera Reel",
-        image="/static/crew/vera-reel.png",
+        image="/static/crew/vera-reel.webp",
         ship_role="Cinematographer",
         operational_role="Video Producer",
         station="Reel Deck",
@@ -209,7 +209,7 @@ CREW = (
     CrewMember(
         slug="nora",
         name="Nora Sharp",
-        image="/static/crew/nora.png",
+        image="/static/crew/nora.webp",
         ship_role="Inspector",
         operational_role="QA Editor",
         station="Inspection Bay",
@@ -228,7 +228,7 @@ CREW = (
     CrewMember(
         slug="roxy",
         name="Roxy Rise",
-        image="/static/crew/roxy.png",
+        image="/static/crew/roxy.webp",
         ship_role="Trade Winds Strategist",
         operational_role="Growth Strategist",
         station="Signal Deck",
@@ -250,7 +250,7 @@ CREW = (
     CrewMember(
         slug="emma",
         name="Emma Heart",
-        image="/static/crew/emma.png",
+        image="/static/crew/emma.webp",
         ship_role="Community Keeper",
         operational_role="Community Specialist",
         station="Harbor Lounge",
@@ -269,7 +269,7 @@ CREW = (
     CrewMember(
         slug="iris-gauge",
         name="Iris Gauge",
-        image="/static/crew/iris-gauge.png",
+        image="/static/crew/iris-gauge.webp",
         ship_role="Signal Analyst",
         operational_role="Growth Analyst",
         station="Metrics Deck",
@@ -288,7 +288,7 @@ CREW = (
     CrewMember(
         slug="sage-ledger",
         name="Sage Ledger",
-        image="/static/crew/sage-ledger.png",
+        image="/static/crew/sage-ledger.webp",
         ship_role="Lesson Librarian",
         operational_role="Archivist",
         station="Archive Hold",

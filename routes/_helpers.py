@@ -1880,7 +1880,7 @@ def _sha256(path: Path) -> str | None:
 
 
 def _crew_asset_audit(root: Path) -> dict[str, object]:
-    static_root = root / "static" / "crew"
+    static_root = root / "static" / "crew" / "original"
     review_root = root / "review" / "crew_final_style_v7"
     rows = []
     matched_review = 0
@@ -2866,7 +2866,7 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
     static_required = [
         root / "static" / "style.css",
         root / "static" / "htmx.min.js",
-        root / "static" / "ships" / "aurora-hero.png",
+        root / "static" / "ships" / "aurora-hero.webp",
     ]
     missing_static = [path.name for path in static_required if not path.exists()]
 
