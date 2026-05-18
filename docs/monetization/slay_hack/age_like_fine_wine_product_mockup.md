@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Product Mockup Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Owner: Lila Lens
 Audience: women 35-44
 Boundary: review asset only; checkout and public sales remain locked until Captain approval.
@@ -67,4 +67,4 @@ Create a premium e-book product mockup for "Age Like Fine Wine", a beauty and co
 
 ## Approval Gate
 
-The v3 visual proof satisfies the repo-controlled product mockup direction for visual review. It does not approve checkout activation, public launch, or live posting.
+The v3 visual proof satisfies the repo-controlled product mockup direction for the Captain sale-gate decision. It does not approve checkout activation, public launch, or live posting.

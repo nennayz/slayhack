@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Checkout Copy Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Boundary: Draft copy only. No payment link, Stripe checkout, public sales page, or live publish is active.
 
 ## Product Title
@@ -58,4 +58,4 @@ Age Like Fine Wine provides general beauty education and routine planning. It do
 
 ## Locked Boundary
 
-Checkout copy is draft-only and cannot be activated until Captain approval.
+Checkout copy is approved for the Captain sale-gate decision, but it cannot be activated until Captain approval and checkout setup testing are complete.

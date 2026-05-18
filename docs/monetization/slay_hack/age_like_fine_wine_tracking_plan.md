@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Tracking Plan Draft
 
-Status: review_ready
+Status: approved_for_sale_gate
 Owner: Roxy Rise
 Audience: women 35-44
 Boundary: measurement plan only; checkout, live ads, public sales, and live publishing remain locked until Captain approval.
@@ -116,4 +116,4 @@ After launch:
 
 ## Approval Gate
 
-This draft is ready for review, but it does not approve checkout activation, live sales, live ads, platform publishing, or automatic tracking integrations.
+This tracking plan is approved for the Captain sale-gate decision, but it does not activate checkout, live sales, live ads, platform publishing, or automatic tracking integrations.

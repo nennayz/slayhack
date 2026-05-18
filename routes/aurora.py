@@ -187,6 +187,7 @@ EBOOK_FACTORY_DEFAULTS = {
     "drive_summary": {"registered": 0, "verified": 0, "missing": 0, "host_available": False, "total": 0},
     "next_missing_drive_artifact": None,
     "source_integrity": {},
+    "monetization_integrity": {},
     "sale_gate": {
         "label": "Captain sale approval",
         "status": "locked",
@@ -569,6 +570,9 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
                 None,
             ),
             "source_integrity": pilot.get("source_integrity") if isinstance(pilot.get("source_integrity"), dict) else {},
+            "monetization_integrity": pilot.get("monetization_integrity")
+            if isinstance(pilot.get("monetization_integrity"), dict)
+            else {},
             "sale_gate": sale_gate,
         }
     )

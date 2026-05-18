@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Sales Page Draft
 
-Status: draft_ready
+Status: approved_for_sale_gate
 Source lane: Fine Wine 35-44 Monetization Lane
 Boundary: Checkout, public sales, and live publish remain locked until Captain approval.
 
@@ -61,9 +61,9 @@ The guide uses SlayHack character wisdom so the advice feels like a visual, coll
 - Mature Skin Quick Checklist
 - Character tip cards from Auntie V, Bella Mist, Sera, Sunny, Wanda, and Conceal
 
-## Risk Reversal Draft
+## Risk Reversal
 
-Low-risk digital product framing is approved as a concept. Refund language is not active until checkout terms are explicitly approved by Nayz.
+Low-risk digital product framing is approved for the Captain sale-gate decision. Refund handling follows the checkout terms: access issues that support cannot resolve can be refunded, duplicate purchases can be refunded, and general change-of-mind refunds for a digital download are not active unless Nayz separately approves that policy.
 
 ## CTA Block
 
@@ -71,4 +71,4 @@ Ready to stop forcing old techniques to work on a new chapter of your life?
 
 Start your Fine Wine glow-up.
 
-Checkout activation remains locked until QA gates, launch assets, and Captain approval are complete.
+Checkout activation remains locked until the Captain sale gate is explicitly approved and checkout setup is separately tested.

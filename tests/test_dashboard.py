@@ -2902,6 +2902,11 @@ def test_aurora_ebooks_records_sale_gate_approval_when_ready(tmp_path, client):
         "label": "Captain sale approval",
         "status": "locked",
         "action_label": "Captain Approve E-book For Sale",
+        "approval_summary": {
+            "heading": "Captain approval package",
+            "note": "Approving this gate keeps checkout setup separate.",
+            "items": ["Product: Age Like Fine Wine", "Checkout remains locked until setup testing."],
+        },
     }
     for gate in ebook["qa_gates"]:
         gate["status"] = "PASS"
@@ -2912,6 +2917,9 @@ def test_aurora_ebooks_records_sale_gate_approval_when_ready(tmp_path, client):
     page = client.get("/aurora/ebooks", headers=_auth())
     assert page.status_code == 200
     assert "Captain Approve E-book For Sale" in page.text
+    assert "Captain approval package" in page.text
+    assert "Product: Age Like Fine Wine" in page.text
+    assert "Checkout remains locked until setup testing." in page.text
 
     resp = client.post(
         "/aurora/ebooks/sale-gate",
