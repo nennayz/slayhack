@@ -181,6 +181,8 @@ Current local Drive proof is tracked from `projects/slay_hack/project_bridge.yam
 - `Ebook Project/20260517-Ebook-Knowledge-Base.md`
 - `Ebook Project/20260517-Slay-Ebook-Visual-Strategy.md`
 
+If the Drive root is not mounted on the current host, the dashboard should show the artifacts as registered external proof instead of marking the e-book as locally verified. Production VPS checks can prove the registry and route render; local Mac checks prove the actual file presence.
+
 ## Launch Package Gate
 
 Before launch, the package must include:

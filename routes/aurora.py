@@ -183,7 +183,7 @@ EBOOK_FACTORY_DEFAULTS = {
     "launch_copy_assets": [],
     "launch_copy_summary": {"review_ready": 0, "total": 0},
     "drive_artifacts": [],
-    "drive_summary": {"verified": 0, "total": 0},
+    "drive_summary": {"registered": 0, "verified": 0, "missing": 0, "host_available": False, "total": 0},
     "next_missing_drive_artifact": None,
 }
 
@@ -262,9 +262,12 @@ def _ebook_safe_drive_path(drive_root: Path, folder: object, raw_path: object) -
     return drive_root.joinpath(*cleaned_parts)
 
 
-def _ebook_drive_summary(rows: list[dict[str, object]]) -> dict[str, int]:
+def _ebook_drive_summary(rows: list[dict[str, object]]) -> dict[str, object]:
     return {
+        "registered": len(rows),
         "verified": sum(1 for item in rows if item.get("status") == "verified"),
+        "missing": sum(1 for item in rows if item.get("status") == "missing"),
+        "host_available": any(bool(item.get("host_available")) for item in rows),
         "total": len(rows),
     }
 
@@ -308,6 +311,7 @@ def _ebook_drive_artifact_rows(root: Path, resolved_project: str, pilot: dict[st
             "status_class": "badge-ops-unavailable",
             "size": "",
             "resolved_path": "",
+            "host_available": bool(drive_root and drive_root.exists()),
             "note": str(artifact.get("note") or artifact.get("expected") or "").strip(),
         }
         if drive_root is None:
@@ -321,6 +325,13 @@ def _ebook_drive_artifact_rows(root: Path, resolved_project: str, pilot: dict[st
             rows.append(row)
             continue
         row["resolved_path"] = str(artifact_path)
+        if not drive_root.exists():
+            row["status"] = "registered"
+            row["status_class"] = "badge-ops-missing"
+            suffix = "Drive root is registered but not mounted on this host."
+            row["note"] = f"{row['note']} {suffix}".strip()
+            rows.append(row)
+            continue
         if artifact_path.exists():
             row["status"] = "verified"
             row["status_class"] = "badge-ops-ready"
@@ -467,7 +478,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "drive_artifacts": drive_artifacts,
             "drive_summary": _ebook_drive_summary(drive_artifacts),
             "next_missing_drive_artifact": next(
-                (item for item in drive_artifacts if item.get("status") != "verified"),
+                (item for item in drive_artifacts if item.get("status") == "missing"),
                 None,
             ),
         }
