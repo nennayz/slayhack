@@ -147,6 +147,8 @@ The e-book is not ready to sell until all five gates are PASS or Captain explici
 
 ## SlayHack Pilot: Age Like Fine Wine
 
+Registry source: `projects/slay_hack/ebooks.yaml`
+
 | Field | Value |
 |---|---|
 | Product | Age Like Fine Wine |

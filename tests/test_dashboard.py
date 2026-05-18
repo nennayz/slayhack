@@ -110,6 +110,60 @@ def _write_stadium_project(tmp_path: Path) -> None:
     )
 
 
+def _write_ebook_registry(tmp_path: Path) -> None:
+    project_dir = tmp_path / "projects" / "slay_hack"
+    project_dir.mkdir(parents=True, exist_ok=True)
+    (project_dir / "ebooks.yaml").write_text(
+        'factory:\n'
+        '  state: "Registry-backed governance ready"\n'
+        '  safe_boundary: "Live publish and checkout stay locked until Captain approval."\n'
+        '  runbook_path: "docs/ebook_production_runbook.md"\n'
+        '  spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"\n'
+        '  next_action: "Run Fleet QA against the existing PDF proof, then prepare the launch package."\n'
+        'stages:\n'
+        '  - key: designed_pdf_ready\n'
+        '    label: Designed PDF ready\n'
+        '    state: active\n'
+        'roles:\n'
+        '  - role: Product PM\n'
+        '    owner: Slay\n'
+        '    responsibility: "Audience and product angle."\n'
+        'hardening:\n'
+        '  - "Remove hardcoded API key fallback."\n'
+        'launch_assets:\n'
+        '  - sales page\n'
+        '  - 7-day content push\n'
+        'ebooks:\n'
+        '  - id: age_like_fine_wine\n'
+        '    title: "Age Like Fine Wine"\n'
+        '    project: SlayHack\n'
+        '    pm: Slay\n'
+        '    audience: "women 35-44"\n'
+        '    status: designed_pdf_ready\n'
+        '    role: "first paid low-ticket monetization pilot"\n'
+        '    proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."\n'
+        '    qa_gates:\n'
+        '      - gate: Content QA\n'
+        '        status: PARTIAL\n'
+        '        check: "Promise and chapter value."\n'
+        '      - gate: Brand QA\n'
+        '        status: PARTIAL\n'
+        '        check: "SlayHack voice."\n'
+        '      - gate: Visual QA\n'
+        '        status: PARTIAL\n'
+        '        check: "Cover and image consistency."\n'
+        '      - gate: PDF Technical QA\n'
+        '        status: PARTIAL\n'
+        '        check: "Dimensions and links."\n'
+        '      - gate: Monetization QA\n'
+        '        status: PARTIAL\n'
+        '        check: "Sales page and checkout copy."\n'
+        '    launch_assets:\n'
+        '      - sales page\n'
+        '      - 7-day content push\n'
+    )
+
+
 def _slay_hack_ticket_id(tmp_path: Path, suffix: str) -> str:
     slate = _dm._calendar_slate(tmp_path)
     assert slate is not None
@@ -2341,11 +2395,15 @@ def test_aurora_learning_page_renders_latest_brief_and_review_note(tmp_path, cli
     assert "current manual crew portrait set is approved production canon and has a production asset audit" in resp.text
 
 
-def test_aurora_ebooks_page_renders_governed_product_factory(client):
+def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
     resp = client.get("/aurora/ebooks", headers=_auth())
 
     assert resp.status_code == 200
     assert "E-book Product Factory" in resp.text
+    assert "Registry-backed governance ready" in resp.text
+    assert "projects/slay_hack/ebooks.yaml" in resp.text
     assert "Age Like Fine Wine" in resp.text
     assert "designed_pdf_ready" in resp.text
     assert "Live publish and checkout stay locked" in resp.text
@@ -2360,7 +2418,19 @@ def test_aurora_ebooks_page_renders_governed_product_factory(client):
     assert "7-day content push" in resp.text
 
 
-def test_aurora_ebooks_link_is_in_navigation(client):
+def test_aurora_ebooks_page_renders_empty_state_without_registry(client):
+    resp = client.get("/aurora/ebooks", headers=_auth())
+
+    assert resp.status_code == 200
+    assert "E-book Product Factory" in resp.text
+    assert "No e-book registry is ready for this project" in resp.text
+    assert "projects/slay_hack/ebooks.yaml" in resp.text
+    assert "Live publish and checkout stay locked until Captain approval." in resp.text
+
+
+def test_aurora_ebooks_link_is_in_navigation(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
     resp = client.get("/aurora/ebooks", headers=_auth())
 
     assert resp.status_code == 200

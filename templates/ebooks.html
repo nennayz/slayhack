@@ -15,11 +15,11 @@
 <section class="stat-grid wide">
   <div class="stat-card">
     <span>Pilot</span>
-    <strong>{{ ebook_factory.pilot.title }}</strong>
+    <strong>{{ ebook_factory.pilot.title if ebook_factory.pilot else "No pilot" }}</strong>
   </div>
   <div class="stat-card">
     <span>Current state</span>
-    <strong>{{ ebook_factory.pilot.status }}</strong>
+    <strong>{{ ebook_factory.pilot.status if ebook_factory.pilot else "registry_missing" }}</strong>
   </div>
   <div class="stat-card">
     <span>QA gates</span>
@@ -39,14 +39,32 @@
   <div class="learning-gates">
     <span>{{ ebook_factory.safe_boundary }}</span>
     <span>{{ ebook_factory.next_action }}</span>
+    <span>Registry: <code>{{ ebook_factory.registry_path }}</code></span>
     <span>Runbook: <code>{{ ebook_factory.runbook_path }}</code></span>
     <span>Dashboard spec: <code>{{ ebook_factory.spec_path }}</code></span>
   </div>
 </section>
 
+{% if not ebook_factory.pilot %}
 <section class="panel spacious">
   <div class="section-heading">
-    <p class="eyebrow">SlayHack pilot</p>
+    <p class="eyebrow">Registry empty</p>
+    <h2>No e-book registry is ready for this project</h2>
+  </div>
+  <div class="learning-gates">
+    <span>Create <code>{{ ebook_factory.registry_path }}</code> to track e-book production for this page.</span>
+    <span>{{ ebook_factory.safe_boundary }}</span>
+    {% if ebook_factory.registry_error %}
+    <span>{{ ebook_factory.registry_error }}</span>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if ebook_factory.pilot %}
+<section class="panel spacious">
+  <div class="section-heading">
+    <p class="eyebrow">{{ ebook_factory.pilot.project }} pilot</p>
     <h2>{{ ebook_factory.pilot.title }}</h2>
   </div>
   <div class="approval-queue-list">
@@ -63,7 +81,9 @@
     </article>
   </div>
 </section>
+{% endif %}
 
+{% if ebook_factory.stages %}
 <section class="panel spacious">
   <div class="section-heading">
     <p class="eyebrow">Production stages</p>
@@ -84,6 +104,7 @@
     {% endfor %}
   </div>
 </section>
+{% endif %}
 
 <section class="content-grid">
   <article class="panel">
@@ -100,6 +121,8 @@
           <p>{{ item.check }}</p>
         </div>
       </article>
+      {% else %}
+      <p class="muted">No QA gates are registered yet.</p>
       {% endfor %}
     </div>
   </article>
@@ -118,6 +141,8 @@
           <p>{{ item.responsibility }}</p>
         </div>
       </article>
+      {% else %}
+      <p class="muted">No role ownership rows are registered yet.</p>
       {% endfor %}
     </div>
   </article>
@@ -132,6 +157,8 @@
     <div class="learning-gates">
       {% for item in ebook_factory.hardening %}
       <span>{{ item }}</span>
+      {% else %}
+      <span>No pipeline hardening checklist is registered yet.</span>
       {% endfor %}
     </div>
   </article>
@@ -147,6 +174,8 @@
         <span>{{ item }}</span>
         <small>required</small>
       </span>
+      {% else %}
+      <p class="muted">No launch package assets are registered yet.</p>
       {% endfor %}
     </div>
   </article>

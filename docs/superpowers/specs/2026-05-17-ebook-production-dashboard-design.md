@@ -38,28 +38,34 @@ Add an `E-books` link under the Voyage navigation group. The route is part of Au
 
 ## Data Shape
 
-Initial data can be static Python dictionaries while the system is still in governance design. Future versions can move this into YAML or a durable asset registry.
+Initial data was allowed to be static Python dictionaries while the system was still in governance design. Registry v1 moves page-specific e-book product data into `projects/<slug>/ebooks.yaml` so the dashboard can add new products without editing route code.
 
 Suggested shape:
 
 ```python
 {
-    "factory_status": "Governance design ready",
-    "safe_boundary": "Read-only planning surface; live publish and checkout stay locked.",
-    "pilot": {
-        "title": "Age Like Fine Wine",
-        "project": "SlayHack",
-        "audience": "women 35-44",
-        "status": "designed_pdf_ready",
-        "next_action": "Run Fleet QA and prepare launch package.",
+    "factory": {
+        "state": "Registry-backed governance ready",
+        "safe_boundary": "Live publish and checkout stay locked until Captain approval.",
+        "next_action": "Run Fleet QA and prepare launch package."
     },
+    "ebooks": [
+        {
+            "id": "age_like_fine_wine",
+            "title": "Age Like Fine Wine",
+            "project": "SlayHack",
+            "audience": "women 35-44",
+            "status": "designed_pdf_ready",
+            "qa_gates": [...]
+        }
+    ],
     "stages": [...],
     "roles": [...],
-    "qa_gates": [...],
-    "hardening": [...],
-    "docs": [...],
+    "hardening": [...]
 }
 ```
+
+If the registry file is missing or invalid, `/aurora/ebooks` must render an empty or error state instead of failing the dashboard route.
 
 ## Page Layout
 

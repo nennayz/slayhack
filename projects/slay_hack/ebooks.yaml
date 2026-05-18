@@ -1,0 +1,139 @@
+factory:
+  state: "Registry-backed governance ready"
+  safe_boundary: "Live publish and checkout stay locked until Captain approval."
+  runbook_path: "docs/ebook_production_runbook.md"
+  spec_path: "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md"
+  next_action: "Run Fleet QA against the existing PDF proof, then prepare the launch package."
+
+stages:
+  - key: idea
+    label: Idea
+    state: done
+  - key: opportunity_qualified
+    label: Opportunity qualified
+    state: done
+  - key: product_brief_ready
+    label: Product brief ready
+    state: done
+  - key: source_audit_ready
+    label: Source audit ready
+    state: done
+  - key: outline_ready
+    label: Outline ready
+    state: done
+  - key: chapter_draft_ready
+    label: Chapter draft ready
+    state: done
+  - key: editor_review_ready
+    label: Editor review ready
+    state: done
+  - key: visual_direction_ready
+    label: Visual direction ready
+    state: done
+  - key: designed_pdf_ready
+    label: Designed PDF ready
+    state: active
+  - key: qa_ready
+    label: QA ready
+    state: locked
+  - key: captain_approved
+    label: Captain approved
+    state: locked
+  - key: launch_package_ready
+    label: Launch package ready
+    state: locked
+  - key: live
+    label: Live
+    state: locked
+  - key: learning_review
+    label: Learning review
+    state: locked
+
+roles:
+  - role: Product PM
+    owner: Slay
+    responsibility: "Audience, promise, product angle, and page fit."
+  - role: Knowledge Reviewer
+    owner: Sage Ledger
+    responsibility: "Source audit, risky claims, and Drive knowledge routing."
+  - role: Content Architect
+    owner: Bella Quill
+    responsibility: "Table of contents, chapter flow, exercises, and templates."
+  - role: Writer
+    owner: Bella Quill
+    responsibility: "Markdown draft in the SlayHack voice."
+  - role: Editor
+    owner: Nora Sharp
+    responsibility: "Clarity, duplication, claims, and conversion logic."
+  - role: Brand Reviewer
+    owner: Slay
+    responsibility: "Tone, persona, vocabulary, and audience match."
+  - role: Visual Designer
+    owner: Lila Lens
+    responsibility: "Cover, chapter openers, panels, character style, and mockups."
+  - role: PDF Producer
+    owner: Robin
+    responsibility: "Pipeline run, PDF export, manifests, logs, and technical checks."
+  - role: Monetization Lead
+    owner: Roxy Rise
+    responsibility: "Sales page, checkout copy, lead magnet, upsell, and tracking plan."
+  - role: Captain Gate
+    owner: Nayz
+    responsibility: "Final approval before sale, checkout activation, or public launch."
+
+hardening:
+  - "Remove hardcoded API key fallback."
+  - "Make content and output paths configurable."
+  - "Keep image manifest resume support."
+  - "Compress generated images before PDF embedding."
+  - "Write pipeline logs with inputs, outputs, duration, model choices, and failures."
+  - "Add PDF bookmarks or an interactive table of contents."
+
+launch_assets:
+  - sales page
+  - product mockup
+  - checkout copy
+  - delivery email
+  - lead magnet
+  - 7-day content push
+  - post-purchase next step
+  - tracking plan
+
+ebooks:
+  - id: age_like_fine_wine
+    title: "Age Like Fine Wine"
+    project: SlayHack
+    pm: Slay
+    audience: "women 35-44"
+    status: designed_pdf_ready
+    role: "first paid low-ticket monetization pilot"
+    proof: "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost."
+    drive:
+      folder: "Google Drive / Slay Hack / 20260517-ebook-age-like-fine-wine"
+      pdf: "20260517-Age-Like-Fine-Wine.pdf"
+      cover: "20260517-cover-age-like-fine-wine.png"
+    qa_gates:
+      - gate: Content QA
+        status: PARTIAL
+        check: "Promise, chapter value, exercises, filler, and risky claims."
+      - gate: Brand QA
+        status: PARTIAL
+        check: "SlayHack voice, PM direction, vocabulary, and target-reader match."
+      - gate: Visual QA
+        status: PARTIAL
+        check: "Cover, palette, typography, image consistency, and character usage."
+      - gate: PDF Technical QA
+        status: PARTIAL
+        check: "Dimensions, mobile readability, links, fonts, metadata, and file size."
+      - gate: Monetization QA
+        status: PARTIAL
+        check: "Sales page, checkout copy, delivery email, lead magnet, and tracking."
+    launch_assets:
+      - sales page
+      - product mockup
+      - checkout copy
+      - delivery email
+      - lead magnet
+      - 7-day content push
+      - post-purchase next step
+      - tracking plan

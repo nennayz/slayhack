@@ -150,75 +150,80 @@ PM_KNOWLEDGE_SMOKE_CHECKS = [
     "What is the best next product/action recommendation style?",
 ]
 
-EBOOK_FACTORY = {
-    "state": "Governance design ready",
+EBOOK_FACTORY_DEFAULTS = {
+    "state": "No e-book registry found",
     "safe_boundary": "Live publish and checkout stay locked until Captain approval.",
     "runbook_path": "docs/ebook_production_runbook.md",
     "spec_path": "docs/superpowers/specs/2026-05-17-ebook-production-dashboard-design.md",
-    "next_action": "Run Fleet QA against the existing PDF proof, then prepare the launch package.",
-    "pilot": {
-        "title": "Age Like Fine Wine",
-        "project": "SlayHack",
-        "pm": "Slay",
-        "audience": "women 35-44",
-        "status": "designed_pdf_ready",
-        "role": "first paid low-ticket monetization pilot",
-        "proof": "Prior handoff reports 22 generated images, 61 PDF pages, 29.9 MB, 57.7 minutes, and about 0.88 USD cost.",
-    },
-    "stages": [
-        {"key": "idea", "label": "Idea", "state": "done"},
-        {"key": "opportunity_qualified", "label": "Opportunity qualified", "state": "done"},
-        {"key": "product_brief_ready", "label": "Product brief ready", "state": "done"},
-        {"key": "source_audit_ready", "label": "Source audit ready", "state": "done"},
-        {"key": "outline_ready", "label": "Outline ready", "state": "done"},
-        {"key": "chapter_draft_ready", "label": "Chapter draft ready", "state": "done"},
-        {"key": "editor_review_ready", "label": "Editor review ready", "state": "done"},
-        {"key": "visual_direction_ready", "label": "Visual direction ready", "state": "done"},
-        {"key": "designed_pdf_ready", "label": "Designed PDF ready", "state": "active"},
-        {"key": "qa_ready", "label": "QA ready", "state": "locked"},
-        {"key": "captain_approved", "label": "Captain approved", "state": "locked"},
-        {"key": "launch_package_ready", "label": "Launch package ready", "state": "locked"},
-        {"key": "live", "label": "Live", "state": "locked"},
-        {"key": "learning_review", "label": "Learning review", "state": "locked"},
-    ],
-    "roles": [
-        {"role": "Product PM", "owner": "Slay", "responsibility": "Audience, promise, product angle, and page fit."},
-        {"role": "Knowledge Reviewer", "owner": "Sage Ledger", "responsibility": "Source audit, risky claims, and Drive knowledge routing."},
-        {"role": "Content Architect", "owner": "Bella Quill", "responsibility": "Table of contents, chapter flow, exercises, and templates."},
-        {"role": "Writer", "owner": "Bella Quill", "responsibility": "Markdown draft in the SlayHack voice."},
-        {"role": "Editor", "owner": "Nora Sharp", "responsibility": "Clarity, duplication, claims, and conversion logic."},
-        {"role": "Brand Reviewer", "owner": "Slay", "responsibility": "Tone, persona, vocabulary, and audience match."},
-        {"role": "Visual Designer", "owner": "Lila Lens", "responsibility": "Cover, chapter openers, panels, character style, and mockups."},
-        {"role": "PDF Producer", "owner": "Robin", "responsibility": "Pipeline run, PDF export, manifests, logs, and technical checks."},
-        {"role": "Monetization Lead", "owner": "Roxy Rise", "responsibility": "Sales page, checkout copy, lead magnet, upsell, and tracking plan."},
-        {"role": "Captain Gate", "owner": "Nayz", "responsibility": "Final approval before sale, checkout activation, or public launch."},
-    ],
-    "qa_gates": [
-        {"gate": "Content QA", "status": "PARTIAL", "check": "Promise, chapter value, exercises, filler, and risky claims."},
-        {"gate": "Brand QA", "status": "PARTIAL", "check": "SlayHack voice, PM direction, vocabulary, and target-reader match."},
-        {"gate": "Visual QA", "status": "PARTIAL", "check": "Cover, palette, typography, image consistency, and character usage."},
-        {"gate": "PDF Technical QA", "status": "PARTIAL", "check": "Dimensions, mobile readability, links, fonts, metadata, and file size."},
-        {"gate": "Monetization QA", "status": "PARTIAL", "check": "Sales page, checkout copy, delivery email, lead magnet, and tracking."},
-    ],
-    "hardening": [
-        "Remove hardcoded API key fallback.",
-        "Make content and output paths configurable.",
-        "Keep image manifest resume support.",
-        "Compress generated images before PDF embedding.",
-        "Write pipeline logs with inputs, outputs, duration, model choices, and failures.",
-        "Add PDF bookmarks or an interactive table of contents.",
-    ],
-    "launch_assets": [
-        "sales page",
-        "product mockup",
-        "checkout copy",
-        "delivery email",
-        "lead magnet",
-        "7-day content push",
-        "post-purchase next step",
-        "tracking plan",
-    ],
+    "next_action": "Create projects/<project_slug>/ebooks.yaml before tracking e-book production in Fleet.",
+    "registry_path": "",
+    "registry_error": "",
+    "has_registry": False,
+    "pilot": {},
+    "ebooks": [],
+    "stages": [],
+    "roles": [],
+    "qa_gates": [],
+    "hardening": [],
+    "launch_assets": [],
 }
+
+
+def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, object]:
+    resolved_project = resolve_project_slug(project_slug, root=root)
+    registry_path = root / "projects" / resolved_project / "ebooks.yaml"
+    if not registry_path.exists() and project_slug == "slay_hack":
+        fallback_project = resolve_project_slug("nayzfreedom_fleet", root=root)
+        fallback_path = root / "projects" / fallback_project / "ebooks.yaml"
+        if fallback_path.exists():
+            resolved_project = fallback_project
+            registry_path = fallback_path
+    factory = dict(EBOOK_FACTORY_DEFAULTS)
+    factory["registry_project"] = resolved_project
+    factory["registry_path"] = f"projects/{resolved_project}/ebooks.yaml"
+    if not registry_path.exists():
+        return factory
+
+    try:
+        raw = yaml.safe_load(registry_path.read_text()) or {}
+    except yaml.YAMLError as exc:
+        factory["state"] = "E-book registry invalid"
+        factory["registry_error"] = str(exc)
+        factory["next_action"] = "Fix the e-book registry YAML before using this dashboard surface."
+        return factory
+
+    if not isinstance(raw, dict):
+        factory["state"] = "E-book registry invalid"
+        factory["registry_error"] = "Top-level YAML value must be a mapping."
+        factory["next_action"] = "Fix the e-book registry YAML before using this dashboard surface."
+        return factory
+
+    factory_meta = raw.get("factory") if isinstance(raw.get("factory"), dict) else {}
+    for key in ("state", "safe_boundary", "runbook_path", "spec_path", "next_action"):
+        if factory_meta.get(key):
+            factory[key] = factory_meta[key]
+
+    ebooks = raw.get("ebooks") if isinstance(raw.get("ebooks"), list) else []
+    pilot = next((item for item in ebooks if isinstance(item, dict)), {})
+    factory.update(
+        {
+            "has_registry": True,
+            "ebooks": ebooks,
+            "pilot": pilot,
+            "stages": raw.get("stages") if isinstance(raw.get("stages"), list) else [],
+            "roles": raw.get("roles") if isinstance(raw.get("roles"), list) else [],
+            "qa_gates": pilot.get("qa_gates") if isinstance(pilot.get("qa_gates"), list) else [],
+            "hardening": raw.get("hardening") if isinstance(raw.get("hardening"), list) else [],
+            "launch_assets": (
+                pilot.get("launch_assets")
+                if isinstance(pilot.get("launch_assets"), list)
+                else raw.get("launch_assets")
+                if isinstance(raw.get("launch_assets"), list)
+                else []
+            ),
+        }
+    )
+    return factory
 
 
 def _manual_posted_at(job) -> datetime | None:
@@ -319,7 +324,8 @@ def aurora_workflow(request: Request, _: str = Depends(verify_auth)):
 
 @router.get("/aurora/ebooks", response_class=HTMLResponse)
 def aurora_ebooks(request: Request, _: str = Depends(verify_auth)):
-    return templates.TemplateResponse(request, "ebooks.html", {"ebook_factory": EBOOK_FACTORY})
+    project_slug = request.query_params.get("project", "slay_hack")
+    return templates.TemplateResponse(request, "ebooks.html", {"ebook_factory": _ebook_factory(_root(request), project_slug)})
 
 
 @router.get("/aurora/daily-slate", response_class=HTMLResponse)
