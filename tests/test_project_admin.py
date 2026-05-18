@@ -68,6 +68,27 @@ def test_project_admin_shows_active_output_only_chat_and_logs(tmp_path, monkeypa
     assert "2026-05-18T08:00:00Z" in resp.text
 
 
+def test_project_admin_handles_mixed_string_and_numeric_chat_ids(tmp_path, monkeypatch):
+    _write_project(tmp_path, "slay_hack", "SlayHack")
+    chat_map = tmp_path / "comment_chat_map.yaml"
+    chat_map.write_text(
+        "chats:\n"
+        "  -5210714067:\n"
+        "    project: slay_hack\n"
+        "    default_platform: instagram\n"
+        "  '-5271108012':\n"
+        "    project: stadium_sweethearts\n"
+        "    default_platform: tiktok\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("COMMENT_CHAT_MAP_PATH", str(chat_map))
+
+    resp = _client(tmp_path).get("/project-admin/", headers=_auth())
+    assert resp.status_code == 200
+    assert "slay_hack" in resp.text
+    assert "stadium_sweethearts" in resp.text
+
+
 def test_project_admin_requires_auth(tmp_path):
     resp = _client(tmp_path).get("/project-admin/")
     assert resp.status_code == 401

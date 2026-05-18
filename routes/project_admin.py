@@ -92,7 +92,7 @@ def _comment_chat_rows(root: Path) -> list[dict[str, Any]]:
         chat_map_path = root / "comment_chat_map.yaml"
     data = _read_yaml(chat_map_path)
     rows: list[dict[str, Any]] = []
-    for chat_id, cfg in sorted((data.get("chats") or {}).items()):
+    for chat_id, cfg in sorted((data.get("chats") or {}).items(), key=lambda item: str(item[0])):
         rows.append(
             {
                 "chat_id": _mask_chat_id(chat_id),
