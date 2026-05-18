@@ -157,3 +157,53 @@ def test_build_system_prompt_contains_brand_fields():
     assert "150" in result
     assert "COMMENT_1:" in result
     assert "REPLY_1:" in result
+
+
+# ── Reply history log ───────────────────────────────────────────────────────
+
+import tempfile
+from pathlib import Path
+
+
+def test_find_in_log_returns_none_when_log_missing():
+    from comment_reply_bot import find_in_log
+    with tempfile.TemporaryDirectory() as d:
+        result = find_in_log(Path(d) / "nonexistent.jsonl", "abc123")
+    assert result is None
+
+
+def test_append_and_find_in_log():
+    from comment_reply_bot import append_to_log, find_in_log
+    with tempfile.TemporaryDirectory() as d:
+        log_path = Path(d) / "slay_hack.jsonl"
+        entry = {
+            "timestamp": "2026-05-18T10:00:00",
+            "chat_id": "-100123",
+            "image_hash": "abc123",
+            "platform": "instagram",
+            "model_used": "anthropic/claude-sonnet-4-6",
+            "comments": ["nice post!"],
+            "replies": ["Thank you! 🤍"],
+        }
+        append_to_log(log_path, entry)
+        found = find_in_log(log_path, "abc123")
+    assert found is not None
+    assert found["image_hash"] == "abc123"
+    assert found["platform"] == "instagram"
+
+
+def test_find_in_log_returns_none_for_unknown_hash():
+    from comment_reply_bot import append_to_log, find_in_log
+    with tempfile.TemporaryDirectory() as d:
+        log_path = Path(d) / "test.jsonl"
+        append_to_log(log_path, {"image_hash": "known", "timestamp": "t"})
+        result = find_in_log(log_path, "unknown_hash")
+    assert result is None
+
+
+def test_append_to_log_creates_parent_directory():
+    from comment_reply_bot import append_to_log
+    with tempfile.TemporaryDirectory() as d:
+        log_path = Path(d) / "subdir" / "project.jsonl"
+        append_to_log(log_path, {"image_hash": "x", "timestamp": "t"})
+        assert log_path.exists()

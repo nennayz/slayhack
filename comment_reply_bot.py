@@ -129,3 +129,29 @@ def format_output(pairs: list[tuple[str, str]], model_label: str, platform: str)
     model_short = model_label.split("/")[-1] if "/" in model_label else model_label
     lines.append(f"🤖 {model_short}  |  📱 {platform}")
     return "\n".join(lines)
+
+
+# ── Reply history log ───────────────────────────────────────────────────────
+
+def find_in_log(log_path: Path, image_hash: str) -> dict | None:
+    """Return the log entry matching image_hash, or None if not found."""
+    if not log_path.exists():
+        return None
+    try:
+        for line in log_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            entry = json.loads(line)
+            if entry.get("image_hash") == image_hash:
+                return entry
+    except (json.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def append_to_log(log_path: Path, entry: dict) -> None:
+    """Append a reply entry to the JSONL log. Creates parent dirs if needed."""
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
