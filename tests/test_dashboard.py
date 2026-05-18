@@ -2591,6 +2591,10 @@ def test_aurora_ebooks_page_renders_governed_product_factory(tmp_path, client):
     assert "Remove hardcoded API key fallback." in resp.text
     assert "7-day content push" in resp.text
     assert "tracking plan" in resp.text
+    assert "Captain sale gate" in resp.text
+    assert "Captain sale approval" in resp.text
+    assert "Sale approval locked" in resp.text
+    assert "Source integrity must be ready with a matching editable source and PDF proof." in resp.text
 
 
 def test_aurora_ebooks_launch_copy_asset_route_serves_registered_markdown(tmp_path, client):
@@ -2870,6 +2874,64 @@ def test_aurora_ebooks_rejects_unknown_launch_asset(tmp_path, client):
 
     assert resp.status_code == 400
     assert "is not registered" in resp.json()["detail"]
+
+
+def test_aurora_ebooks_rejects_sale_gate_approval_when_blocked(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+
+    resp = client.post(
+        "/aurora/ebooks/sale-gate",
+        headers=_auth(),
+        data={"project_slug": "slay_hack", "ebook_id": "age_like_fine_wine"},
+    )
+
+    assert resp.status_code == 400
+    assert "Captain sale approval is locked" in resp.json()["detail"]
+    assert "QA gates still blocked" in resp.json()["detail"]
+    assert "Launch assets still need approval" in resp.json()["detail"]
+    assert "Source integrity must be ready" in resp.json()["detail"]
+
+
+def test_aurora_ebooks_records_sale_gate_approval_when_ready(tmp_path, client):
+    _write_ebook_registry(tmp_path)
+    registry_path = tmp_path / "projects" / "slay_hack" / "ebooks.yaml"
+    registry = yaml.safe_load(registry_path.read_text())
+    ebook = registry["ebooks"][0]
+    ebook["source_integrity"] = {"status": "ready"}
+    ebook["captain_sale_gate"] = {
+        "label": "Captain sale approval",
+        "status": "locked",
+        "action_label": "Captain Approve E-book For Sale",
+    }
+    for gate in ebook["qa_gates"]:
+        gate["status"] = "PASS"
+    for asset in ebook["launch_assets"]:
+        asset["status"] = "approved"
+    registry_path.write_text(yaml.safe_dump(registry, sort_keys=False))
+
+    page = client.get("/aurora/ebooks", headers=_auth())
+    assert page.status_code == 200
+    assert "Captain Approve E-book For Sale" in page.text
+
+    resp = client.post(
+        "/aurora/ebooks/sale-gate",
+        headers=_auth(),
+        data={"project_slug": "slay_hack", "ebook_id": "age_like_fine_wine"},
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith(
+        "/aurora/ebooks?project=slay_hack&launch_result=Captain%20sale%20approval%3A%20approved"
+    )
+    updated = yaml.safe_load(registry_path.read_text())
+    gate = updated["ebooks"][0]["captain_sale_gate"]
+    assert gate["status"] == "approved"
+    assert gate["approved_by"] == "admin"
+    assert gate["approved_at"]
+
+    approved_page = client.get("/aurora/ebooks", headers=_auth())
+    assert "Sale approved by admin" in approved_page.text
 
 
 def test_aurora_ebooks_page_renders_empty_state_without_registry(client):

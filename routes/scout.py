@@ -35,8 +35,9 @@ def _latest_report(root: Path) -> ScoutJob | None:
 async def scout_index(request: Request, _: str = Depends(verify_auth)):
     job = _latest_report(_root(request))
     return templates.TemplateResponse(
+        request,
         "scout.html",
-        {"request": request, "job": job},
+        {"job": job},
     )
 
 

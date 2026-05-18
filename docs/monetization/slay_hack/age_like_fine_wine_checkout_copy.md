@@ -1,6 +1,6 @@
 # Age Like Fine Wine - Checkout Copy Draft
 
-Status: draft_ready
+Status: review_ready
 Boundary: Draft copy only. No payment link, Stripe checkout, public sales page, or live publish is active.
 
 ## Product Title
@@ -44,7 +44,17 @@ Draft bump CTA: Add the 7-Day Glow Routine
 
 ## Trust Notes
 
-This product is a digital download. Delivery, support, and refund terms must be reviewed before checkout activation.
+This product is a digital download. Delivery, support, and refund terms are drafted in `docs/monetization/slay_hack/age_like_fine_wine_checkout_terms.md`, but they are not active until Captain approval.
+
+## Support And Refund Draft
+
+Delivery is planned as an immediate secure download link plus purchase-confirmation email after checkout completion. Support should route through the approved receipt inbox, not social DMs, with a target response within 2 business days.
+
+If a buyer cannot access the file and support cannot resolve the issue, refund the purchase. If the buyer accidentally purchases twice, refund the duplicate order. General change-of-mind refunds for a digital download are not active unless Nayz approves that policy before checkout activation.
+
+## Buyer Expectation Note
+
+Age Like Fine Wine provides general beauty education and routine planning. It does not provide medical, dermatology, supplement, or diagnosis advice. Results vary by person.
 
 ## Locked Boundary
 
