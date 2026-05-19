@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
 from knowledge.embedder import Embedder, OfflineError
 from knowledge.index import Index
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.vault import VaultWriter
+
+if TYPE_CHECKING:
+    from knowledge.dedup import DedupMatch
 
 
 class KnowledgeStore:
@@ -33,3 +39,55 @@ class KnowledgeStore:
             except OfflineError:
                 pass  # stays pending; drained later
         return obj
+
+    def check_duplicate(self, dedup_text: str, page: str, kind: str,
+                        online: bool = True) -> list["DedupMatch"]:
+        from knowledge.dedup import DedupChecker
+
+        return DedupChecker(self).check(dedup_text, page, kind, online=online)
+
+    def get(self, uid: str) -> ContentObject | None:
+        row = self.index.get(uid)
+        if row is None:
+            return None
+        return self.vault.read(Path(row["vault_path"]))
+
+    def search(self, query: str, page: str | None = None,
+               kind: str | None = None, limit: int = 20) -> list[ContentObject]:
+        results: list[ContentObject] = []
+        for uid in self.index.fts_search(query, page=page, limit=limit):
+            obj = self.get(uid)
+            if obj is not None and (kind is None or obj.kind == kind):
+                results.append(obj)
+        return results
+
+    def recent(self, page: str | None = None, kind: str | None = None,
+               limit: int = 20) -> list[ContentObject]:
+        sql = "SELECT uid FROM notes"
+        clauses: list[str] = []
+        params: list[str] = []
+        if page:
+            clauses.append("page=?")
+            params.append(page)
+        if kind:
+            clauses.append("kind=?")
+            params.append(kind)
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += f" ORDER BY created_at DESC, uid DESC LIMIT {int(limit)}"
+        uids = [r["uid"] for r in self.index.conn.execute(sql, params)]
+        return [o for o in (self.get(u) for u in uids) if o is not None]
+
+    def lineage(self, uid: str) -> list[ContentObject]:
+        """Return [obj, parent, grandparent, ...] following the first parent chain."""
+        chain: list[ContentObject] = []
+        seen: set[str] = set()
+        cursor: str | None = uid
+        while cursor and cursor not in seen:
+            seen.add(cursor)
+            obj = self.get(cursor)
+            if obj is None:
+                break
+            chain.append(obj)
+            cursor = obj.parent_uids[0] if obj.parent_uids else None
+        return chain
