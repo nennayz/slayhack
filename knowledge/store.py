@@ -62,7 +62,7 @@ class KnowledgeStore:
         return results
 
     def recent(self, page: str | None = None, kind: str | None = None,
-               limit: int = 20) -> list[ContentObject]:
+               status: str | None = None, limit: int = 20) -> list[ContentObject]:
         sql = "SELECT uid FROM notes"
         clauses: list[str] = []
         params: list[str] = []
@@ -72,11 +72,27 @@ class KnowledgeStore:
         if kind:
             clauses.append("kind=?")
             params.append(kind)
+        if status:
+            clauses.append("status=?")
+            params.append(status)
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
         sql += f" ORDER BY created_at DESC, uid DESC LIMIT {int(limit)}"
         uids = [r["uid"] for r in self.index.conn.execute(sql, params)]
         return [o for o in (self.get(u) for u in uids) if o is not None]
+
+    def set_status(self, uid: str, new_status: str) -> ContentObject:
+        """Atomically update status in vault (source of truth) and SQLite index.
+
+        Raises KeyError if the uid is not found.
+        """
+        obj = self.get(uid)
+        if obj is None:
+            raise KeyError(f"No object with uid={uid!r}")
+        obj.status = new_status
+        path = self.vault.write(obj)
+        self.index.upsert(obj, note_hash=self.vault.note_hash(path))
+        return obj
 
     def lineage(self, uid: str) -> list[ContentObject]:
         """Return [obj, parent, grandparent, ...] following the first parent chain."""
