@@ -1,0 +1,18 @@
+- {a: "Quiet luxury wardrobe essentials for fall", b: "Essential quiet-luxury pieces for autumn", same_page: true, expected: STRONG}
+- {a: "Quiet luxury wardrobe essentials for fall", b: "Essential quiet-luxury pieces for autumn", same_page: false, expected: SOFT}
+- {a: "How to build a capsule wardrobe", b: "Capsule wardrobe starter guide", same_page: true, expected: STRONG}
+- {a: "How to build a capsule wardrobe", b: "Loud streetwear sneaker drops 2026", same_page: true, expected: none}
+- {a: "เทรนด์ quiet luxury สำหรับสาวออฟฟิศ", b: "quiet luxury ลุคสาวทำงาน", same_page: true, expected: STRONG}
+- {a: "เทรนด์ quiet luxury สำหรับสาวออฟฟิศ", b: "รีวิวลิปสติกโทนนู้ด", same_page: true, expected: none}
+- {a: "Minimalist skincare routine for glass skin", b: "Glass-skin minimal skincare steps", same_page: true, expected: STRONG}
+- {a: "Minimalist skincare routine for glass skin", b: "Glass-skin minimal skincare steps", same_page: false, expected: SOFT}
+- {a: "Best neutral-tone handbags under budget", b: "Affordable beige and tan handbags", same_page: true, expected: STRONG}
+- {a: "Best neutral-tone handbags under budget", b: "Bold neon party clutches", same_page: true, expected: none}
+- {a: "5 ways to style a white shirt", b: "White shirt styling ideas", same_page: true, expected: STRONG}
+- {a: "5 ways to style a white shirt", b: "How to fold a fitted sheet", same_page: true, expected: none}
+- {a: "Old money aesthetic explained", b: "What is the old-money look", same_page: true, expected: STRONG}
+- {a: "Old money aesthetic explained", b: "What is the old-money look", same_page: false, expected: SOFT}
+- {a: "Investing basics for women in their 20s", b: "Beginner investing guide for young women", same_page: true, expected: STRONG}
+- {a: "Investing basics for women in their 20s", b: "Quiet luxury fall wardrobe", same_page: true, expected: none}
+- {a: "Linen summer dresses roundup", b: "Best linen dresses for summer", same_page: true, expected: STRONG}
+- {a: "Linen summer dresses roundup", b: "Winter wool coat care tips", same_page: true, expected: none}
