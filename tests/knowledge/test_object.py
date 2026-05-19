@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 from datetime import datetime
 from knowledge.object import ContentObject, make_uid
 
@@ -27,9 +28,27 @@ def test_make_uid_is_deterministic():
 
 
 def test_make_uid_collision_extends_hash():
-    taken = {make_uid("slayhack", "idea", datetime(2026, 5, 19), "text one")}
+    digest = hashlib.sha256("text two".encode()).hexdigest()
+    short_uid = f"slayhack-idea-20260519-{digest[:4]}"
+    taken = {short_uid}
     uid = make_uid("slayhack", "idea", datetime(2026, 5, 19), "text two", taken=taken)
     assert uid not in taken
+    assert uid == f"slayhack-idea-20260519-{digest[:5]}"
+
+
+def test_assign_uid_sets_uid():
+    obj = make_obj()
+    assert obj.uid == ""
+    uid = obj.assign_uid()
+    assert uid != ""
+    assert obj.uid == uid
+
+
+def test_assign_uid_is_idempotent():
+    obj = make_obj()
+    first = obj.assign_uid()
+    second = obj.assign_uid()
+    assert first == second
 
 
 def test_content_object_defaults():

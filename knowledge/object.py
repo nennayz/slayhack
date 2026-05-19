@@ -17,7 +17,8 @@ def make_uid(
     taken: set[str] | None = None,
 ) -> str:
     """Build a stable, collision-checked uid: <page>-<kind>-<YYYYMMDD>-<hashN>."""
-    taken = taken or set()
+    if taken is None:
+        taken = set()
     date = created_at.strftime("%Y%m%d")
     digest = hashlib.sha256(dedup_text.encode("utf-8")).hexdigest()
     for length in range(4, len(digest) + 1):
@@ -36,7 +37,7 @@ class ContentObject(BaseModel):
     summary: str = ""
     body: str = ""
     dedup_text: str
-    status: str = "new"
+    status: str = "new"  # open string; STATUS_VALUES is the advisory set of expected values
     parent_uids: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.now)
