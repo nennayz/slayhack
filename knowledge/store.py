@@ -118,3 +118,25 @@ class KnowledgeStore:
                 self.index.conn.execute("DELETE FROM vectors WHERE uid=?", (row["uid"],))
         self.index.conn.commit()
         return len(live_uids)
+
+    def drain_pending(self) -> int:
+        """Embed objects whose vector is still pending. Returns the count embedded.
+
+        Resumable: each object is committed individually, so a mid-drain network
+        failure leaves already-embedded objects done and the rest still pending.
+        Vectors stored under a different embed model are reconciled to pending first
+        (spec D12), so changing the embedding model never silently breaks dedup.
+        """
+        self.index.mark_model_mismatch_pending(self.embedder.model)
+        embedded = 0
+        for uid in self.index.pending_uids():
+            row = self.index.get(uid)
+            if row is None:
+                continue
+            try:
+                vector = self.embedder.embed([row["dedup_text"]])[0]
+            except OfflineError:
+                break  # stop; the rest stay pending for a later run
+            self.index.set_vector(uid, self.embedder.model, vector)
+            embedded += 1
+        return embedded

@@ -117,3 +117,13 @@ class Index:
 
     def close(self) -> None:
         self.conn.close()
+
+    def mark_model_mismatch_pending(self, current_model: str) -> int:
+        """Mark vectors embedded under a different model as pending. Returns the count."""
+        cur = self.conn.execute(
+            "UPDATE vectors SET pending=1 WHERE embed_model IS NOT NULL "
+            "AND embed_model != ?",
+            (current_model,),
+        )
+        self.conn.commit()
+        return cur.rowcount
