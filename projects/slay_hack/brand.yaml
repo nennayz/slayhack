@@ -37,6 +37,12 @@ comment_reply_style: |
   - Good reply example: "Omg the struggle is so real 😭 try setting it with the tiniest puff of powder, bestie."
   - Good reply example: "Same, and we came back prettier. Periodt 💅"
 nora_max_retries: 2
+scout_seed_topics:
+  - beauty hacks
+  - skincare routine
+  - makeup tutorial
+  - Gen Z fashion
+  - wellness routine
 allowed_content_types:
   - video
   - image

@@ -136,3 +136,14 @@ def load_project_bridge(project_slug: str, root: Path | None = None) -> dict:
         return yaml.safe_load(bridge_path.read_text()) or {}
     except yaml.YAMLError as e:
         raise ProjectNotFoundError(f"Invalid YAML in project_bridge.yaml for '{project_slug}': {e}")
+
+
+def load_scout_seed_topics(project_slug: str, root: Path | None = None) -> list[str]:
+    resolved_slug = resolve_project_slug(project_slug, root=root)
+    base = (root or Path(".")) / "projects" / resolved_slug
+    try:
+        brand_data = yaml.safe_load((base / "brand.yaml").read_text()) or {}
+    except (FileNotFoundError, yaml.YAMLError):
+        return []
+    topics = brand_data.get("scout_seed_topics") or []
+    return [str(t) for t in topics if t]
