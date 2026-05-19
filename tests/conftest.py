@@ -3,11 +3,10 @@ import sys
 from unittest.mock import MagicMock
 
 # Stub out google.genai so tests that import main/orchestrator don't fail
-# in environments where google-cloud packages aren't installed.
-_google = MagicMock()
-_google.genai = MagicMock()
-sys.modules.setdefault("google", _google)
-sys.modules.setdefault("google.genai", _google.genai)
+# in environments where google-cloud packages aren't installed. Do not stub the
+# top-level google namespace; real google.auth/googleapiclient imports need it.
+_google_genai = MagicMock()
+sys.modules.setdefault("google.genai", _google_genai)
 
 # Stub anthropic for tests that don't need real API calls
 if "anthropic" not in sys.modules:
