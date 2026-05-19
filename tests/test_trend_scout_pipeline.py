@@ -66,3 +66,27 @@ def test_no_seed_topics_returns_completed_immediately(store, config, tmp_path):
     assert job.status == TrendScanJobStatus.COMPLETED
     assert job.signals_found == 0
     assert job.signals_stored == 0
+
+
+def test_digest_file_created(store, config, tmp_path):
+    from datetime import datetime
+
+    from trend_scout_pipeline import run_trend_scout_pipeline
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    run_trend_scout_pipeline("nayzfreedom_fleet", config, store, dry_run=True, output_root=tmp_path)
+    digest = tmp_path / "nayzfreedom_fleet" / "scout" / date_str / "trend_digest.md"
+    assert digest.exists()
+
+
+def test_digest_contains_all_topics(store, config, tmp_path):
+    from datetime import datetime
+
+    from trend_scout_pipeline import run_trend_scout_pipeline
+
+    date_str = datetime.now().strftime("%Y%m%d")
+    run_trend_scout_pipeline("nayzfreedom_fleet", config, store, dry_run=True, output_root=tmp_path)
+    digest = tmp_path / "nayzfreedom_fleet" / "scout" / date_str / "trend_digest.md"
+    content = digest.read_text()
+    for topic in ["beauty hacks", "skincare routine", "makeup tutorial", "Gen Z fashion", "wellness routine"]:
+        assert topic in content
