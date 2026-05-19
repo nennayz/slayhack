@@ -28,3 +28,8 @@ secrets/
 # Use vault-template/ as the shareable starter structure instead.
 vault/
 *.vault.local/
+
+# Knowledge Store local index (derived, never commit)
+knowledge.db
+knowledge.db-wal
+knowledge.db-shm
