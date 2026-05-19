@@ -91,3 +91,30 @@ class KnowledgeStore:
             chain.append(obj)
             cursor = obj.parent_uids[0] if obj.parent_uids else None
         return chain
+
+    def rebuild_index(self) -> int:
+        """Drop and rebuild the index from vault notes. Returns the note count.
+
+        The vault is the source of truth: orphan rows (note missing) are dropped,
+        and human-edited notes are re-indexed from their current content.
+        """
+        self.index.conn.execute("DELETE FROM notes")
+        self.index.conn.execute("DELETE FROM notes_fts")
+        # keep cached vectors; drop only vectors whose note is gone (done below)
+        self.index.conn.commit()
+
+        knowledge_dir = self.settings.vault_knowledge_dir
+        live_uids: set[str] = set()
+        if knowledge_dir.exists():
+            for note in knowledge_dir.rglob("*.md"):
+                obj = self.vault.read(note)
+                self.index.upsert(obj, note_hash=self.vault.note_hash(note))
+                live_uids.add(obj.uid)
+
+        # sweep vectors for notes that no longer exist
+        rows = self.index.conn.execute("SELECT uid FROM vectors").fetchall()
+        for row in rows:
+            if row["uid"] not in live_uids:
+                self.index.conn.execute("DELETE FROM vectors WHERE uid=?", (row["uid"],))
+        self.index.conn.commit()
+        return len(live_uids)
