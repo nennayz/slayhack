@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 import yaml
 from activity_logger import log_action, log_command
-from notifier import send_slack_alert
 from project_loader import list_project_slugs
 
 logging.basicConfig(
@@ -32,6 +31,18 @@ _KEY_TO_CONTENT_TYPE: dict[str, str] = {
 _BRIEF_KEYS = list(_KEY_TO_CONTENT_TYPE.keys())
 _LOCK_FILE = Path("/tmp/nayz_pipeline.lock")
 _SKIP_LOCK_ENV = "NAYZ_SKIP_PIPELINE_LOCK"
+
+
+def send_slack_alert(
+    failures: list[dict],
+    run_date: str,
+    total_jobs: int,
+    dry_run: bool = False,
+) -> None:
+    import importlib
+
+    notifier = importlib.import_module("notifier")
+    notifier.send_slack_alert(failures, run_date, total_jobs, dry_run=dry_run)
 
 
 def _today_name() -> str:
@@ -85,9 +96,10 @@ def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_typ
         logger.info("OK: project=%s key=%s", project_slug, key)
         return {"project": project_slug, "brief": key, "content_type": content_type, "failed": False}
     except subprocess.TimeoutExpired as exc:
-        if exc.process:
-            exc.process.kill()
-            exc.process.communicate()
+        proc = getattr(exc, "process", None)
+        if proc:
+            proc.kill()
+            proc.communicate()
         logger.error("TIMEOUT: project=%s key=%s", project_slug, key)
         return {"project": project_slug, "brief": key, "content_type": content_type,
                 "exit_code": None, "failed": True}
@@ -98,14 +110,56 @@ def _run_daily_scout(dry_run: bool = False) -> None:
         logger.debug("BRAVE_SEARCH_API_KEY not set — skipping daily scout")
         return
     try:
+        import importlib
+
         from config import Config
-        from scout_pipeline import run_scout_pipeline
-        from notifier import send_telegram_scout_report
+
+        scout_pipeline = importlib.import_module("scout_pipeline")
+        notifier = importlib.import_module("notifier")
         cfg = Config.from_env()
-        job = run_scout_pipeline(cfg, triggered_by="scheduler", dry_run=dry_run)
-        send_telegram_scout_report(cfg, job)
+        job = scout_pipeline.run_scout_pipeline(cfg, triggered_by="scheduler", dry_run=dry_run)
+        notifier.send_telegram_scout_report(cfg, job)
     except Exception as exc:
         logger.error("Daily scout failed: %s", exc)
+
+
+def _run_daily_trend_scan(
+    active_slugs: list[str],
+    dry_run: bool = False,
+    root: Path | None = None,
+) -> None:
+    try:
+        from config import Config
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+        from trend_scout_pipeline import run_trend_scout_pipeline
+
+        cfg = Config.from_env()
+        settings_root = root if root is not None else _ROOT
+        settings = KnowledgeSettings.from_env(settings_root)
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        embed_fn = openai_embed_fn(settings.embed_model, api_key)
+        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+        output_root = root / "output" if root is not None else None
+
+        for slug in active_slugs:
+            try:
+                if output_root is None:
+                    job = run_trend_scout_pipeline(slug, cfg, store, dry_run=dry_run)
+                else:
+                    job = run_trend_scout_pipeline(slug, cfg, store, dry_run=dry_run, output_root=output_root)
+                logger.info(
+                    "Trend scan done: page=%s found=%d stored=%d skipped=%d",
+                    slug,
+                    job.signals_found,
+                    job.signals_stored,
+                    job.signals_skipped,
+                )
+            except Exception as exc:
+                logger.error("Trend scan failed for %s: %s", slug, exc)
+    except Exception as exc:
+        logger.error("Daily trend scan setup failed: %s", exc)
 
 
 def run_scheduler(
@@ -136,6 +190,7 @@ def run_scheduler(
     should_run_scout = root is None if run_scout is None else run_scout
     if should_run_scout:
         _run_daily_scout(dry_run=dry_run)
+        _run_daily_trend_scan(active_slugs, dry_run=dry_run, root=root)
 
     # Collect all jobs to run today across all projects
     pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)
