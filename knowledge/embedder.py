@@ -10,13 +10,21 @@ class OfflineError(Exception):
 
 
 def openai_embed_fn(model: str, api_key: str) -> EmbedFn:
-    """Build a real embed function backed by the OpenAI API."""
+    """Build a real embed function backed by the OpenAI API.
+
+    The OpenAI client is constructed lazily on the first embedding call, so
+    importing or invoking commands that don't actually embed (e.g. `backfill
+    --dry-run`, `rebuild`) does not require OPENAI_API_KEY to be set.
+    """
     from openai import OpenAI
 
-    client = OpenAI(api_key=api_key)
+    client: list[OpenAI | None] = [None]
 
     def _embed(texts: Sequence[str]) -> list[list[float]]:
-        resp = client.embeddings.create(model=model, input=list(texts))
+        if client[0] is None:
+            client[0] = OpenAI(api_key=api_key)
+        assert client[0] is not None
+        resp = client[0].embeddings.create(model=model, input=list(texts))
         return [d.embedding for d in resp.data]
 
     return _embed
