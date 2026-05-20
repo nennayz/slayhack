@@ -8,20 +8,102 @@
   </div>
   <div class="inline-actions">
     <a class="button button-secondary" href="/aurora/planner">Planner</a>
+    <a class="button button-secondary" href="/aurora/publish-queue">Publish Queue</a>
     <a class="button button-secondary" href="/aurora/bubbles">Bubbles</a>
     <a class="button button-secondary" href="/aurora/monetize">Monetize</a>
     <a class="button" href="/freedom/daily-brief">Nami brief</a>
   </div>
 </section>
+
 <section class="panel spacious">
   <div class="section-heading"><p class="eyebrow">Focus</p><h2>{{ brief.focus }}</h2></div>
+  {% if brief.next_best_action %}
+  <article class="mission-card ops-card">
+    <p class="eyebrow">Next Best Action</p>
+    <h2>{{ brief.next_best_action.label }}</h2>
+    <p>{{ brief.next_best_action.reason }}</p>
+    <p><span class="badge badge-ops-ready">{{ brief.next_best_action.category }}</span> {{ brief.next_best_action.count }} waiting</p>
+    <a class="button" href="{{ brief.next_best_action.href }}">Open action</a>
+  </article>
+  {% endif %}
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Action Queue</p><h2>Captain decisions in order</h2></div>
   <div class="manual-posting-checklist-grid">
-    {% for item in brief.priorities %}<article><span class="badge badge-ops-ready">P{{ loop.index }}</span><strong>{{ item }}</strong></article>{% endfor %}
+    {% for action in brief.action_queue %}
+    <article>
+      <span class="badge badge-ops-ready">P{{ loop.index }}</span>
+      <strong>{{ action.label }}</strong>
+      <p>{{ action.reason }}</p>
+      <a href="{{ action.href }}">Open {{ action.category }}</a>
+    </article>
+    {% endfor %}
   </div>
 </section>
+
 <section class="daily-slate-grid">
-  <article class="panel"><p class="eyebrow">Decisions</p>{% for item in brief.decisions %}<p>{{ item }}</p>{% endfor %}</article>
-  <article class="panel"><p class="eyebrow">Safety</p>{% for item in brief.risks %}<p>{{ item }}</p>{% endfor %}</article>
-  <article class="panel"><p class="eyebrow">Counts</p><p>{{ plans|length }} plans · {{ tickets|length }} tickets · {{ publish_rows|length }} packages</p><p>{{ bubbles|length }} bubbles · {{ monetize|length }} monetize opportunities</p></article>
+  {% for section in brief.sections %}
+  <article class="panel">
+    <p class="eyebrow">{{ section.title }}</p>
+    <h3>{{ section.item_count }} waiting</h3>
+    {% if section.item_count %}
+      <p>{{ section.next_action }}</p>
+      {% if section.href %}<a href="{{ section.href }}">Open section</a>{% endif %}
+    {% else %}
+      <p>{{ section.empty_message }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+
+<section class="daily-slate-grid">
+  <article class="panel">
+    <p class="eyebrow">Draft plans waiting Captain review</p>
+    {% if draft_plans %}
+      {% for plan in draft_plans[:5] %}<p><strong>{{ plan.hook }}</strong><br>{{ plan.next_action }}</p>{% endfor %}
+    {% else %}
+      <p>No draft plans waiting review.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <p class="eyebrow">Today's slate</p>
+    {% if slates %}
+      {% for slate in slates[:3] %}<p><strong>{{ slate.page }}</strong> · {{ slate.status.value }}<br>{{ slate.daily_focus }}</p>{% endfor %}
+    {% else %}
+      <p>No slate exists for today yet.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <p class="eyebrow">Queued production tickets</p>
+    {% if queued_tickets %}
+      {% for ticket in queued_tickets[:5] %}<p><strong>{{ ticket.page }}</strong> · {{ ticket.ticket_type.value }}<br>{{ ticket.next_action }}</p>{% endfor %}
+    {% else %}
+      <p>No queued production tickets.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <p class="eyebrow">Publish queue pending review</p>
+    {% if pending_publish_rows %}
+      {% for row in pending_publish_rows[:5] %}<p><strong>{{ row.package_id }}</strong><br>{{ row.caption }}</p>{% endfor %}
+    {% else %}
+      <p>No pending publish packages.</p>
+    {% endif %}
+  </article>
+  <article class="panel">
+    <p class="eyebrow">Bubble drafts</p>
+    <p>{{ bubbles|length }} bubble draft(s). Manual review only.</p>
+  </article>
+  <article class="panel">
+    <p class="eyebrow">Monetize opportunities</p>
+    <p>{{ monetize|length }} opportunity item(s). No checkout or affiliate automation.</p>
+  </article>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Risks / locked gates</p><h2>Manual gates stay locked</h2></div>
+  <div class="manual-posting-checklist-grid">
+    {% for item in brief.risks %}<article><span class="badge badge-danger">Locked</span><strong>{{ item }}</strong></article>{% endfor %}
+  </div>
 </section>
 {% endblock %}

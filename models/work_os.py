@@ -167,10 +167,31 @@ class MonetizeOpportunity(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now)
 
 
+class DailyBriefAction(BaseModel):
+    label: str
+    reason: str
+    href: str
+    priority: int
+    category: str
+    count: int = 0
+
+
+class DailyBriefSection(BaseModel):
+    key: str
+    title: str
+    item_count: int = 0
+    next_action: str
+    href: str = ""
+    empty_message: str = "Nothing waiting here."
+
+
 class DailyWorkBrief(BaseModel):
     date: dt_date = Field(default_factory=dt_date.today)
     focus: str
     priorities: list[str] = Field(default_factory=list)
     decisions: list[str] = Field(default_factory=list)
     risks: list[str] = Field(default_factory=list)
+    next_best_action: DailyBriefAction | None = None
+    action_queue: list[DailyBriefAction] = Field(default_factory=list)
+    sections: list[DailyBriefSection] = Field(default_factory=list)
     personal_note: str = "Nami low-sensitivity brief only; no private finance/music data connected yet."
