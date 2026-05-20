@@ -410,31 +410,119 @@ def update_publish_review(root: Path, package_id: str, status: ReviewStatus, not
     return found
 
 
-def publish_queue_rows(root: Path) -> list[dict[str, object]]:
+def _list_field(data: dict[str, object], *keys: str) -> list[str]:
+    for key in keys:
+        value = data.get(key)
+        if isinstance(value, list):
+            return [str(item) for item in value if str(item)]
+        if isinstance(value, str) and value.strip():
+            return [item.strip() for item in value.split(",") if item.strip()]
+    return []
+
+
+def _string_field(data: dict[str, object], *keys: str, max_length: int | None = None) -> str:
+    for key in keys:
+        value = data.get(key)
+        if value is not None and str(value).strip():
+            text = str(value).strip()
+            return text[:max_length] if max_length is not None else text
+    return ""
+
+
+def _lineage_field(data: dict[str, object]) -> list[str]:
+    lineage: list[str] = []
+    for label, keys in {
+        "ticket": ("ticket_id", "production_ticket_id"),
+        "job": ("job_id",),
+        "plan": ("plan_id", "source_plan_id"),
+        "slate": ("slate_id", "content_slate_id"),
+        "package": ("package_uid", "package_id"),
+    }.items():
+        value = _string_field(data, *keys)
+        if value:
+            lineage.append(f"{label}: {value}")
+    return lineage
+
+
+def publish_queue_rows(root: Path, status_filter: str | None = None) -> list[dict[str, object]]:
     queue = root / "output" / "publish_queue.jsonl"
     reviews = {item.package_id: item for item in load_publish_reviews(root)}
     rows: list[dict[str, object]] = []
+    normalized_filter = status_filter if status_filter in {status.value for status in ReviewStatus} else None
     if queue.exists():
         for idx, line in enumerate(queue.read_text().splitlines(), start=1):
             if not line.strip():
                 continue
             try:
-                data = json.loads(line)
+                parsed = json.loads(line)
+                data = parsed if isinstance(parsed, dict) else {"raw": parsed}
             except json.JSONDecodeError:
                 data = {"raw": line}
-            package_id = str(data.get("package_uid") or data.get("package_id") or data.get("job_id") or f"queue-{idx}")
+            package_id = _string_field(data, "package_uid", "package_id", "job_id") or f"queue-{idx}"
             review = reviews.get(package_id)
+            status = review.status.value if review else ReviewStatus.PENDING.value
+            if normalized_filter is not None and status != normalized_filter:
+                continue
+            platforms = _list_field(data, "platforms", "target_platforms", "platform")
+            hashtags = _list_field(data, "hashtags")
+            asset_path = _string_field(data, "asset_path", "asset", "video_path", "image_path")
+            caption = _string_field(data, "caption", "body", "post_text", max_length=600)
             rows.append({
                 "package_id": package_id,
-                "job_id": str(data.get("job_id") or ""),
-                "platforms": data.get("platforms") or data.get("target_platforms") or [],
-                "caption": str(data.get("caption") or data.get("body") or "")[:600],
-                "hashtags": data.get("hashtags") or [],
-                "asset_path": str(data.get("asset_path") or ""),
-                "status": review.status.value if review else ReviewStatus.PENDING.value,
+                "job_id": _string_field(data, "job_id"),
+                "ticket_id": _string_field(data, "ticket_id", "production_ticket_id"),
+                "plan_id": _string_field(data, "plan_id", "source_plan_id"),
+                "slate_id": _string_field(data, "slate_id", "content_slate_id"),
+                "platforms": platforms,
+                "caption": caption,
+                "hashtags": hashtags,
+                "asset_path": asset_path,
+                "status": status,
                 "review_note": review.review_note if review else "",
+                "lineage": _lineage_field(data),
+                "manual_checklist": [
+                    "Confirm caption, hook, CTA, and hashtags match the page voice.",
+                    "Confirm asset path exists or attach the final asset manually.",
+                    "Confirm platform/account selection before posting.",
+                    "Post manually only after Captain review; no live API is called here.",
+                    "Record the posted URL or learning note after manual post.",
+                ],
             })
     return rows
+
+
+def export_manual_publish_checklist(root: Path, status_filter: str | None = ReviewStatus.PENDING.value) -> str:
+    rows = publish_queue_rows(root, status_filter=status_filter)
+    lines = [
+        "# Manual Publish Checklist",
+        "",
+        "Live publish APIs remain locked. Use this as a local handoff checklist only.",
+        "",
+    ]
+    if not rows:
+        lines.append("No publish packages match this filter.")
+        return "\n".join(lines) + "\n"
+    for row in rows:
+        platforms = ", ".join(row["platforms"]) if isinstance(row["platforms"], list) else ""
+        hashtags = " ".join(row["hashtags"]) if isinstance(row["hashtags"], list) else ""
+        lineage = row["lineage"] if isinstance(row["lineage"], list) else []
+        checklist = row["manual_checklist"] if isinstance(row["manual_checklist"], list) else []
+        lines.extend([
+            f"## {row['package_id']}",
+            f"Status: {row['status']}",
+            f"Platforms: {platforms or 'manual review'}",
+            f"Asset: {row['asset_path'] or 'not registered'}",
+            "",
+            "Caption preview:",
+            str(row["caption"] or "No caption preview available."),
+            "",
+            f"Hashtags: {hashtags or 'none'}",
+            f"Lineage: {', '.join(lineage) if lineage else 'not registered'}",
+            "",
+        ])
+        lines.extend(f"- [ ] {item}" for item in checklist)
+        lines.append("")
+    return "\n".join(lines)
 
 
 def generate_bubbles(root: Path) -> list[BubbleMessage]:

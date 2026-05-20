@@ -4,17 +4,20 @@ from knowledge.embedder import Embedder
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.store import KnowledgeStore
-from models.work_os import ContentPlan, ContentSlate, PlanStatus, ProductionTicket, SlateStatus, TicketStatus
+from models.work_os import ContentPlan, ContentSlate, PlanStatus, ProductionTicket, ReviewStatus, SlateStatus, TicketStatus
 from work_os_store import (
-    create_ticket_for_plan,
     build_daily_work_brief,
+    create_ticket_for_plan,
     create_today_slate,
+    export_manual_publish_checklist,
     load_plans,
     load_slates,
     load_tickets,
+    publish_queue_rows,
     save_plans,
     sync_approved_ideas_into_planner,
     update_plan_status,
+    update_publish_review,
     update_slate_status,
 )
 
@@ -212,3 +215,48 @@ def test_daily_brief_empty_state_does_not_seed_work_objects(tmp_path):
     assert load_slates(tmp_path) == []
     assert load_tickets(tmp_path) == []
     assert any("Live auto-posting remains locked" in risk for risk in brief.risks)
+
+
+def test_publish_queue_rows_include_filters_lineage_and_manual_checklist(tmp_path):
+    queue = tmp_path / "output" / "publish_queue.jsonl"
+    queue.parent.mkdir(parents=True)
+    queue.write_text(
+        '{"package_uid": "pkg-pending", "job_id": "job-1", "ticket_id": "ticket-1", '
+        '"plan_id": "plan-1", "platforms": ["facebook", "instagram"], '
+        '"caption": "caption one", "hashtags": ["#one"], "asset_path": "output/asset-one.mp4"}\n'
+        '{"package_uid": "pkg-approved", "job_id": "job-2", "platform": "facebook", '
+        '"post_text": "caption two", "asset": "output/asset-two.png"}\n'
+    )
+    update_publish_review(tmp_path, "pkg-approved", ReviewStatus.APPROVED, "safe manual handoff")
+
+    all_rows = publish_queue_rows(tmp_path)
+    pending_rows = publish_queue_rows(tmp_path, status_filter="pending")
+    approved_rows = publish_queue_rows(tmp_path, status_filter="approved")
+
+    assert [row["package_id"] for row in all_rows] == ["pkg-pending", "pkg-approved"]
+    assert [row["package_id"] for row in pending_rows] == ["pkg-pending"]
+    assert [row["package_id"] for row in approved_rows] == ["pkg-approved"]
+    assert pending_rows[0]["platforms"] == ["facebook", "instagram"]
+    assert "ticket: ticket-1" in pending_rows[0]["lineage"]
+    assert "plan: plan-1" in pending_rows[0]["lineage"]
+    assert any("no live API" in item for item in pending_rows[0]["manual_checklist"])
+    assert approved_rows[0]["review_note"] == "safe manual handoff"
+
+
+def test_export_manual_publish_checklist_is_local_handoff_only(tmp_path):
+    queue = tmp_path / "output" / "publish_queue.jsonl"
+    queue.parent.mkdir(parents=True)
+    queue.write_text(
+        '{"package_uid": "pkg-checklist", "job_id": "job-check", '
+        '"caption": "manual caption", "hashtags": ["#manual"], "asset_path": "output/manual.mp4"}\n'
+    )
+
+    checklist = export_manual_publish_checklist(tmp_path)
+
+    assert "# Manual Publish Checklist" in checklist
+    assert "Live publish APIs remain locked" in checklist
+    assert "pkg-checklist" in checklist
+    assert "manual caption" in checklist
+    assert "#manual" in checklist
+    assert "job: job-check" in checklist
+    assert "- [ ] Post manually only after Captain review" in checklist

@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Form
+from fastapi import APIRouter, Depends, Form, Query
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from models.work_os import PlanStatus, ReviewStatus, SlateStatus
 from routes.deps import _root, templates, verify_auth
 from work_os_store import (
     build_daily_work_brief,
     create_ticket_for_plan,
+    create_today_slate,
+    export_manual_publish_checklist,
     generate_bubbles,
     load_bubbles,
     load_monetize,
@@ -16,7 +18,6 @@ from work_os_store import (
     load_slates,
     load_tickets,
     publish_queue_rows,
-    create_today_slate,
     seed_content_planner,
     seed_monetize,
     sync_approved_ideas_into_planner,
@@ -145,13 +146,36 @@ def work_os_create_ticket(
 
 
 @router.get("/aurora/publish-queue", response_class=HTMLResponse)
-def work_os_publish_queue(request: Request, _: str = Depends(verify_auth)) -> HTMLResponse:
-    rows = publish_queue_rows(_root(request))
+def work_os_publish_queue(
+    request: Request,
+    status: str = Query("all", pattern="^(all|pending|approved|rejected|posted_manually)$"),
+    _: str = Depends(verify_auth),
+) -> HTMLResponse:
+    status_filter = None if status == "all" else status
+    rows = publish_queue_rows(_root(request), status_filter=status_filter)
+    all_rows = publish_queue_rows(_root(request))
     return templates.TemplateResponse(
         request,
         "work_os_publish_queue.html",
-        {"request": request, "rows": rows, "pending_count": sum(1 for row in rows if row["status"] == "pending")},
+        {
+            "request": request,
+            "rows": rows,
+            "all_count": len(all_rows),
+            "pending_count": sum(1 for row in all_rows if row["status"] == "pending"),
+            "approved_count": sum(1 for row in all_rows if row["status"] == "approved"),
+            "rejected_count": sum(1 for row in all_rows if row["status"] == "rejected"),
+            "status_filter": status,
+        },
     )
+
+
+@router.get("/aurora/publish-queue/checklist", response_class=PlainTextResponse)
+def work_os_publish_queue_checklist(
+    request: Request,
+    status: str = Query("pending", pattern="^(pending|approved|rejected|posted_manually)$"),
+    _: str = Depends(verify_auth),
+) -> PlainTextResponse:
+    return PlainTextResponse(export_manual_publish_checklist(_root(request), status_filter=status))
 
 
 @router.post("/aurora/publish-queue/review")

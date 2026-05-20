@@ -87,6 +87,8 @@ def test_publish_queue_review_is_local_only(client, tmp_path):
     queue.write_text(json.dumps({
         "package_uid": "pkg-1",
         "job_id": "job-1",
+        "ticket_id": "ticket-1",
+        "plan_id": "plan-1",
         "platforms": ["facebook"],
         "caption": "manual caption only",
         "hashtags": ["#test"],
@@ -97,8 +99,17 @@ def test_publish_queue_review_is_local_only(client, tmp_path):
     assert page.status_code == 200
     assert "Captain Manual Publish Gate" in page.text
     assert "manual caption only" in page.text
+    assert "Lineage: ticket: ticket-1" in page.text
+    assert "Confirm caption, hook, CTA, and hashtags" in page.text
+    assert "Export pending checklist" in page.text
     assert "Live publish" in page.text
     assert "Locked" in page.text
+
+    checklist = client.get("/aurora/publish-queue/checklist?status=pending", headers=_auth())
+    assert checklist.status_code == 200
+    assert "# Manual Publish Checklist" in checklist.text
+    assert "pkg-1" in checklist.text
+    assert "Live publish APIs remain locked" in checklist.text
 
     reviewed = client.post(
         "/aurora/publish-queue/review",
@@ -109,3 +120,10 @@ def test_publish_queue_review_is_local_only(client, tmp_path):
     assert reviewed.status_code == 200
     assert "approved" in reviewed.text
     assert "safe manual handoff" in reviewed.text
+
+    pending = client.get("/aurora/publish-queue?status=pending", headers=_auth())
+    assert pending.status_code == 200
+    assert "No queued social packages match this filter" in pending.text
+    approved = client.get("/aurora/publish-queue?status=approved", headers=_auth())
+    assert approved.status_code == 200
+    assert "manual caption only" in approved.text
