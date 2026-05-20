@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from knowledge.object import ContentObject
 from models.content_job import (
     BrandProfile,
     ContentJob,
@@ -17,15 +18,15 @@ from social_packaging import run_social_packaging
 
 class FakeStore:
     def __init__(self) -> None:
-        self.added = []
-        self.statuses = []
+        self.added: list[tuple[ContentObject, bool]] = []
+        self.statuses: list[tuple[str, str]] = []
 
-    def add(self, obj, embed=True):
+    def add(self, obj: ContentObject, embed: bool = True) -> ContentObject:
         obj.uid = obj.uid or f"uid-{obj.kind}-{len(self.added)}"
         self.added.append((obj, embed))
         return obj
 
-    def set_status(self, uid: str, status: str):
+    def set_status(self, uid: str, status: str) -> None:
         self.statuses.append((uid, status))
 
 
