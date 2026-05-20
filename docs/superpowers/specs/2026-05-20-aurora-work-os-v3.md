@@ -131,13 +131,13 @@ Fields:
 
 ## Storage strategy
 
-v1 uses local offline files under:
+v1 starts with local offline files under:
 
 ```text
 output/work_os/
 ```
 
-This keeps v3 safe and inspectable while the Knowledge Store integration matures. Later, these objects can be mirrored into Knowledge Store kinds.
+This keeps v3 safe and inspectable while the planner matures. Content Planner v1 now reads approved Knowledge Store ideas (`kind="idea"`, `status="approved"`) into idempotent `ContentPlan` drafts keyed by `source_idea_uid`, then mirrors newly created plan drafts back into the Knowledge Store as `kind="content_plan"` with the source idea in `parent_uids`. The operational review/queue state remains local JSON for v1 so Captain approval and production-ticket handoff stay reversible and easy to inspect.
 
 Recommended long-term storage:
 
@@ -163,11 +163,19 @@ Production must stop pulling ideas directly once ticketed planning is available.
 
 ```text
 ContentPlan approved
-→ ContentSlate approved
+→ ContentSlate draft/approved
 → ProductionTicket queued
 → production loop consumes ticket
 → artifact/package
 ```
+
+Content Planner v1 supports this path with local review actions:
+
+- sync approved KS ideas into draft plans,
+- approve/reject plans,
+- create today's slate from approved/ticketed plans,
+- approve slate,
+- create tickets only from approved/ticketed plans.
 
 ## Locked boundaries
 

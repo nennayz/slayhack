@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from models.work_os import ReviewStatus
+from models.work_os import PlanStatus, ReviewStatus, SlateStatus
 from routes.deps import _root, templates, verify_auth
 from work_os_store import (
     build_daily_work_brief,
@@ -16,18 +16,47 @@ from work_os_store import (
     load_slates,
     load_tickets,
     publish_queue_rows,
+    create_today_slate,
     seed_content_planner,
     seed_monetize,
+    sync_approved_ideas_into_planner,
+    update_plan_status,
     update_publish_review,
+    update_slate_status,
 )
 
 router = APIRouter()
 
 
+def _knowledge_store(root):
+    try:
+        import os
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+
+        settings = KnowledgeSettings.from_env(root)
+        embed_fn = openai_embed_fn(settings.embed_model, os.getenv("OPENAI_API_KEY", ""))
+        return KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+    except Exception:  # noqa: BLE001 - dashboard planner must still render without KS availability
+        return None
+
+
 @router.get("/aurora/planner", response_class=HTMLResponse)
 def work_os_planner(request: Request, _: str = Depends(verify_auth)) -> HTMLResponse:
     root = _root(request)
-    plans, slates, tickets = seed_content_planner(root)
+    store = _knowledge_store(root)
+    synced_count = 0
+    if store is not None:
+        plans, synced_count = sync_approved_ideas_into_planner(root, store)
+        slates = load_slates(root)
+        tickets = load_tickets(root)
+    else:
+        plans = load_plans(root)
+        slates = load_slates(root)
+        tickets = load_tickets(root)
+    if not plans and not slates and not tickets:
+        plans, slates, tickets = seed_content_planner(root)
     return templates.TemplateResponse(
         request,
         "work_os_planner.html",
@@ -37,6 +66,7 @@ def work_os_planner(request: Request, _: str = Depends(verify_auth)) -> HTMLResp
             "slates": slates,
             "tickets": tickets,
             "queued_tickets": [item for item in tickets if item.status.value == "queued"],
+            "synced_count": synced_count,
         },
     )
 
@@ -44,6 +74,49 @@ def work_os_planner(request: Request, _: str = Depends(verify_auth)) -> HTMLResp
 @router.post("/aurora/planner/seed")
 def work_os_planner_seed(request: Request, _: str = Depends(verify_auth)) -> RedirectResponse:
     seed_content_planner(_root(request))
+    return RedirectResponse("/aurora/planner", status_code=303)
+
+
+@router.post("/aurora/planner/sync")
+def work_os_planner_sync(request: Request, _: str = Depends(verify_auth)) -> RedirectResponse:
+    root = _root(request)
+    store = _knowledge_store(root)
+    if store is not None:
+        sync_approved_ideas_into_planner(root, store)
+    return RedirectResponse("/aurora/planner", status_code=303)
+
+
+@router.post("/aurora/planner/review")
+def work_os_plan_review(
+    request: Request,
+    plan_id: str = Form(...),
+    decision: str = Form(...),
+    _: str = Depends(verify_auth),
+) -> RedirectResponse:
+    status = PlanStatus.APPROVED if decision == "approve" else PlanStatus.REJECTED
+    update_plan_status(_root(request), plan_id, status)
+    return RedirectResponse("/aurora/planner", status_code=303)
+
+
+@router.post("/aurora/planner/slate")
+def work_os_create_slate(
+    request: Request,
+    page: str = Form(""),
+    _: str = Depends(verify_auth),
+) -> RedirectResponse:
+    create_today_slate(_root(request), page or None)
+    return RedirectResponse("/aurora/planner", status_code=303)
+
+
+@router.post("/aurora/planner/slate/review")
+def work_os_slate_review(
+    request: Request,
+    slate_id: str = Form(...),
+    decision: str = Form(...),
+    _: str = Depends(verify_auth),
+) -> RedirectResponse:
+    status = SlateStatus.APPROVED if decision == "approve" else SlateStatus.DRAFT
+    update_slate_status(_root(request), slate_id, status)
     return RedirectResponse("/aurora/planner", status_code=303)
 
 
