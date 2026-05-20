@@ -111,6 +111,7 @@ def _draft_to_content_object(
         page=page_slug,
         kind="idea",
         title=draft.title,
+        summary=draft.hook,
         body=body,
         dedup_text=f"{draft.title}|{draft.hook}|{page_slug}|{date_str}",
         tags=[draft.content_type, draft.angle, page_slug],

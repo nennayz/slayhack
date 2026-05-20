@@ -62,7 +62,8 @@ class KnowledgeStore:
         return results
 
     def recent(self, page: str | None = None, kind: str | None = None,
-               status: str | None = None, limit: int = 20) -> list[ContentObject]:
+               status: str | None = None, limit: int = 20,
+               order: str = "desc") -> list[ContentObject]:
         sql = "SELECT uid FROM notes"
         clauses: list[str] = []
         params: list[str] = []
@@ -77,7 +78,8 @@ class KnowledgeStore:
             params.append(status)
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
-        sql += f" ORDER BY created_at DESC, uid DESC LIMIT {int(limit)}"
+        direction = "ASC" if order.lower() == "asc" else "DESC"
+        sql += f" ORDER BY created_at {direction}, uid {direction} LIMIT {int(limit)}"
         uids = [r["uid"] for r in self.index.conn.execute(sql, params)]
         return [o for o in (self.get(u) for u in uids) if o is not None]
 

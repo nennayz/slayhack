@@ -76,3 +76,11 @@ def test_recent_no_status_filter_returns_all(store):
     statuses = {o.status for o in results}
     assert "new" in statuses
     assert "approved" in statuses
+
+
+def test_recent_order_asc_returns_oldest_first(store):
+    obj1 = store.add(_make_idea("nayzfreedom_fleet", "Idea First", 10), embed=False)
+    obj2 = store.add(_make_idea("nayzfreedom_fleet", "Idea Second", 11), embed=False)
+    results = store.recent(kind="idea", order="asc")
+    assert results[0].uid == obj1.uid
+    assert results[1].uid == obj2.uid
