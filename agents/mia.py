@@ -1,9 +1,10 @@
+# DEPRECATED (SP-2): Mia Trend is retired. Daily trend research is now handled by
+# TrendScoutAgent (agents/trend_scout.py) + KnowledgeStore. Behavioural removal
+# and orchestrator unwiring happen in SP-3 Production Loop.
 from __future__ import annotations
 from datetime import datetime
-import json
 import requests
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
-from config import Config
 from models.content_job import ContentJob
 
 _DRY_RUN_DATA = {

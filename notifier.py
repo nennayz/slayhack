@@ -204,3 +204,16 @@ def send_telegram_scout_report(config, job) -> None:
         )
     except Exception as exc:
         logger.warning("send_telegram_scout_report failed: %s", exc)
+
+
+def send_telegram_idea_digest(page_slug: str, idea_uids: list[str]) -> None:
+    """Send a Telegram message with the day's idea digest.
+
+    Stub in SP-2 — sends a text summary only. Inline button callbacks for
+    approve/reject from Telegram are added in SP-5 Daily Ops.
+    """
+    logger.info(
+        "send_telegram_idea_digest: page=%s ideas=%d (stub — Telegram push not yet wired)",
+        page_slug,
+        len(idea_uids),
+    )
