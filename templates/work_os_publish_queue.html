@@ -9,12 +9,25 @@
   <div class="inline-actions">
     <a class="button button-secondary" href="/aurora/planner">Planner</a>
     <a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a>
+    <a class="button" href="/aurora/publish-queue/checklist?status=pending">Export pending checklist</a>
   </div>
 </section>
 <section class="stat-grid wide">
-  <div class="stat-card"><span>Packages</span><strong>{{ rows|length }}</strong></div>
+  <div class="stat-card"><span>Packages</span><strong>{{ all_count }}</strong></div>
   <div class="stat-card"><span>Pending review</span><strong>{{ pending_count }}</strong></div>
+  <div class="stat-card"><span>Approved local</span><strong>{{ approved_count }}</strong></div>
+  <div class="stat-card"><span>Rejected local</span><strong>{{ rejected_count }}</strong></div>
   <div class="stat-card"><span>Live publish</span><strong>Locked</strong></div>
+</section>
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Filters</p><h2>Review status</h2></div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/publish-queue?status=all">All</a>
+    <a class="button button-secondary" href="/aurora/publish-queue?status=pending">Pending</a>
+    <a class="button button-secondary" href="/aurora/publish-queue?status=approved">Approved</a>
+    <a class="button button-secondary" href="/aurora/publish-queue?status=rejected">Rejected</a>
+  </div>
+  <p class="muted">Current filter: {{ status_filter }} · Manual export keeps posting offline and Captain-controlled.</p>
 </section>
 <section class="panel spacious">
   <div class="section-heading"><p class="eyebrow">Local handoff queue</p><h2>Manual review</h2></div>
@@ -23,10 +36,14 @@
     <article class="slate-ticket">
       <span class="badge badge-ops-{{ 'ready' if row.status == 'approved' else 'failed' if row.status == 'rejected' else 'missing' }}">{{ row.status }}</span>
       <strong>{{ row.package_id }}{% if row.job_id %} · {{ row.job_id }}{% endif %}</strong>
-      <small>Platforms: {{ row.platforms|join(", ") }} · Asset: {{ row.asset_path or "not registered" }}</small>
+      <small>Platforms: {{ row.platforms|join(", ") or "manual review" }} · Asset: {{ row.asset_path or "not registered" }}</small>
       <p>{{ row.caption or "No caption preview available." }}</p>
       <small>{{ row.hashtags|join(" ") }}</small>
+      {% if row.lineage %}<small>Lineage: {{ row.lineage|join(" · ") }}</small>{% endif %}
       {% if row.review_note %}<small>Review note: {{ row.review_note }}</small>{% endif %}
+      <div class="manual-posting-checklist-grid">
+        {% for item in row.manual_checklist %}<article><span class="badge badge-ops-ready">Manual</span><strong>{{ item }}</strong></article>{% endfor %}
+      </div>
       <form class="inline-form compact-action-form" method="post" action="/aurora/publish-queue/review">
         <input type="hidden" name="package_id" value="{{ row.package_id }}">
         <input name="review_note" placeholder="optional review note">
@@ -35,7 +52,7 @@
       </form>
     </article>
     {% else %}
-    <p class="muted">No queued social packages found at output/publish_queue.jsonl yet.</p>
+    <p class="muted">No queued social packages match this filter. Source file: output/publish_queue.jsonl.</p>
     {% endfor %}
   </div>
 </section>
