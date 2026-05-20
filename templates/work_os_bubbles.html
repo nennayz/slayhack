@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-map">
+  <div>
+    <p class="eyebrow">Bubble Planner</p>
+    <h1>Daily Bubble / Status Drafts</h1>
+    <p class="hero-copy">Proactive page presence matched to today's slate. Manual posting only.</p>
+  </div>
+  <div class="inline-actions">
+    <form method="post" action="/aurora/bubbles/generate"><button type="submit">Generate bubbles</button></form>
+    <a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a>
+  </div>
+</section>
+<section class="panel spacious">
+  <div class="slate-ticket-list">
+    {% for bubble in bubbles %}
+    <article class="slate-ticket">
+      <span class="badge badge-ops-missing">{{ bubble.status.value }}</span>
+      <strong>{{ bubble.page }} · {{ bubble.date }}</strong>
+      <p>{{ bubble.bubble_text }}</p>
+      <small>{{ bubble.story_prompt }}</small>
+      <small>{{ bubble.trend_context }}</small>
+    </article>
+    {% else %}<p class="muted">No bubble drafts yet.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

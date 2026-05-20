@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-harbor">
+  <div>
+    <p class="eyebrow">Publish Queue Review</p>
+    <h1>Captain Manual Publish Gate</h1>
+    <p class="hero-copy">Review social packages locally. This page never calls live publishing APIs.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/planner">Planner</a>
+    <a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a>
+  </div>
+</section>
+<section class="stat-grid wide">
+  <div class="stat-card"><span>Packages</span><strong>{{ rows|length }}</strong></div>
+  <div class="stat-card"><span>Pending review</span><strong>{{ pending_count }}</strong></div>
+  <div class="stat-card"><span>Live publish</span><strong>Locked</strong></div>
+</section>
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Local handoff queue</p><h2>Manual review</h2></div>
+  <div class="slate-ticket-list">
+    {% for row in rows %}
+    <article class="slate-ticket">
+      <span class="badge badge-ops-{{ 'ready' if row.status == 'approved' else 'failed' if row.status == 'rejected' else 'missing' }}">{{ row.status }}</span>
+      <strong>{{ row.package_id }}{% if row.job_id %} · {{ row.job_id }}{% endif %}</strong>
+      <small>Platforms: {{ row.platforms|join(", ") }} · Asset: {{ row.asset_path or "not registered" }}</small>
+      <p>{{ row.caption or "No caption preview available." }}</p>
+      <small>{{ row.hashtags|join(" ") }}</small>
+      {% if row.review_note %}<small>Review note: {{ row.review_note }}</small>{% endif %}
+      <form class="inline-form compact-action-form" method="post" action="/aurora/publish-queue/review">
+        <input type="hidden" name="package_id" value="{{ row.package_id }}">
+        <input name="review_note" placeholder="optional review note">
+        <button type="submit" name="decision" value="approve">Approve local</button>
+        <button type="submit" name="decision" value="reject">Reject local</button>
+      </form>
+    </article>
+    {% else %}
+    <p class="muted">No queued social packages found at output/publish_queue.jsonl yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

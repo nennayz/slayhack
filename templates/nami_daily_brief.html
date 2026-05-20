@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-map">
+  <div>
+    <p class="eyebrow">Nami Daily Brief</p>
+    <h1>The Freedom — daily secretary v1</h1>
+    <p class="hero-copy">Low-sensitivity personal brief only. Investment, private finance, and music catalog data remain disconnected.</p>
+  </div>
+  <div class="inline-actions"><a class="button button-secondary" href="/aurora/work-brief">Work brief</a></div>
+</section>
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Today</p><h2>{{ brief.focus }}</h2></div>
+  <p>{{ brief.personal_note }}</p>
+  <h3>Top priorities</h3>
+  {% for item in brief.priorities %}<p>• {{ item }}</p>{% endfor %}
+  <h3>Captain decisions</h3>
+  {% for item in brief.decisions %}<p>• {{ item }}</p>{% endfor %}
+</section>
+{% endblock %}

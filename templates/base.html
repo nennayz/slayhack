@@ -23,17 +23,22 @@
       <div class="nav-group-links">
         <a class="{{ 'active' if request.url.path == '/' else '' }}" href="/">Deck</a>
         <a class="{{ 'active' if request.url.path == '/aurora' else '' }}" href="/aurora">Aurora</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/work-brief' else '' }}" href="/aurora/work-brief">Work Brief</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/planner' else '' }}" href="/aurora/planner">Planner</a>
         <a class="{{ 'active' if request.url.path == '/aurora/ebooks' else '' }}" href="/aurora/ebooks">E-books</a>
         <a class="{{ 'active' if request.url.path == '/ops' else '' }}" href="/ops">Ops</a>
       </div>
     </div>
     <details class="nav-group nav-dropdown">
-      <summary class="{{ 'active' if request.url.path in ['/aurora/daily-slate', '/aurora/approval-queue', '/aurora/generation', '/aurora/manual-posting', '/aurora/learning', '/aurora/slayobjects/live', '/project-admin', '/readiness', '/freedom', '/lyra'] or request.url.path.startswith('/aurora/crew') or request.url.path.startswith('/ideas') or request.url.path.startswith('/scout') else '' }}">More</summary>
+      <summary class="{{ 'active' if request.url.path in ['/aurora/daily-slate', '/aurora/approval-queue', '/aurora/generation', '/aurora/manual-posting', '/aurora/publish-queue', '/aurora/bubbles', '/aurora/monetize', '/aurora/learning', '/aurora/slayobjects/live', '/project-admin', '/readiness', '/freedom', '/freedom/daily-brief', '/lyra'] or request.url.path.startswith('/aurora/crew') or request.url.path.startswith('/ideas') or request.url.path.startswith('/scout') else '' }}">More</summary>
       <div class="nav-group-links">
         <a class="{{ 'active' if request.url.path == '/aurora/daily-slate' else '' }}" href="/aurora/daily-slate">Slate</a>
         <a class="{{ 'active' if request.url.path == '/aurora/approval-queue' else '' }}" href="/aurora/approval-queue">Approvals</a>
         <a class="{{ 'active' if request.url.path == '/aurora/generation' else '' }}" href="/aurora/generation">Generation</a>
         <a class="{{ 'active' if request.url.path == '/aurora/manual-posting' else '' }}" href="/aurora/manual-posting">Manual</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/publish-queue' else '' }}" href="/aurora/publish-queue">Publish Queue</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/bubbles' else '' }}" href="/aurora/bubbles">Bubbles</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/monetize' else '' }}" href="/aurora/monetize">Monetize</a>
         <a class="{{ 'active' if request.url.path == '/aurora/slayobjects/live' else '' }}" href="/aurora/slayobjects/live">SlayObjects</a>
         <a class="{{ 'active' if request.url.path == '/aurora/learning' else '' }}" href="/aurora/learning">Learning</a>
         <a class="{{ 'active' if request.url.path.startswith('/aurora/crew') else '' }}" href="/aurora/crew">Crew</a>
@@ -42,6 +47,7 @@
         <a class="{{ 'active' if request.url.path == '/project-admin' else '' }}" href="/project-admin">Projects</a>
         <a class="{{ 'active' if request.url.path == '/readiness' else '' }}" href="/readiness">Readiness</a>
         <a class="{{ 'active' if request.url.path == '/freedom' else '' }}" href="/freedom">Freedom</a>
+        <a class="{{ 'active' if request.url.path == '/freedom/daily-brief' else '' }}" href="/freedom/daily-brief">Nami Brief</a>
         <a class="{{ 'active' if request.url.path == '/lyra' else '' }}" href="/lyra">Lyra</a>
       </div>
     </details>
