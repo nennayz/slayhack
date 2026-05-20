@@ -42,22 +42,18 @@ def test_orchestrator_dry_run_completes(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
 
-    # Robin calls agents in sequence then end_turn
+    # SP-3: Robin starts from run_bella (no run_mia/run_zoe/idea_selection)
     tool_sequence = [
-        [_make_tool_use_block("run_mia", "t1")],
-        [_make_tool_use_block("run_zoe", "t2")],
+        [_make_tool_use_block("run_bella", "t1")],
+        [_make_tool_use_block("run_lila", "t2")],
         [_make_tool_use_block("request_checkpoint", "t3",
-            {"stage": "idea_selection", "summary": "Pick an idea", "options": ["1. Lip Hack"]})],
-        [_make_tool_use_block("run_bella", "t4")],
-        [_make_tool_use_block("run_lila", "t5")],
-        [_make_tool_use_block("request_checkpoint", "t6",
-            {"stage": "content_review", "summary": "Review script"})],
-        [_make_tool_use_block("run_nora", "t7")],
-        [_make_tool_use_block("request_checkpoint", "t8",
+            {"stage": "content_review", "summary": "Review content"})],
+        [_make_tool_use_block("run_nora", "t4")],
+        [_make_tool_use_block("request_checkpoint", "t5",
             {"stage": "qa_review", "summary": "QA passed"})],
-        [_make_tool_use_block("run_roxy", "t9")],
-        [_make_tool_use_block("run_emma", "t10")],
-        [_make_tool_use_block("request_checkpoint", "t11",
+        [_make_tool_use_block("run_roxy", "t6")],
+        [_make_tool_use_block("run_emma", "t7")],
+        [_make_tool_use_block("request_checkpoint", "t8",
             {"stage": "final_approval", "summary": "Ready to publish?"})],
     ]
 
@@ -70,17 +66,15 @@ def test_orchestrator_dry_run_completes(mocker, tmp_path, monkeypatch):
         return _make_end_turn_response()
 
     mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.side_effect = mock_create
-    mocker.patch("builtins.input", return_value="1")
 
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
-    result = orch.run(job)
+    job.content_type = ContentType.VIDEO   # SP-3: set by idea_to_content_job before Orchestrator.run
+    result = orch.run(job, unattended=True)
 
     assert result.status == JobStatus.COMPLETED
-    assert result.trend_data is not None
-    assert result.ideas is not None
     assert result.bella_output is not None
-    assert len(result.checkpoint_log) == 4
+    assert len(result.checkpoint_log) == 3   # content_review, qa_review, final_approval
 
 
 def test_orchestrator_sets_content_type_at_idea_selection(mocker, tmp_path, monkeypatch):

@@ -6,8 +6,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from openai import OpenAI
 from activity_logger import log_action
-from agents.mia import MiaAgent
-from agents.zoe import ZoeAgent
 from agents.bella import BellaAgent
 from agents.lila import LilaAgent
 from agents.nora import NoraAgent
@@ -33,22 +31,20 @@ You act directly on behalf of the owner. Every decision you make optimizes for m
 
 Before recommending strategy, review past job performance data provided in context. If no performance data exists, proceed without it.
 
-You coordinate Freedom Architects (Mia, Zoe, Bella, Lila, Nora, Roxy, Emma) through {pm_name}, the PM for {page_name}.
+The brief and content type have already been selected by the Captain from the
+Idea Bank — do NOT call run_mia or run_zoe. Start directly with run_bella.
 
 ## Team workflow (follow this order):
-1. run_mia — research trends
-2. run_zoe — generate ideas (each idea has a content_type)
-3. request_checkpoint (stage: "idea_selection") — show ideas, wait for user to pick one
-4. run_bella — write content for the selected idea based on its content_type
-5. After Bella completes, check job.content_type:
-   - video, image, or infographic → run_lila (visual direction)
-   - article → skip run_lila entirely, go directly to step 6
-6. request_checkpoint (stage: "content_review") — show content and visual (if applicable) for approval
-7. run_nora — QA review. If QA fails and retry count < max_retries, re-run the relevant agent.
-8. request_checkpoint (stage: "qa_review") — show QA result
-9. run_roxy and run_emma — call BOTH in the same response (they are independent and run in parallel); do not wait for one before calling the other
-10. request_checkpoint (stage: "final_approval") — final sign-off before publishing
-11. run_publish — publish to Meta (Facebook + Instagram). Pass schedule=true to post at Roxy's recommended time.
+1. run_bella — write content based on the brief and content_type
+2. After Bella completes, check job.content_type:
+   - video, image, or infographic → run_lila
+   - article → skip run_lila, go directly to step 3
+3. request_checkpoint (stage: "content_review") — show content and visual for approval
+4. run_nora — QA review. If QA fails and retry < max_retries, re-run relevant agent.
+5. request_checkpoint (stage: "qa_review") — show QA result
+6. run_roxy and run_emma — call BOTH in the same response (parallel)
+7. request_checkpoint (stage: "final_approval") — final sign-off before publishing
+8. run_publish — publish to Meta. Pass schedule=true for Roxy's recommended time.
 
 Never skip a checkpoint. After run_publish completes, declare the job complete.
 """
@@ -140,8 +136,6 @@ class Orchestrator:
         self.client = OpenAI(api_key=config.openai_api_key)
         self.model = config.openai_robin_model
         self.agents = {
-            "mia": MiaAgent(config),
-            "zoe": ZoeAgent(config),
             "bella": BellaAgent(config),
             "lila": LilaAgent(config),
             "nora": NoraAgent(config),

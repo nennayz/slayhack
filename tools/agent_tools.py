@@ -4,16 +4,6 @@ from __future__ import annotations
 def get_tool_definitions() -> list[dict]:
     return [
         {
-            "name": "run_mia",
-            "description": "Research current trends relevant to the brief using Brave Search. Call this first.",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        },
-        {
-            "name": "run_zoe",
-            "description": "Generate 5-7 content ideas based on Mia's trend research.",
-            "input_schema": {"type": "object", "properties": {}, "required": []},
-        },
-        {
             "name": "run_bella",
             "description": "Write the Reels script for the selected idea.",
             "input_schema": {"type": "object", "properties": {}, "required": []},
