@@ -52,21 +52,18 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
     monkeypatch.setenv("BRAVE_SEARCH_API_KEY", "brave")
     monkeypatch.setenv("OPENAI_API_KEY", "oai")
 
+    # SP-3: Robin starts from run_bella (idea already selected from Idea Bank)
     sequence = [
-        [_tool_block("run_mia", "t1")],
-        [_tool_block("run_zoe", "t2")],
-        [_tool_block("request_checkpoint", "t3", {"stage": "idea_selection",
-            "summary": "Ideas:\n1. Lip Hack\n2. Morning Routine", "options": ["1", "2", "3", "4", "5"]})],
-        [_tool_block("run_bella", "t4")],
-        [_tool_block("run_lila", "t5")],
-        [_tool_block("request_checkpoint", "t6", {"stage": "content_review",
+        [_tool_block("run_bella", "t1")],
+        [_tool_block("run_lila", "t2")],
+        [_tool_block("request_checkpoint", "t3", {"stage": "content_review",
             "summary": "Script and visual ready for review."})],
-        [_tool_block("run_nora", "t7")],
-        [_tool_block("request_checkpoint", "t8", {"stage": "qa_review",
+        [_tool_block("run_nora", "t4")],
+        [_tool_block("request_checkpoint", "t5", {"stage": "qa_review",
             "summary": "Nora says: PASSED ✓"})],
-        [_tool_block("run_roxy", "t9")],
-        [_tool_block("run_emma", "t10")],
-        [_tool_block("request_checkpoint", "t11", {"stage": "final_approval",
+        [_tool_block("run_roxy", "t6")],
+        [_tool_block("run_emma", "t7")],
+        [_tool_block("request_checkpoint", "t8", {"stage": "final_approval",
             "summary": "Everything ready. Post to Instagram + Facebook?"})],
     ]
 
@@ -78,28 +75,27 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
             return _tool_call_response(sequence[i])
         return _end_turn_response()
 
-    with patch("orchestrator.OpenAI") as mock_openai, \
-         patch("builtins.input", return_value="1"):
+    with patch("orchestrator.OpenAI") as mock_openai:
         mock_openai.return_value.chat.completions.create.side_effect = mock_create
 
         pm = load_project("nayzfreedom_fleet")
+        from models.content_job import ContentType
         job = ContentJob(
             project="nayzfreedom_fleet", pm=pm,
-            brief="lipstick that lasts all day",
+            brief="The Glow Up Method: this hack changed my whole face [Tutorial]",
             platforms=["instagram", "facebook"],
             dry_run=True,
+            content_type=ContentType.VIDEO,  # SP-3: set by idea_to_content_job before Orchestrator.run
         )
         orch = Orchestrator(make_config())
-        result = orch.run(job)
+        result = orch.run(job, unattended=True)
 
     assert result.status == JobStatus.COMPLETED
-    assert result.trend_data is not None
-    assert result.ideas is not None and len(result.ideas) >= 3
     assert result.bella_output is not None
     assert result.qa_result is not None and result.qa_result.passed
     assert result.growth_strategy is not None
     assert result.community_faq_path is not None
-    assert len(result.checkpoint_log) == 4
+    assert len(result.checkpoint_log) == 3  # content_review, qa_review, final_approval
 
     job_file = tmp_path / "output" / "Slayhack" / result.id / "job.json"
     assert job_file.exists()
