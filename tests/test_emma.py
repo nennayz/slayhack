@@ -1,5 +1,4 @@
 from pathlib import Path
-from unittest.mock import patch
 from agents.emma import EmmaAgent
 from tests.test_roxy import make_job_post_qa
 from tests.test_mia import make_config

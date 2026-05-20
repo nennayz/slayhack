@@ -6,7 +6,7 @@ import re
 from openai import OpenAI
 
 from config import Config
-from models.niche_opportunity import NicheOpportunity, NicheSignal, ScoutJob, ScoutJobStatus
+from models.niche_opportunity import NicheOpportunity, ScoutJob, ScoutJobStatus
 
 logger = logging.getLogger(__name__)
 

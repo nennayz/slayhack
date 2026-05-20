@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from datetime import date
 from pathlib import Path
+from typing import cast
 
 from models.content_job import ContentJob
 from project_loader import normalize_job_identity
@@ -123,9 +124,11 @@ def fleet_status(jobs: list[ContentJob]) -> list[dict[str, str]]:
 
 
 def _needs_manual_closeout(job: ContentJob) -> bool:
-    kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
-    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
-    closeout = kit.get("closeout") if isinstance(kit.get("closeout"), dict) else {}
+    kit = cast(dict[str, object], job.manual_post_kit) if isinstance(job.manual_post_kit, dict) else {}
+    manual_post_raw = kit.get("manual_post")
+    closeout_raw = kit.get("closeout")
+    manual_post = cast(dict[str, object], manual_post_raw) if isinstance(manual_post_raw, dict) else {}
+    closeout = cast(dict[str, object], closeout_raw) if isinstance(closeout_raw, dict) else {}
     has_manual_post = any(
         isinstance(value, dict) and value.get("status") == "posted" and str(value.get("post_url") or "").strip()
         for value in manual_post.values()

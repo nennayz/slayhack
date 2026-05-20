@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import quote
 from agents.base_agent import BaseAgent
 from models.content_job import ContentJob, ContentType
+from publish_control import ensure_auto_posting_enabled
 from track_queue import enqueue_track_snapshots
 
 _META_GRAPH_BASE = "https://graph.facebook.com/v19.0"
@@ -89,6 +90,7 @@ class PublishAgent(BaseAgent):
         return job
 
     def run_live(self, job: ContentJob, **kwargs) -> ContentJob:
+        ensure_auto_posting_enabled("live publish")
         schedule: bool = kwargs.get("schedule", False)
         target_platforms = kwargs.get("target_platforms")
         requested_platforms = list(target_platforms or job.platforms)

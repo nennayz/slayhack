@@ -102,21 +102,30 @@ OPENAI_API_KEY=
 OPENAI_ROBIN_MODEL=gpt-4o
 OPENAI_AGENT_MODEL=gpt-4o-mini
 BRAVE_SEARCH_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
 GOOGLE_CLOUD_PROJECT=
 GOOGLE_APPLICATION_CREDENTIALS=
 GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID=
+GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS=
+GOOGLE_DRIVE_OAUTH_TOKEN_FILE=
 META_ACCESS_TOKEN=
+META_APP_SECRET=
 META_PAGE_ID=
 META_IG_USER_ID=
 TIKTOK_ACCESS_TOKEN=
-YOUTUBE_API_KEY=
+YOUTUBE_CLIENT_ID=
+YOUTUBE_CLIENT_SECRET=
+YOUTUBE_REFRESH_TOKEN=
 REDDIT_CLIENT_ID=
 REDDIT_CLIENT_SECRET=
+SCOUT_DRIVE_FOLDER_ID=
 
 # Dashboard (both required — dashboard.py raises RuntimeError on import if missing)
 DASHBOARD_USER=
 DASHBOARD_PASSWORD=
 PUBLIC_BASE_URL=https://fleet.nayzfreedom.cloud   # also read as OPS_PUBLIC_BASE_URL
+OPS_PUBLIC_BASE_URL=https://fleet.nayzfreedom.cloud
 
 # Comment Reply Bot
 COMMENT_BOT_TOKEN=          # separate Telegram bot for the comment bot
@@ -143,11 +152,11 @@ python main.py --project nayzfreedom_fleet --brief "your brief here"
 python main.py --resume 20260512_143022
 
 # Dry-run from an interactive terminal (pauses for checkpoints).
-# Still calls OpenAI for Robin orchestration; agents/publish use mock outputs.
+# Agents use mock outputs; orchestration still follows the real deterministic stage machine.
 python main.py --project nayzfreedom_fleet --brief "..." --dry-run
 
 # Dry-run from Claude/Codex/cron (auto-approves checkpoints, no stdin block)
-# Still calls OpenAI for Robin orchestration; agents/publish use mock outputs.
+# Agents use mock outputs; orchestration still follows the real deterministic stage machine.
 python main.py --project nayzfreedom_fleet --brief "..." --dry-run --unattended
 
 # Run scheduler manually with mock agent/publish outputs
@@ -225,16 +234,16 @@ The Freedom and Lyra should stay clearly marked as planned until their data mode
 
 ## Key Architecture Notes
 
-- **Robin uses `OPENAI_ROBIN_MODEL`** with tool use. Each agent tool call = dispatching to one of the 7 agents.
+- **`OPENAI_ROBIN_MODEL` remains in config for compatibility**, but orchestration is now code-driven with explicit stage transitions and checkpoints to keep resume deterministic.
 - **All agents use `OPENAI_AGENT_MODEL`** for writing/analysis tasks.
 - **`ContentJob`** (Pydantic model in `models/content_job.py`) is the single contract passed between all agents. Never pass raw dicts.
-- **Jobs persist to `output/<page_name>/<job_id>/job.json`** after every agent completes. Resume reads this file and skips completed stages.
+- **Jobs persist to `output/<page_name>/<job_id>/job.json`** after every deterministic stage transition. Resume reconstructs the next required step from saved job state + checkpoint log instead of replaying the full pipeline.
 - **Manual Post Kits** are the default test-phase handoff: download or sync the structured kit to Google Drive, then Captain posts manually. Live publishing remains locked unless explicitly approved.
 - **`job.dry_run: bool`** controls whether agents call real APIs or return mock data. Use `--dry-run` during development.
 - **Bella has no hardcoded style** — `script_style` and `target_audience` in `brand.yaml` fully control her output.
 - **Nora can send work back** to Bella or Lila. `nora_max_retries` in `brand.yaml` controls the limit (default: 2).
 - **`BaseAgent._call_claude()` calls OpenAI**, not Claude/Anthropic — the name is misleading. All pipeline agents use the OpenAI SDK via `BaseAgent`.
-- **Project slug alias**: `project_loader.py` resolves `nayzfreedom_fleet` → the `slay_hack` folder on disk via `_PROJECT_ALIASES`. Grep for `slay_hack` in `projects/` when a file search by slug returns nothing.
+- **Canonical project slug**: `nayzfreedom_fleet`. `slay_hack` is a compatibility alias only. Keep new config under `projects/nayzfreedom_fleet/` and treat any `slay_hack` references as legacy.
 - **Scheduler rotation gate**: a project added by Scout won't run in the scheduler until `scout_activation.yaml` in its project dir contains `scheduler_rotation_approved: true`. `list_project_slugs()` silently skips unapproved projects.
 - **Dashboard is FastAPI**, split into `routes/` modules. `dashboard.py` is a thin re-exporter for test-compatibility; route logic lives in `routes/{captain,aurora,jobs,ships,ops,project_admin,readiness,scout}.py`. Shared app/auth/templates are in `routes/deps.py`.
 - **Deploy** (`deploy/`) contains systemd `.service` and `.timer` unit files plus `setup.sh` / `update.sh` for VPS deployment.

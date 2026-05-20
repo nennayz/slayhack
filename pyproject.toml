@@ -1,0 +1,5 @@
+[tool.ruff.lint.per-file-ignores]
+"dashboard.py" = ["E402", "F811"]
+"main.py" = ["E402"]
+"routes/ops.py" = ["E402"]
+"routes/scout.py" = ["E402"]

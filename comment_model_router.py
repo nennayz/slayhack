@@ -6,6 +6,22 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
+def _first_text_block_text(blocks: object) -> str:
+    if not isinstance(blocks, list):
+        raise RuntimeError("Provider returned no text blocks")
+    for block in blocks:
+        text = getattr(block, "text", None)
+        if isinstance(text, str) and text.strip():
+            return text
+    raise RuntimeError("Provider returned no text blocks")
+
+
+def _required_text(value: object, provider: str) -> str:
+    if isinstance(value, str):
+        return value
+    raise RuntimeError(f"{provider} returned no text")
+
+
 @dataclass
 class ProviderConfig:
     provider: str  # "anthropic" | "openai" | "gemini"
@@ -73,7 +89,7 @@ class ModelRouter:
                 }],
             }],
         )
-        return response.content[0].text
+        return _first_text_block_text(response.content)
 
     def _call_openai(self, model: str, image_b64: str, system_prompt: str) -> str:
         import openai
@@ -92,7 +108,7 @@ class ModelRouter:
                 },
             ],
         )
-        return response.choices[0].message.content
+        return _required_text(response.choices[0].message.content, "OpenAI")
 
     def _call_gemini(self, model: str, image_b64: str, system_prompt: str) -> str:
         import google.generativeai as genai
@@ -124,7 +140,7 @@ class ModelRouter:
             max_tokens=256,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
+        return _first_text_block_text(response.content)
 
     def _call_openai_text(self, model: str, prompt: str) -> str:
         import openai
@@ -134,7 +150,7 @@ class ModelRouter:
             max_tokens=256,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.choices[0].message.content
+        return _required_text(response.choices[0].message.content, "OpenAI")
 
     def _call_gemini_text(self, model: str, prompt: str) -> str:
         import google.generativeai as genai

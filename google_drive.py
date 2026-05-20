@@ -4,17 +4,50 @@ import json
 import mimetypes
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, Protocol, TypedDict, cast
 
 from google.auth.transport.requests import Request
 from google.oauth2 import credentials as oauth_credentials
 from google.oauth2 import service_account
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from google_auth_oauthlib.flow import InstalledAppFlow  # type: ignore[import-untyped]
+from googleapiclient.discovery import build  # type: ignore[import-untyped]
+from googleapiclient.http import MediaFileUpload  # type: ignore[import-untyped]
 
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 DEFAULT_MIME_TYPE = "text/markdown"
+
+
+class DriveFile(TypedDict, total=False):
+    id: str
+    name: str
+    webViewLink: str
+    webContentLink: str
+    parents: list[str]
+    syncAction: str
+
+
+class _DriveListResponse(TypedDict, total=False):
+    files: list[DriveFile]
+
+
+class _Executable(Protocol):
+    def execute(self) -> DriveFile | _DriveListResponse: ...
+
+
+class _FilesResource(Protocol):
+    def list(self, **kwargs: Any) -> _Executable: ...
+    def create(self, **kwargs: Any) -> _Executable: ...
+    def update(self, **kwargs: Any) -> _Executable: ...
+
+
+class _DriveService(Protocol):
+    def files(self) -> _FilesResource: ...
+
+
+def _require_drive_file(response: DriveFile | _DriveListResponse, action: str) -> DriveFile:
+    if "id" not in response:
+        raise RuntimeError(f"Unexpected Google Drive {action} response shape")
+    return cast(DriveFile, response)
 
 
 def get_oauth_credentials(
@@ -43,11 +76,14 @@ def get_oauth_credentials(
     return creds
 
 
+CredentialsLike = oauth_credentials.Credentials | service_account.Credentials
+
+
 def get_credentials(
     credential_path: Optional[Path] = None,
     oauth_client_secrets: Optional[Path] = None,
     token_path: Optional[Path] = None,
-):
+) -> CredentialsLike:
     if oauth_client_secrets is not None:
         if not oauth_client_secrets.exists() or not oauth_client_secrets.is_file():
             raise FileNotFoundError(
@@ -72,7 +108,7 @@ def get_credentials(
     )
 
 
-def get_drive_service(credentials) -> object:
+def get_drive_service(credentials: CredentialsLike) -> _DriveService:
     return build("drive", "v3", credentials=credentials)
 
 
@@ -80,7 +116,7 @@ def _escape_query_value(value: str) -> str:
     return value.replace("\\", "\\\\").replace("'", "\\'")
 
 
-def find_child_folder(service, parent_id: str, name: str) -> Optional[dict]:
+def find_child_folder(service: _DriveService, parent_id: str, name: str) -> Optional[DriveFile]:
     safe_name = _escape_query_value(name)
     safe_parent = _escape_query_value(parent_id)
     query = (
@@ -95,11 +131,11 @@ def find_child_folder(service, parent_id: str, name: str) -> Optional[dict]:
         supportsAllDrives=True,
         includeItemsFromAllDrives=True,
     ).execute()
-    files = response.get("files", [])
+    files = cast(list[DriveFile], response.get("files", []) if isinstance(response, dict) else [])
     return files[0] if files else None
 
 
-def find_child_file(service, parent_id: str, name: str) -> Optional[dict]:
+def find_child_file(service: _DriveService, parent_id: str, name: str) -> Optional[DriveFile]:
     safe_name = _escape_query_value(name)
     safe_parent = _escape_query_value(parent_id)
     query = (
@@ -114,21 +150,22 @@ def find_child_file(service, parent_id: str, name: str) -> Optional[dict]:
         supportsAllDrives=True,
         includeItemsFromAllDrives=True,
     ).execute()
-    files = response.get("files", [])
+    files = cast(list[DriveFile], response.get("files", []) if isinstance(response, dict) else [])
     return files[0] if files else None
 
 
-def create_child_folder(service, parent_id: str, name: str) -> dict:
+def create_child_folder(service: _DriveService, parent_id: str, name: str) -> DriveFile:
     metadata = {
         "name": name,
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [parent_id],
     }
-    return service.files().create(
+    response = service.files().create(
         body=metadata,
         fields="id,name,webViewLink,parents",
         supportsAllDrives=True,
     ).execute()
+    return _require_drive_file(response, "create")
 
 
 def ensure_drive_folder_path(
@@ -137,7 +174,7 @@ def ensure_drive_folder_path(
     credential_path: Optional[str] = None,
     oauth_client_secrets: Optional[str] = None,
     token_path: Optional[str] = None,
-) -> dict:
+) -> dict[str, str | list[DriveFile]]:
     credentials = get_credentials(
         Path(credential_path) if credential_path else None,
         Path(oauth_client_secrets) if oauth_client_secrets else None,
@@ -145,13 +182,15 @@ def ensure_drive_folder_path(
     )
     service = get_drive_service(credentials)
     parent_id = root_folder_id
-    folders = []
+    folders: list[DriveFile] = []
     for name in folder_names:
         folder = find_child_folder(service, parent_id, name)
         if folder is None:
             folder = create_child_folder(service, parent_id, name)
         folders.append(folder)
-        parent_id = folder["id"]
+        parent_id = folder.get("id") or ""
+        if not parent_id:
+            raise RuntimeError("Google Drive folder response missing id")
     return {"folder_id": parent_id, "folders": folders}
 
 
@@ -164,7 +203,7 @@ def upload_file_to_drive(
     oauth_client_secrets: Optional[str] = None,
     token_path: Optional[str] = None,
     replace_existing: bool = False,
-) -> dict:
+) -> DriveFile:
     path = Path(source_path)
     if not path.exists():
         raise FileNotFoundError(f"Source file not found: {source_path}")
@@ -188,23 +227,24 @@ def upload_file_to_drive(
     if replace_existing and folder_id:
         existing = find_child_file(service, folder_id, file_name)
         if existing is not None:
-            updated_file = service.files().update(
+            updated_response = service.files().update(
                 fileId=existing["id"],
                 body={"name": file_name},
                 media_body=media,
                 fields="id,name,webViewLink,webContentLink,parents",
                 supportsAllDrives=True,
             ).execute()
+            updated_file = _require_drive_file(updated_response, "update")
             updated_file["syncAction"] = "updated"
             return updated_file
 
-    request = service.files().create(
+    create_response = service.files().create(
         body=file_metadata,
         media_body=media,
         fields="id,name,webViewLink,webContentLink,parents",
         supportsAllDrives=True,
-    )
-    created_file = request.execute()
+    ).execute()
+    created_file = _require_drive_file(create_response, "create")
     created_file["syncAction"] = "created"
     return created_file
 

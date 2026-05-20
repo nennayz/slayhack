@@ -9,6 +9,7 @@ from __future__ import annotations
 import os as _os
 import subprocess  # noqa: F401 – re-exported so tests can patch dashboard.subprocess.Popen
 import sys as _sys_top  # noqa: F401
+from typing import cast
 
 # Production starts this file as `python dashboard.py`, which makes the module
 # name `__main__`. Route modules import `dashboard` for test monkeypatch
@@ -210,7 +211,7 @@ from routes._helpers import (  # noqa: F401
 # These calls must go through dashboard's own global namespace, not _helpers'.
 import sys as _sys
 
-def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
+def _ops_snapshot(root, smoke_results=None):  # type: ignore[override,no-redef]
     """Wrapper that calls helpers through dashboard globals for monkeypatching."""
     _mod = _sys.modules[__name__]
     jobs = list_all_jobs(root)
@@ -260,7 +261,7 @@ def _ops_snapshot(root, smoke_results=None):  # type: ignore[override]
     }
 
 
-def _ops_unit_status():  # type: ignore[override]
+def _ops_unit_status():  # type: ignore[override,no-redef]
     _mod = _sys.modules[__name__]
     rows = []
     for unit in OPS_UNITS:
@@ -274,17 +275,19 @@ def _ops_unit_status():  # type: ignore[override]
     return rows
 
 
-def _run_ops_action(action: str):  # type: ignore[override]
+def _run_ops_action(action: str):  # type: ignore[override,no-redef]
     _mod = _sys.modules[__name__]
-    from routes._helpers import OPS_ACTIONS, _systemctl_args
-    import json, subprocess, sys
+    from routes._helpers import OPS_ACTIONS
+    import json
+    import sys
     config = OPS_ACTIONS.get(action)
     if config is None:
         return {"name": action, "state": "Failed", "detail": "Unknown Ops action."}
-    label = str(config["label"])
-    unit = str(config["unit"])
-    verb = str(config["verb"])
-    if config.get("delayed"):
+    config_map = cast(dict[str, object], config)
+    label = str(config_map["label"])
+    unit = str(config_map["unit"])
+    verb = str(config_map["verb"])
+    if config_map.get("delayed"):
         code = (
             "import subprocess,time;"
             "time.sleep(1);"
@@ -303,16 +306,14 @@ def _run_ops_action(action: str):  # type: ignore[override]
     return {"name": label, "state": state, "detail": detail}
 
 
-def _ops_now_utc():  # type: ignore[override]
+def _ops_now_utc():  # type: ignore[override,no-redef]
     # The function itself is replaced by monkeypatch. This default implementation is used normally.
-    from datetime import datetime, timezone
     return datetime.now(timezone.utc)
 
 
-def _ops_publish_summary(jobs) -> dict[str, object]:  # type: ignore[override]
+def _ops_publish_summary(jobs) -> dict[str, object]:  # type: ignore[override,no-redef]
     """Override that calls _ops_now_utc through dashboard globals so monkeypatch works."""
     from datetime import timedelta
-    from routes._helpers import _instagram_due_time, _ops_time_distance, _caption_preview, _parse_ops_time
     _mod = _sys.modules[__name__]
     counts = {
         "facebook_scheduled": 0,

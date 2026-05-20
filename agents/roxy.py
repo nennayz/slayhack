@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from typing import Any, cast
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
 from models.content_job import ContentJob, GrowthStrategy
 from project_loader import load_platform_specs
@@ -20,6 +21,8 @@ _DRY_RUN_STRATEGY = GrowthStrategy(
 
 def _write_growth_file(job: ContentJob) -> None:
     g = job.growth_strategy
+    if g is None:
+        raise ValueError(f"growth_strategy is not set for job {job.id}")
     out_dir = Path("output") / job.pm.page_name / job.id
     out_dir.mkdir(parents=True, exist_ok=True)
     guidance_lines = ""
@@ -69,13 +72,15 @@ class RoxyAgent(BaseAgent):
             "best_post_time_utc (str HH:MM), best_post_time_thai (str HH:MM). JSON only."
         )
         raw = self._call_claude(system, user, max_tokens=512)
-        parsed = self._parse_json(raw)
+        parsed = cast(dict[str, Any], self._parse_json(raw))
 
         try:
             all_specs = load_platform_specs(job.project)
         except Exception:
             all_specs = {}
-        parsed["editorial_guidance"] = {p: all_specs[p] for p in job.platforms if p in all_specs}
+        parsed["editorial_guidance"] = {
+            p: str(all_specs[p]) for p in job.platforms if p in all_specs
+        }
 
         job.growth_strategy = GrowthStrategy(**parsed)
         job.stage = "roxy_done"

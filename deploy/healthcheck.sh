@@ -41,14 +41,34 @@ check_unit() {
     echo "unit_ok=$unit"
 }
 
+posting_lock_enabled() {
+    case "${NAYZ_AUTO_POSTING_DISABLED:-}" in
+        1|true|TRUE|yes|YES|on|ON|locked|disabled) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+check_posting_unit() {
+    local unit="$1"
+    if posting_lock_enabled; then
+        echo "unit_locked=$unit"
+        return
+    fi
+    check_unit "$unit"
+}
+
 curl -fsS "$HEALTH_URL" >/dev/null
 echo "health_url_ok=$HEALTH_URL"
 
 check_unit nayzfreedom-dashboard.service
-check_unit nayzfreedom-bot.service
-check_unit nayzfreedom-scheduler.timer
+if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+    check_unit nayzfreedom-bot.service
+else
+    echo "unit_skipped=nayzfreedom-bot.service"
+fi
+check_posting_unit nayzfreedom-scheduler.timer
 check_unit nayzfreedom-reporter.timer
-check_unit nayzfreedom-instagram-queue.timer
+check_posting_unit nayzfreedom-instagram-queue.timer
 check_unit nayzfreedom-production-summary.timer
 check_unit nayzfreedom-log-retention.timer
 check_unit nayzfreedom-ops-report.timer

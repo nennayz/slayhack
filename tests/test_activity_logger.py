@@ -1,10 +1,8 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from pathlib import Path
 
-import pytest
 
-from activity_logger import LOG_DIR, _daily_log_path, log_action, log_command
+from activity_logger import _daily_log_path, log_action, log_command
 
 
 def test_daily_log_path_uses_utc_date(monkeypatch):

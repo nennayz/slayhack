@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from comment_model_router import ModelRouter, ProviderConfig
 
 
@@ -69,7 +69,7 @@ def test_call_text_uses_first_provider():
 def test_call_text_falls_back():
     router = _make_router()
     with patch.object(router, "_call_anthropic_text", side_effect=Exception("quota")), \
-         patch.object(router, "_call_openai_text", return_value="short openai") as mock_o:
+         patch.object(router, "_call_openai_text", return_value="short openai"):
         text, label = router.call_text("shorten this")
     assert text == "short openai"
     assert "openai" in label
@@ -77,7 +77,7 @@ def test_call_text_falls_back():
 
 def test_single_provider_chain():
     router = _make_router(chain=[ProviderConfig(provider="gemini", model="gemini-2.0-flash")])
-    with patch.object(router, "_call_gemini", return_value="gemini only") as mock_g:
+    with patch.object(router, "_call_gemini", return_value="gemini only"):
         text, label = router.call("img==", "prompt")
     assert text == "gemini only"
     assert "gemini" in label

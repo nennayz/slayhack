@@ -1,7 +1,6 @@
 from __future__ import annotations
 import argparse
 import json
-import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -11,6 +10,7 @@ from agents.publish import PublishAgent, has_publish_failures, sanitize_error_te
 from config import Config
 from job_store import save_job
 from models.content_job import ContentJob, JobStatus
+from publish_control import auto_posting_disabled
 from work_activity import write_work_activity
 
 _IG_MAX_RETRIES = 3
@@ -95,6 +95,23 @@ def _retry_instagram_result(previous: dict, failed_result: dict, now_ts: int) ->
 def process_instagram_queue(root: Path | None = None, dry_run: bool = False) -> int:
     root = root or Path(__file__).resolve().parent
     load_dotenv(root / ".env")
+    if auto_posting_disabled() and not dry_run:
+        record = {
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "dry_run": False,
+            "blocked": True,
+            "reason": "NAYZ_AUTO_POSTING_DISABLED=1",
+            "processed": 0,
+            "published": 0,
+            "retrying": 0,
+            "failed": 0,
+            "jobs": [],
+        }
+        _write_queue_history(root, record)
+        _write_queue_work_activity(root, record)
+        print("auto_posting_disabled=1")
+        print("processed=0 failures=0")
+        return 0
     config = Config.from_env()
     agent = PublishAgent(config)
     processed = 0

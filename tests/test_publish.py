@@ -1,6 +1,7 @@
 from agents.publish import PublishAgent, has_publish_failures
 from config import Config
 from models.content_job import ContentType, ImageCaption, Article, Script, GrowthStrategy
+from publish_control import AutoPostingDisabledError
 
 
 def make_publish_config():
@@ -85,6 +86,28 @@ def test_publish_live_fb_image_calls_photos_endpoint(mocker, tmp_path, monkeypat
     call_url = mock_post.call_args[0][0]
     assert "page-123/photos" in call_url
     assert job.publish_result["facebook"]["status"] == "published"
+
+
+def test_publish_live_blocked_when_auto_posting_disabled(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("NAYZ_AUTO_POSTING_DISABLED", "1")
+    img_file = tmp_path / "image.png"
+    img_file.write_bytes(b"PNG")
+    mock_post = mocker.patch("agents.publish.requests.post")
+    agent = PublishAgent(make_publish_config())
+    job = make_image_job(dry_run=False)
+    job.image_path = str(img_file)
+    job.platforms = ["facebook"]
+
+    try:
+        agent.run(job)
+        raised = None
+    except AutoPostingDisabledError as exc:
+        raised = exc
+
+    assert raised is not None
+    assert "NAYZ_AUTO_POSTING_DISABLED=1" in str(raised)
+    mock_post.assert_not_called()
 
 
 def test_publish_live_fb_video_calls_videos_endpoint(mocker, tmp_path, monkeypatch):

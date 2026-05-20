@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import cast
 
 from models.content_job import ContentJob
 
@@ -170,7 +171,8 @@ def job_tracking_summary(job: ContentJob, entries: list[dict], now: datetime | N
     )
     if job_entries:
         status = "Queued"
-        state = "Missing" if queue["counts"]["due_now"] else "Ready"
+        counts = cast(dict[str, int], queue["counts"])
+        state = "Missing" if counts["due_now"] else "Ready"
         detail = f"{len(job_entries)} queued snapshot checks"
     elif snapshots:
         status = "Tracked"
