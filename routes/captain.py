@@ -1,6 +1,7 @@
 """Captain's Deck route — /"""
 from __future__ import annotations
 
+from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, HTTPException
@@ -43,6 +44,23 @@ def _runbook_redirect_path(value: str, result: str) -> str:
     return f"{_runbook_return_path(value)}?runbook_result={quote(result, safe='')}"
 
 
+def _pending_ideas_count(root: Path) -> int:
+    """Return the number of KS ideas with status='new'. Never raises."""
+    try:
+        import os
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+
+        settings = KnowledgeSettings.from_env(root)
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        embed_fn = openai_embed_fn(settings.embed_model, api_key)
+        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+        return len(store.recent(kind="idea", status="new", limit=200))
+    except Exception:
+        return 0
+
+
 @router.get("/", response_class=HTMLResponse)
 def captains_deck(request: Request, _: str = Depends(verify_auth)):
     root = _root(request)
@@ -82,6 +100,7 @@ def captains_deck(request: Request, _: str = Depends(verify_auth)):
                 mission=request.query_params.get("history_mission", ""),
                 needs_captain=request.query_params.get("needs_captain") == "1",
             ),
+            "pending_ideas_count": _pending_ideas_count(root),
         },
     )
 

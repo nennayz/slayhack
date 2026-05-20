@@ -53,6 +53,11 @@
     <strong>{{ summary.failed }}</strong>
     <small>Needs repair</small>
   </article>
+  <article class="captain-pulse-card{% if pending_ideas_count > 0 %} captain-pulse-card--attention{% endif %}">
+    <span>Ideas</span>
+    <strong>{{ pending_ideas_count }}</strong>
+    <small><a href="/ideas?status=new">Needs review</a></small>
+  </article>
 </section>
 
 {% include "_captain_attention_lane.html" %}
