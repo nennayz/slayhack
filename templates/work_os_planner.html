@@ -9,9 +9,12 @@
   <div class="inline-actions">
     <a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a>
     <a class="button button-secondary" href="/aurora/publish-queue">Publish queue</a>
+    <form method="post" action="/aurora/planner/sync"><button type="submit">Sync approved ideas</button></form>
+    <form method="post" action="/aurora/planner/slate"><button type="submit">Create today slate</button></form>
     <form method="post" action="/aurora/planner/seed"><button type="submit">Seed planner</button></form>
   </div>
 </section>
+{% if synced_count %}<p class="notice success">Synced {{ synced_count }} approved idea(s) into ContentPlan drafts.</p>{% endif %}
 
 <section class="stat-grid wide">
   <div class="stat-card"><span>Content plans</span><strong>{{ plans|length }}</strong></div>
@@ -29,6 +32,11 @@
       <h3>{{ slate.page }} · {{ slate.date }}</h3>
       <p>{{ slate.daily_focus }}</p>
       <small>{{ slate.plan_ids|length }} plan(s) · {{ slate.next_action }}</small>
+      <form class="inline-form compact-action-form" method="post" action="/aurora/planner/slate/review">
+        <input type="hidden" name="slate_id" value="{{ slate.id }}">
+        <button type="submit" name="decision" value="approve">Approve slate</button>
+        <button type="submit" name="decision" value="draft">Return to draft</button>
+      </form>
     </article>
     {% else %}
     <p class="muted">No content slates yet. Seed the planner to create the first offline-safe slate.</p>
@@ -44,7 +52,13 @@
       <span>{{ plan.content_type.value }} · {{ plan.objective.value }}</span>
       <strong>{{ plan.hook }}</strong>
       <small>{{ plan.page }} · {{ plan.pillar }} · {{ plan.status.value }}</small>
+      <small>Source idea: {{ plan.source_idea_uid }}</small>
       <p>{{ plan.angle }}</p>
+      <form class="inline-form compact-action-form" method="post" action="/aurora/planner/review">
+        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+        <button type="submit" name="decision" value="approve">Approve plan</button>
+        <button type="submit" name="decision" value="reject">Reject plan</button>
+      </form>
       <form class="inline-form compact-action-form" method="post" action="/aurora/planner/tickets">
         <input type="hidden" name="plan_id" value="{{ plan.id }}">
         <button type="submit">Create production ticket</button>

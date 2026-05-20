@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from pydantic import BaseModel
 
@@ -25,6 +25,10 @@ from models.work_os import (
     WorkObjective,
 )
 from project_loader import list_project_slugs, load_project
+
+if TYPE_CHECKING:
+    from knowledge.object import ContentObject
+    from knowledge.store import KnowledgeStore
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -95,6 +99,176 @@ def load_publish_reviews(root: Path) -> list[PublishQueueReview]:
 
 def save_publish_reviews(root: Path, items: list[PublishQueueReview]) -> None:
     _write_model_list(_dir(root) / "publish_queue_reviews.json", items)
+
+
+
+def _plan_dedup_key(idea: "ContentObject") -> str:
+    return f"{idea.uid}:{idea.title}:{idea.summary}" if idea.uid else idea.dedup_text
+
+
+def _content_type_from_idea(idea: "ContentObject") -> PlanContentType:
+    tags = {tag.lower() for tag in idea.tags}
+    text = f"{idea.title} {idea.summary} {idea.body}".lower()
+    if "article" in tags or "guide" in tags or "บทความ" in text:
+        return PlanContentType.ARTICLE
+    if "image" in tags or "infographic" in tags or "ภาพ" in text:
+        return PlanContentType.INFOGRAPHIC if "infographic" in tags else PlanContentType.IMAGE
+    if "long_video" in tags or "long video" in text:
+        return PlanContentType.LONG_VIDEO
+    if "prompt_only_video" in tags or "prompt-only" in text:
+        return PlanContentType.PROMPT_ONLY_VIDEO
+    if "bubble" in tags or "status" in tags:
+        return PlanContentType.BUBBLE
+    return PlanContentType.SHORT_VIDEO
+
+
+def _objective_from_idea(idea: "ContentObject") -> WorkObjective:
+    tags = {tag.lower() for tag in idea.tags}
+    text = f"{idea.title} {idea.summary} {idea.body}".lower()
+    if "revenue" in tags or "monetize" in tags or "affiliate" in text or "ebook" in text:
+        return WorkObjective.REVENUE
+    if "save" in tags or "guide" in tags or "checklist" in text:
+        return WorkObjective.SAVE
+    if "community" in tags or "comment" in tags or "bubble" in tags:
+        return WorkObjective.COMMUNITY
+    if "learning" in tags:
+        return WorkObjective.LEARNING
+    return WorkObjective.REACH
+
+
+def _platforms_for_page(root: Path, page: str) -> list[str]:
+    try:
+        project = load_project(page, root=root)
+        return project.brand.platforms or ["facebook", "instagram"]
+    except Exception:  # noqa: BLE001 - planner must degrade when project metadata is missing
+        return ["facebook", "instagram"]
+
+
+def plan_from_approved_idea(root: Path, idea: "ContentObject") -> ContentPlan:
+    content_type = _content_type_from_idea(idea)
+    objective = _objective_from_idea(idea)
+    hook = idea.title.strip() or idea.summary.strip() or "Approved idea ready for planning"
+    angle = idea.summary.strip() or idea.body.strip()[:240] or "Turn this approved idea into a practical page-native content plan."
+    plan = ContentPlan(
+        page=idea.page,
+        source_idea_uid=idea.uid,
+        pillar=(idea.tags[0] if idea.tags else "growth"),
+        objective=objective,
+        content_type=content_type,
+        target_platforms=_platforms_for_page(root, idea.page)[:3],
+        hook=hook,
+        angle=angle,
+        production_brief=(
+            f"Create a {content_type.value} production brief from approved idea {idea.uid}: "
+            f"hook={hook}; angle={angle[:180]}"
+        ),
+        publish_window="Manual best-time review from page cadence",
+        status=PlanStatus.DRAFT,
+        next_action="Captain approves/rejects this plan, then creates tickets for approved plans.",
+    )
+    return plan
+
+
+def _mirror_work_os_object(store: "KnowledgeStore | None", obj: "ContentObject") -> None:
+    if store is None:
+        return
+    try:
+        store.add(obj, embed=False)
+    except Exception:
+        return
+
+
+def sync_approved_ideas_into_planner(
+    root: Path,
+    store: "KnowledgeStore",
+    limit: int = 50,
+) -> tuple[list[ContentPlan], int]:
+    from knowledge.object import ContentObject
+
+    plans = load_plans(root)
+    existing_sources = {plan.source_idea_uid for plan in plans if plan.source_idea_uid}
+    created = 0
+    for idea in store.recent(kind="idea", status="approved", limit=limit, order="asc"):
+        if idea.uid in existing_sources:
+            continue
+        plan = plan_from_approved_idea(root, idea)
+        plans.append(plan)
+        existing_sources.add(idea.uid)
+        created += 1
+        _mirror_work_os_object(
+            store,
+            ContentObject(
+                page=plan.page,
+                kind="content_plan",
+                title=plan.hook,
+                summary=plan.angle,
+                body=plan.production_brief,
+                dedup_text=f"work_os:content_plan:{_plan_dedup_key(idea)}",
+                status=plan.status.value,
+                parent_uids=[idea.uid],
+                tags=[plan.pillar, plan.objective.value, plan.content_type.value, "work_os"],
+            ),
+        )
+    if created:
+        save_plans(root, plans)
+    return plans, created
+
+
+def update_plan_status(root: Path, plan_id: str, status: PlanStatus) -> ContentPlan | None:
+    plans = load_plans(root)
+    for plan in plans:
+        if plan.id == plan_id:
+            plan.status = status
+            plan.updated_at = datetime.now()
+            if status == PlanStatus.APPROVED:
+                plan.next_action = "Plan approved; add it to a slate or create a production ticket."
+            elif status == PlanStatus.REJECTED:
+                plan.next_action = "Rejected locally; keep for learning but do not produce."
+            save_plans(root, plans)
+            return plan
+    return None
+
+
+def create_today_slate(root: Path, page: str | None = None) -> ContentSlate | None:
+    plans = load_plans(root)
+    slates = load_slates(root)
+    today = datetime.now().date()
+    candidates = [
+        plan for plan in plans
+        if plan.status in {PlanStatus.APPROVED, PlanStatus.TICKETED}
+        and (page is None or plan.page == page)
+    ]
+    if not candidates:
+        return None
+    target_page = page or candidates[0].page
+    existing = next((slate for slate in slates if slate.page == target_page and slate.date == today), None)
+    plan_ids = [plan.id for plan in candidates if plan.page == target_page]
+    if existing is not None:
+        existing.plan_ids = sorted(set(existing.plan_ids + plan_ids))
+        existing.updated_at = datetime.now()
+        save_slates(root, slates)
+        return existing
+    slate = ContentSlate(
+        page=target_page,
+        daily_focus="Produce approved plans through ticket-first Work OS flow; keep live publishing manual.",
+        plan_ids=plan_ids,
+        status=SlateStatus.DRAFT,
+        next_action="Captain approves the slate, then tickets move into production.",
+    )
+    slates.append(slate)
+    save_slates(root, slates)
+    return slate
+
+
+def update_slate_status(root: Path, slate_id: str, status: SlateStatus) -> ContentSlate | None:
+    slates = load_slates(root)
+    for slate in slates:
+        if slate.id == slate_id:
+            slate.status = status
+            slate.updated_at = datetime.now()
+            save_slates(root, slates)
+            return slate
+    return None
 
 
 def seed_content_planner(root: Path) -> tuple[list[ContentPlan], list[ContentSlate], list[ProductionTicket]]:
@@ -208,9 +382,12 @@ def create_ticket_for_plan(root: Path, plan_id: str) -> ProductionTicket | None:
             return ticket
     for plan in plans:
         if plan.id == plan_id:
+            if plan.status not in {PlanStatus.APPROVED, PlanStatus.TICKETED}:
+                return None
             ticket = ticket_from_plan(plan)
             tickets.append(ticket)
             plan.status = PlanStatus.TICKETED
+            plan.next_action = "Production ticket created; run or review the ticket."
             plan.updated_at = datetime.now()
             save_plans(root, plans)
             save_tickets(root, tickets)
