@@ -98,6 +98,27 @@ def test_scheduler_can_run_daily_scout_when_requested(tmp_path, monkeypatch):
     mock_scout.assert_called_once_with(dry_run=True)
 
 
+def test_scheduler_runs_social_packaging_after_production_loop(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
+    import yaml
+    (tmp_path / "projects" / "nayzfreedom_fleet" / "weekly_calendar.yaml").write_text(
+        yaml.dump(MONDAY_CALENDAR)
+    )
+    monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
+    with patch("scheduler.subprocess.run", return_value=_make_ok_result()), \
+         patch("scheduler._run_daily_scout"), \
+         patch("scheduler._run_daily_trend_scan"), \
+         patch("scheduler._run_daily_idea_planner"), \
+         patch("scheduler._run_daily_production_loop") as mock_production, \
+         patch("scheduler._run_daily_social_packaging") as mock_social:
+        exit_code = sched_module.run_scheduler(dry_run=True, root=tmp_path, run_scout=True)
+
+    assert exit_code == 0
+    mock_production.assert_called_once_with([], dry_run=True, root=tmp_path)
+    mock_social.assert_called_once_with([], dry_run=True, root=tmp_path)
+
+
 def test_scheduler_skips_missing_day(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "projects" / "nayzfreedom_fleet").mkdir(parents=True)
