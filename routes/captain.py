@@ -1,4 +1,5 @@
 """Captain's Deck route — /"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -55,7 +56,9 @@ def _pending_ideas_count(root: Path) -> int:
         settings = KnowledgeSettings.from_env(root)
         api_key = os.getenv("OPENAI_API_KEY", "")
         embed_fn = openai_embed_fn(settings.embed_model, api_key)
-        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+        store = KnowledgeStore(
+            settings, Embedder(settings.embed_model, embed_fn=embed_fn)
+        )
         return len(store.recent(kind="idea", status="new", limit=200))
     except Exception:
         return 0
@@ -114,7 +117,10 @@ def learning_runbook_create_draft(
     root = _root(request)
     lessons = _manual_closeout_undrafted_learning_rows(root)
     if not lessons:
-        raise HTTPException(status_code=400, detail="No closed manual posting lessons need a daily draft")
+        raise HTTPException(
+            status_code=400,
+            detail="No closed manual posting lessons need a daily draft",
+        )
     draft = _write_manual_closeout_learning_draft(root, lessons, created_by=user)
     _write_work_event(
         root,
@@ -125,7 +131,10 @@ def learning_runbook_create_draft(
         next_action="Accept the daily learning draft before applying it to the next mission.",
         metadata={"source_job_ids": draft["source_job_ids"]},
     )
-    return RedirectResponse(_runbook_redirect_path(return_path, f"Created draft: {draft['path']}"), status_code=303)
+    return RedirectResponse(
+        _runbook_redirect_path(return_path, f"Created draft: {draft['path']}"),
+        status_code=303,
+    )
 
 
 @router.post("/learning-runbook/accept-draft")
@@ -137,7 +146,9 @@ def learning_runbook_accept_draft(
 ):
     root = _root(request)
     try:
-        result = _update_daily_brief_draft_status(root, draft_path, "accepted", actor=user)
+        result = _update_daily_brief_draft_status(
+            root, draft_path, "accepted", actor=user
+        )
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Draft {draft_path!r} not found")
     except ValueError as exc:
@@ -151,7 +162,10 @@ def learning_runbook_accept_draft(
         next_action="Apply accepted learning to the next Daily Slate mission.",
         metadata={"source_job_ids": result["source_job_ids"]},
     )
-    return RedirectResponse(_runbook_redirect_path(return_path, f"Accepted artifact: {result['path']}"), status_code=303)
+    return RedirectResponse(
+        _runbook_redirect_path(return_path, f"Accepted artifact: {result['path']}"),
+        status_code=303,
+    )
 
 
 @router.post("/learning-runbook/apply-learning")
@@ -163,7 +177,9 @@ def learning_runbook_apply_learning(
 ):
     root = _root(request)
     try:
-        result = _apply_accepted_learning_to_next_mission(root, project_slug, actor=user)
+        result = _apply_accepted_learning_to_next_mission(
+            root, project_slug, actor=user
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     _write_work_event(
@@ -182,7 +198,10 @@ def learning_runbook_apply_learning(
         },
     )
     return RedirectResponse(
-        _runbook_redirect_path(return_path, f"Applied mission: {result['job_id']} ({result['project']}:{result['ticket_id']})"),
+        _runbook_redirect_path(
+            return_path,
+            f"Applied mission: {result['job_id']} ({result['project']}:{result['ticket_id']})",
+        ),
         status_code=303,
     )
 
@@ -212,4 +231,7 @@ def learning_runbook_confirm_learning(
         next_action="Crew can use the confirmed learning in safe generation execution.",
         metadata=result,
     )
-    return RedirectResponse(_runbook_redirect_path(return_path, f"Confirmed mission: {job_id}"), status_code=303)
+    return RedirectResponse(
+        _runbook_redirect_path(return_path, f"Confirmed mission: {job_id}"),
+        status_code=303,
+    )

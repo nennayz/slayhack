@@ -1,4 +1,5 @@
 """Tests for /ideas dashboard routes."""
+
 from __future__ import annotations
 
 import base64
@@ -92,7 +93,9 @@ def test_approve_unknown_uid_returns_404(tmp_path, store):
 
 def test_generate_returns_202(tmp_path, store):
     with patch("routes.ideas._run_pipeline_background"):
-        resp = _client(tmp_path).post("/ideas/generate/nayzfreedom_fleet", headers=_auth())
+        resp = _client(tmp_path).post(
+            "/ideas/generate/nayzfreedom_fleet", headers=_auth()
+        )
     assert resp.status_code == 202
     assert resp.json()["status"] == "started"
 
