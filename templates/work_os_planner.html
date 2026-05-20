@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-map">
+  <div>
+    <p class="eyebrow">Aurora Work OS v3</p>
+    <h1>Content Planner</h1>
+    <p class="hero-copy">Plans, slates, and production tickets are the new command layer between ideas and production.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a>
+    <a class="button button-secondary" href="/aurora/publish-queue">Publish queue</a>
+    <form method="post" action="/aurora/planner/seed"><button type="submit">Seed planner</button></form>
+  </div>
+</section>
+
+<section class="stat-grid wide">
+  <div class="stat-card"><span>Content plans</span><strong>{{ plans|length }}</strong></div>
+  <div class="stat-card"><span>Slates</span><strong>{{ slates|length }}</strong></div>
+  <div class="stat-card"><span>Production tickets</span><strong>{{ tickets|length }}</strong></div>
+  <div class="stat-card"><span>Queued tickets</span><strong>{{ queued_tickets|length }}</strong></div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Daily slates</p><h2>Approved page focus</h2></div>
+  <div class="daily-slate-grid">
+    {% for slate in slates %}
+    <article class="panel daily-slate-card">
+      <span class="badge badge-ops-ready">{{ slate.status.value }}</span>
+      <h3>{{ slate.page }} · {{ slate.date }}</h3>
+      <p>{{ slate.daily_focus }}</p>
+      <small>{{ slate.plan_ids|length }} plan(s) · {{ slate.next_action }}</small>
+    </article>
+    {% else %}
+    <p class="muted">No content slates yet. Seed the planner to create the first offline-safe slate.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Plans</p><h2>Idea → plan contracts</h2></div>
+  <div class="slate-ticket-list">
+    {% for plan in plans %}
+    <article class="slate-ticket">
+      <span>{{ plan.content_type.value }} · {{ plan.objective.value }}</span>
+      <strong>{{ plan.hook }}</strong>
+      <small>{{ plan.page }} · {{ plan.pillar }} · {{ plan.status.value }}</small>
+      <p>{{ plan.angle }}</p>
+      <form class="inline-form compact-action-form" method="post" action="/aurora/planner/tickets">
+        <input type="hidden" name="plan_id" value="{{ plan.id }}">
+        <button type="submit">Create production ticket</button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Tickets</p><h2>Production queue</h2></div>
+  <div class="slate-ticket-list">
+    {% for ticket in tickets %}
+    <article class="slate-ticket">
+      <span class="badge badge-ops-missing">{{ ticket.status.value }}</span>
+      <strong>{{ ticket.ticket_type.value }} · {{ ticket.page }}</strong>
+      <p>{{ ticket.brief }}</p>
+      <small>Assets: {{ ticket.required_assets|join(", ") }}</small>
+      <small>Acceptance: {{ ticket.acceptance_criteria|join(" / ") }}</small>
+    </article>
+    {% else %}
+    <p class="muted">No production tickets yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

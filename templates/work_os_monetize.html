@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-map">
+  <div>
+    <p class="eyebrow">Monetize Registry</p>
+    <h1>Opportunity Gate</h1>
+    <p class="hero-copy">Safe registry for e-book, lead magnet, sales page, website, and affiliate ideas. No checkout or affiliate automation.</p>
+  </div>
+  <div class="inline-actions"><a class="button button-secondary" href="/aurora/work-brief">Daily work brief</a></div>
+</section>
+<section class="panel spacious">
+  <div class="slate-ticket-list">
+    {% for item in opportunities %}
+    <article class="slate-ticket">
+      <span class="badge badge-ops-missing">{{ item.status.value }}</span>
+      <strong>{{ item.page }} · {{ item.offer_type.value }}</strong>
+      <p>{{ item.suggested_offer }}</p>
+      <small>Pain: {{ item.audience_pain }}</small>
+      <small>Risk: {{ item.risk_notes }}</small>
+      <small>Matches: {{ item.matching_content_ids|join(", ") }}</small>
+    </article>
+    {% else %}<p class="muted">No monetize opportunities yet.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -18,10 +18,17 @@ logger = logging.getLogger(__name__)
 _ROOT = Path(__file__).resolve().parent
 
 
+def _work_os_root(output_root: Path | None) -> Path:
+    if output_root is None:
+        return _ROOT
+    return output_root.parent if output_root.name == "output" else output_root
+
+
 @dataclass
 class ProductionLoopResult:
     page_slug: str
     ideas_found: int = 0
+    tickets_found: int = 0
     jobs_started: int = 0
     jobs_completed: int = 0
     jobs_failed: int = 0
@@ -35,6 +42,59 @@ def run_production_loop(
     output_root: Path | None = None,
 ) -> ProductionLoopResult:
     result = ProductionLoopResult(page_slug=page_slug)
+
+    try:
+        from models.content_job import ContentJob, ContentType, JobStatus
+        from models.work_os import PlanContentType, TicketStatus
+        from work_os_store import load_tickets, save_tickets
+
+        store_root = _work_os_root(output_root)
+        tickets = load_tickets(store_root)
+        queued = [ticket for ticket in tickets if ticket.page == page_slug and ticket.status == TicketStatus.QUEUED]
+        result.tickets_found = len(queued)
+        if queued:
+            ticket = queued[0]
+            try:
+                pm = load_project(page_slug)
+            except Exception as exc:
+                logger.error("Production loop: could not load project %s: %s", page_slug, exc)
+                return result
+            content_map = {
+                PlanContentType.ARTICLE: ContentType.ARTICLE,
+                PlanContentType.IMAGE: ContentType.IMAGE,
+                PlanContentType.INFOGRAPHIC: ContentType.INFOGRAPHIC,
+                PlanContentType.SHORT_VIDEO: ContentType.VIDEO,
+                PlanContentType.LONG_VIDEO: ContentType.VIDEO,
+                PlanContentType.PROMPT_ONLY_VIDEO: ContentType.VIDEO,
+                PlanContentType.BUBBLE: ContentType.ARTICLE,
+            }
+            job = ContentJob(
+                project=page_slug,
+                pm=pm,
+                brief=ticket.brief,
+                platforms=pm.brand.platforms or ["facebook", "instagram"],
+                dry_run=dry_run,
+                content_type=content_map.get(ticket.ticket_type, ContentType.VIDEO),
+                production_ticket=ticket.model_dump(mode="json"),
+            )
+            ticket.status = TicketStatus.IN_PROGRESS
+            save_tickets(store_root, tickets)
+            result.jobs_started += 1
+            try:
+                orchestrator = Orchestrator(config)
+                orchestrator.run(job, unattended=True)
+                ticket.status = TicketStatus.DONE if job.status == JobStatus.COMPLETED else TicketStatus.QA_READY
+                save_tickets(store_root, tickets)
+                result.jobs_completed += 1
+                logger.info("Production loop: completed ticket=%s page=%s", ticket.id, page_slug)
+            except Exception as exc:
+                logger.error("Production loop: ticket failed ticket=%s: %s", ticket.id, exc)
+                ticket.status = TicketStatus.QUEUED
+                save_tickets(store_root, tickets)
+                result.jobs_failed += 1
+            return result
+    except Exception as exc:  # noqa: BLE001 - keep legacy approved-idea loop available if Work OS store is unavailable
+        logger.warning("Production loop: Work OS ticket scan skipped: %s", exc)
 
     approved = store.recent(kind="idea", page=page_slug, status="approved",
                              limit=1, order="asc")
