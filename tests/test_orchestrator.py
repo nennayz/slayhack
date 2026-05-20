@@ -12,17 +12,17 @@ def test_orchestrator_dry_run_completes(tmp_path, monkeypatch):
 
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
+    job.content_type = ContentType.VIDEO
     result = orch.run(job)
 
     assert result.status == JobStatus.COMPLETED
-    assert result.trend_data is not None
-    assert result.ideas is not None
-    assert result.selected_idea is not None
+    assert result.trend_data is None
+    assert result.ideas is None
+    assert result.selected_idea is None
     assert result.bella_output is not None
     assert result.growth_strategy is not None
     assert result.community_faq_path is not None
     assert [entry.stage for entry in result.checkpoint_log] == [
-        "idea_selection",
         "content_review",
         "qa_review",
         "final_approval",

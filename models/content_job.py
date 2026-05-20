@@ -154,3 +154,4 @@ class ContentJob(BaseModel):
     checkpoint_log: list[CheckpointDecision] = Field(default_factory=list)
     performance: list[PostPerformance] = Field(default_factory=list)
     published_at: Optional[datetime] = None
+    idea_uid: str | None = None   # uid of the KS idea that spawned this job

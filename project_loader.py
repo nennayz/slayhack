@@ -152,3 +152,18 @@ def load_platform_specs(project_slug: str, root: Path | None = None) -> dict[str
 def load_project_bridge(project_slug: str, root: Path | None = None) -> dict:
     _first_existing_project_dir(project_slug, root=root)
     return _read_project_yaml(project_slug, "project_bridge.yaml", root=root, default={})
+
+
+def load_scout_seed_topics(project_slug: str, root: Path | None = None) -> list[str]:
+    for candidate in _project_search_dirs(project_slug, root=root):
+        brand_path = candidate / "brand.yaml"
+        if not brand_path.exists():
+            continue
+        try:
+            brand_data = yaml.safe_load(brand_path.read_text()) or {}
+        except yaml.YAMLError:
+            continue
+        topics = brand_data.get("scout_seed_topics") or []
+        if topics:
+            return [str(t) for t in topics if t]
+    return []

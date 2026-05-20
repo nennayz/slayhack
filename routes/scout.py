@@ -12,14 +12,14 @@ from pathlib import Path
 import yaml
 from fastapi import APIRouter, Depends, Form, HTTPException
 from fastapi.requests import Request
-from fastapi.responses import HTMLResponse, RedirectResponse
-
-_JOB_ID_RE = re.compile(r"^\d{8}_\d{6}$")
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from config import Config
 from models.niche_opportunity import ScoutJob
 from project_loader import load_project_page_name
 from routes.deps import templates, verify_auth, _root
+
+_JOB_ID_RE = re.compile(r"^\d{8}_\d{6}$")
 
 logger = logging.getLogger(__name__)
 
@@ -396,6 +396,44 @@ async def scout_project_delete(
         destination = archive_dir / f"{project_slug}-{timestamp}"
     shutil.move(str(project_dir), str(destination))
     return RedirectResponse(url="/scout/", status_code=303)
+
+
+@router.post("/trend-scan/{project_slug}")
+async def run_trend_scan(
+    project_slug: str,
+    request: Request,
+    _: str = Depends(verify_auth),
+) -> JSONResponse:
+    if not _PROJECT_SLUG_RE.match(project_slug):
+        raise HTTPException(status_code=400, detail="Invalid project_slug")
+
+    root = _root(request)
+
+    def _run() -> None:
+        import os
+
+        try:
+            from knowledge.embedder import Embedder, openai_embed_fn
+            from knowledge.settings import KnowledgeSettings
+            from knowledge.store import KnowledgeStore
+            from trend_scout_pipeline import run_trend_scout_pipeline
+
+            cfg = Config.from_env()
+            settings = KnowledgeSettings.from_env(root)
+            embed_fn = openai_embed_fn(settings.embed_model, os.getenv("OPENAI_API_KEY", ""))
+            store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+            job = run_trend_scout_pipeline(project_slug, cfg, store, output_root=root / "output")
+            logger.info(
+                "Dashboard trend scan done: page=%s stored=%d skipped=%d",
+                project_slug,
+                job.signals_stored,
+                job.signals_skipped,
+            )
+        except Exception as exc:
+            logger.error("Dashboard trend scan failed for %s: %s", project_slug, exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+    return JSONResponse({"status": "started", "project_slug": project_slug})
 
 
 @router.post("/approve")

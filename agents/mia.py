@@ -1,3 +1,6 @@
+# DEPRECATED (SP-2): Mia Trend is retired. Daily trend research is now handled by
+# TrendScoutAgent (agents/trend_scout.py) + KnowledgeStore. Behavioural removal
+# and orchestrator unwiring happen in SP-3 Production Loop.
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, cast

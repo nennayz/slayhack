@@ -31,6 +31,29 @@ def _acquire_lock() -> bool:
     raise LockAcquisitionError(_LOCK_FILE, pid)
 
 
+def _update_ks_published(job: "ContentJob", root: "Path | None" = None) -> None:
+    """Mark the KS idea that spawned this job as published. Non-fatal on failure."""
+    if not (job.idea_uid and job.performance):
+        return
+    try:
+        import os as _os
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+        _root = root if root is not None else Path(__file__).resolve().parent
+        settings = KnowledgeSettings.from_env(_root)
+        api_key = _os.getenv("OPENAI_API_KEY", "")
+        embed_fn = openai_embed_fn(settings.embed_model, api_key)
+        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+        store.set_status(job.idea_uid, "published")
+        print(f"Idea {job.idea_uid} marked as published in Knowledge Store.")
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Could not update KS status for idea=%s: %s", job.idea_uid, exc
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="NayzFreedom Fleet — AI Content Pipeline")
     group = parser.add_mutually_exclusive_group(required=True)
@@ -132,6 +155,7 @@ def main() -> None:
         print(f"Tracking job {job.id} for {job.pm.page_name}")
         job = track_job(job, config)
         save_job(job)
+        _update_ks_published(job)
         if not job.performance:
             print("No metrics available.")
         else:

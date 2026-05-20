@@ -39,19 +39,10 @@ class Orchestrator:
         job.status = JobStatus.RUNNING
         log_action("orchestrator_start", {"job_id": job.id, "unattended": unattended})
 
-        self._run_step_if_needed(job, "run_mia", lambda j: j.trend_data is None)
-        self._run_step_if_needed(job, "run_zoe", lambda j: j.ideas is None)
-        if job.selected_idea is None:
-            self._dispatch(
-                "request_checkpoint",
-                {
-                    "stage": "idea_selection",
-                    "summary": self._idea_selection_summary(job),
-                    "options": self._idea_options(job),
-                },
-                job,
-            )
-            save_job(job)
+        # SP-3: ideas are approved upstream by IdeaPlanner and converted to ContentJob.
+        # Robin starts from Bella; Mia/Zoe and idea selection remain only for legacy helpers.
+        if job.content_type is None:
+            raise ValueError("ContentJob.content_type must be set before Orchestrator.run")
 
         self._run_step_if_needed(job, "run_bella", lambda j: j.bella_output is None)
         self._run_step_if_needed(job, "run_lila", lambda j: self._needs_lila(j) and not self._visual_ready(j))

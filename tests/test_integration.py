@@ -1,7 +1,7 @@
 from pathlib import Path
 import shutil
 
-from models.content_job import CheckpointDecision, ContentJob, JobStatus
+from models.content_job import CheckpointDecision, ContentJob, ContentType, JobStatus
 from orchestrator import Orchestrator
 from project_loader import load_project
 from tests.test_mia import make_config
@@ -19,7 +19,7 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
         "orchestrator.pause",
         lambda *args, **kwargs: CheckpointDecision(
             stage=args[0],
-            decision="1" if args[0] == "idea_selection" else "approved",
+            decision="approved",
         ),
     )
 
@@ -30,18 +30,17 @@ def test_full_dry_run_pipeline(tmp_path, monkeypatch):
         brief="lipstick that lasts all day",
         platforms=["instagram", "facebook"],
         dry_run=True,
+        content_type=ContentType.VIDEO,
     )
     orch = Orchestrator(make_config())
-    result = orch.run(job)
+    result = orch.run(job, unattended=True)
 
     assert result.status == JobStatus.COMPLETED
-    assert result.trend_data is not None
-    assert result.ideas is not None and len(result.ideas) >= 3
     assert result.bella_output is not None
     assert result.qa_result is not None and result.qa_result.passed
     assert result.growth_strategy is not None
     assert result.community_faq_path is not None
-    assert len(result.checkpoint_log) == 4
+    assert len(result.checkpoint_log) == 3
 
     job_file = tmp_path / "output" / "Slayhack" / result.id / "job.json"
     assert job_file.exists()

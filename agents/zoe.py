@@ -1,3 +1,6 @@
+# DEPRECATED (SP-2): Zoe Spark is retired. Idea generation is now handled by
+# IdeaPlannerAgent (agents/idea_planner.py) + daily IdeaPlanner pipeline. Behavioural
+# removal and orchestrator unwiring happen in SP-3 Production Loop.
 from __future__ import annotations
 import json
 from pathlib import Path
