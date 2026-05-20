@@ -162,6 +162,45 @@ def _run_daily_trend_scan(
         logger.error("Daily trend scan setup failed: %s", exc)
 
 
+def _run_daily_idea_planner(
+    active_slugs: list[str],
+    dry_run: bool = False,
+    root: Path | None = None,
+) -> None:
+    try:
+        from config import Config
+        from idea_planner_pipeline import run_idea_planner_pipeline
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+
+        cfg = Config.from_env()
+        settings_root = root if root is not None else _ROOT
+        settings = KnowledgeSettings.from_env(settings_root)
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        embed_fn = openai_embed_fn(settings.embed_model, api_key)
+        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+        output_root = root / "output" if root is not None else None
+
+        for slug in active_slugs:
+            try:
+                kwargs: dict = {"dry_run": dry_run}
+                if output_root is not None:
+                    kwargs["output_root"] = output_root
+                job = run_idea_planner_pipeline(slug, cfg, store, **kwargs)
+                logger.info(
+                    "Idea planner done: page=%s generated=%d stored=%d skipped=%d",
+                    slug,
+                    job.ideas_generated,
+                    job.ideas_stored,
+                    job.ideas_skipped,
+                )
+            except Exception as exc:
+                logger.error("Idea planner failed for %s: %s", slug, exc)
+    except Exception as exc:
+        logger.error("Daily idea planner setup failed: %s", exc)
+
+
 def run_scheduler(
     dry_run: bool = False,
     root: Path | None = None,
@@ -191,6 +230,7 @@ def run_scheduler(
     if should_run_scout:
         _run_daily_scout(dry_run=dry_run)
         _run_daily_trend_scan(active_slugs, dry_run=dry_run, root=root)
+        _run_daily_idea_planner(active_slugs, dry_run=dry_run, root=root)
 
     # Collect all jobs to run today across all projects
     pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)
