@@ -74,6 +74,18 @@ def test_bubbles_and_monetize_registry_render(client):
     assert bubbles.status_code == 200
     assert "Daily Bubble / Status Drafts" in bubbles.text
     assert "manual" in bubbles.text.lower()
+    assert "Manual posting only" in bubbles.text
+
+    bubble_id = bubbles.text.split('name="bubble_id" value="', 1)[1].split('"', 1)[0]
+    approved = client.post(
+        "/aurora/bubbles/review",
+        headers=_auth(),
+        data={"bubble_id": bubble_id, "decision": "approve", "review_note": "safe manual story"},
+        follow_redirects=True,
+    )
+    assert approved.status_code == 200
+    assert "approved" in approved.text
+    assert "safe manual story" in approved.text
 
     monetize = client.get("/aurora/monetize", headers=_auth())
     assert monetize.status_code == 200

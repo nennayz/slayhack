@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Query
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
-from models.work_os import PlanStatus, ReviewStatus, SlateStatus
+from models.work_os import BubbleStatus, PlanStatus, ReviewStatus, SlateStatus
 from routes.deps import _root, templates, verify_auth
 from work_os_store import (
     build_daily_work_brief,
@@ -21,6 +21,7 @@ from work_os_store import (
     seed_content_planner,
     seed_monetize,
     sync_approved_ideas_into_planner,
+    update_bubble_status,
     update_plan_status,
     update_publish_review,
     update_slate_status,
@@ -243,6 +244,19 @@ def work_os_bubbles(request: Request, _: str = Depends(verify_auth)) -> HTMLResp
 @router.post("/aurora/bubbles/generate")
 def work_os_bubbles_generate(request: Request, _: str = Depends(verify_auth)) -> RedirectResponse:
     generate_bubbles(_root(request))
+    return RedirectResponse("/aurora/bubbles", status_code=303)
+
+
+@router.post("/aurora/bubbles/review")
+def work_os_bubbles_review(
+    request: Request,
+    bubble_id: str = Form(...),
+    decision: str = Form(...),
+    review_note: str = Form(""),
+    _: str = Depends(verify_auth),
+) -> RedirectResponse:
+    status = BubbleStatus.APPROVED if decision == "approve" else BubbleStatus.REJECTED
+    update_bubble_status(_root(request), bubble_id, status, review_note)
     return RedirectResponse("/aurora/bubbles", status_code=303)
 
 

@@ -4,18 +4,22 @@ from knowledge.embedder import Embedder
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.store import KnowledgeStore
-from models.work_os import ContentPlan, ContentSlate, PlanStatus, ProductionTicket, ReviewStatus, SlateStatus, TicketStatus
+from models.work_os import BubbleStatus, ContentPlan, ContentSlate, PlanStatus, ProductionTicket, ReviewStatus, SlateStatus, TicketStatus
 from work_os_store import (
     build_daily_work_brief,
     create_ticket_for_plan,
     create_today_slate,
     export_manual_publish_checklist,
+    generate_bubbles,
+    load_bubbles,
     load_plans,
     load_slates,
     load_tickets,
     publish_queue_rows,
     save_plans,
+    save_slates,
     sync_approved_ideas_into_planner,
+    update_bubble_status,
     update_plan_status,
     update_publish_review,
     update_slate_status,
@@ -215,6 +219,69 @@ def test_daily_brief_empty_state_does_not_seed_work_objects(tmp_path):
     assert load_slates(tmp_path) == []
     assert load_tickets(tmp_path) == []
     assert any("Live auto-posting remains locked" in risk for risk in brief.risks)
+
+
+
+def test_generate_bubbles_uses_approved_slate_and_is_idempotent(tmp_path):
+    approved_plan = _plan(status=PlanStatus.TICKETED)
+    draft_plan = _plan(status=PlanStatus.APPROVED)
+    draft_plan.id = "draft-plan"
+    draft_plan.hook = "Draft slate hook should not generate"
+    approved_slate = ContentSlate(
+        id="slate-approved",
+        page=approved_plan.page,
+        daily_focus="Approved slate focus for community presence",
+        plan_ids=[approved_plan.id],
+        status=SlateStatus.APPROVED,
+    )
+    draft_slate = ContentSlate(
+        id="slate-draft",
+        page=approved_plan.page,
+        daily_focus="Draft slate focus",
+        plan_ids=[draft_plan.id],
+        status=SlateStatus.DRAFT,
+    )
+    save_plans(tmp_path, [approved_plan, draft_plan])
+    save_slates(tmp_path, [approved_slate, draft_slate])
+
+    bubbles = generate_bubbles(tmp_path)
+    bubbles_again = generate_bubbles(tmp_path)
+
+    assert len(bubbles) == 1
+    assert len(bubbles_again) == 1
+    bubble = bubbles_again[0]
+    assert bubble.source_slate_id == "slate-approved"
+    assert bubble.source_plan_ids == [approved_plan.id]
+    assert bubble.status == BubbleStatus.DRAFT
+    assert "Approved slate focus" in bubble.bubble_text
+    assert "Draft slate" not in bubble.bubble_text
+    assert any("Post manually" in item for item in bubble.manual_checklist)
+    assert load_bubbles(tmp_path)[0].source_slate_id == "slate-approved"
+
+
+def test_update_bubble_status_approves_or_rejects_without_live_posting(tmp_path):
+    plan = _plan(status=PlanStatus.TICKETED)
+    slate = ContentSlate(
+        id="slate-review",
+        page=plan.page,
+        daily_focus="Reviewable bubble focus",
+        plan_ids=[plan.id],
+        status=SlateStatus.APPROVED,
+    )
+    save_plans(tmp_path, [plan])
+    save_slates(tmp_path, [slate])
+    bubble = generate_bubbles(tmp_path)[0]
+
+    approved = update_bubble_status(tmp_path, bubble.id, BubbleStatus.APPROVED, "manual story approved")
+    assert approved is not None
+    assert approved.status == BubbleStatus.APPROVED
+    assert approved.review_note == "manual story approved"
+    assert approved.reviewed_at is not None
+
+    rejected = update_bubble_status(tmp_path, bubble.id, BubbleStatus.REJECTED, "too soon")
+    assert rejected is not None
+    assert rejected.status == BubbleStatus.REJECTED
+    assert rejected.next_action == "Rejected locally; do not post this bubble."
 
 
 def test_publish_queue_rows_include_filters_lineage_and_manual_checklist(tmp_path):

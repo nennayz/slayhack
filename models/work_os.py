@@ -64,6 +64,7 @@ class ReviewStatus(str, Enum):
 class BubbleStatus(str, Enum):
     DRAFT = "draft"
     APPROVED = "approved"
+    REJECTED = "rejected"
     USED = "used"
     ARCHIVED = "archived"
 
@@ -144,12 +145,19 @@ class BubbleMessage(BaseModel):
     id: str = Field(default_factory=lambda: _id("bubble"))
     page: str
     date: dt_date = Field(default_factory=dt_date.today)
+    source_slate_id: str = ""
+    source_plan_ids: list[str] = Field(default_factory=list)
+    target_platforms: list[str] = Field(default_factory=list)
     story_prompt: str
     bubble_text: str
     trend_context: str = ""
     status: BubbleStatus = BubbleStatus.DRAFT
     next_action: str = "Captain reviews and posts manually."
+    manual_checklist: list[str] = Field(default_factory=list)
+    review_note: str = ""
+    reviewed_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
+    updated_at: datetime = Field(default_factory=datetime.now)
 
 
 class MonetizeOpportunity(BaseModel):

@@ -525,26 +525,75 @@ def export_manual_publish_checklist(root: Path, status_filter: str | None = Revi
     return "\n".join(lines)
 
 
+def _bubble_manual_checklist(platforms: list[str]) -> list[str]:
+    platform_note = ", ".join(platforms) if platforms else "the selected story/status channel"
+    return [
+        "Confirm the bubble text matches the page voice and today's slate.",
+        f"Confirm {platform_note} is the right manual posting destination.",
+        "Post manually only after Captain approval; no live social API is called here.",
+        "Record the posted URL or learning note after manual post.",
+    ]
+
+
+def _bubble_text_from_slate(slate: ContentSlate, plans: list[ContentPlan]) -> str:
+    community_plan = next((plan for plan in plans if plan.content_type == PlanContentType.BUBBLE), None)
+    lead_plan = community_plan or (plans[0] if plans else None)
+    hook = lead_plan.hook if lead_plan is not None else slate.daily_focus
+    return f"Today we are testing one tiny upgrade: {slate.daily_focus[:110]} — start with: {hook[:90]}"
+
+
 def generate_bubbles(root: Path) -> list[BubbleMessage]:
     bubbles = load_bubbles(root)
-    today = str(datetime.now().date())
-    existing = {f"{item.page}:{item.date}" for item in bubbles}
-    plans, slates, _ = seed_content_planner(root)
+    plans = load_plans(root)
+    slates = load_slates(root)
+    if not plans and not slates:
+        plans, slates, _ = seed_content_planner(root)
+    today = datetime.now().date()
+    existing_slate_ids = {item.source_slate_id for item in bubbles if item.source_slate_id}
     for slate in slates:
-        key = f"{slate.page}:{today}"
-        if key in existing:
+        if slate.status != SlateStatus.APPROVED or slate.date != today:
+            continue
+        if slate.id in existing_slate_ids:
             continue
         page_plans = [plan for plan in plans if plan.id in slate.plan_ids]
         hook = page_plans[0].hook if page_plans else slate.daily_focus
+        platforms = sorted({platform for plan in page_plans for platform in plan.target_platforms}) or [
+            "facebook",
+            "instagram",
+        ]
         bubbles.append(BubbleMessage(
             page=slate.page,
-            story_prompt=f"Turn today's focus into a casual Story/Bubble that tees up: {hook}",
-            bubble_text=f"Today we are testing one tiny upgrade: {slate.daily_focus[:120]}",
-            trend_context="Generated from the approved Work OS slate; Captain posts manually.",
+            source_slate_id=slate.id,
+            source_plan_ids=[plan.id for plan in page_plans],
+            target_platforms=platforms,
+            story_prompt=f"Turn today's approved slate into a casual Story/Bubble that tees up: {hook}",
+            bubble_text=_bubble_text_from_slate(slate, page_plans),
+            trend_context="Generated from an approved Work OS slate; Captain posts manually only.",
             status=BubbleStatus.DRAFT,
+            manual_checklist=_bubble_manual_checklist(platforms),
         ))
+        existing_slate_ids.add(slate.id)
     save_bubbles(root, bubbles)
     return bubbles
+
+
+def update_bubble_status(root: Path, bubble_id: str, status: BubbleStatus, note: str = "") -> BubbleMessage | None:
+    bubbles = load_bubbles(root)
+    for bubble in bubbles:
+        if bubble.id == bubble_id:
+            bubble.status = status
+            bubble.review_note = note
+            bubble.reviewed_at = datetime.now()
+            bubble.updated_at = datetime.now()
+            if status == BubbleStatus.APPROVED:
+                bubble.next_action = "Approved for manual story/status posting; no live API is called here."
+            elif status == BubbleStatus.REJECTED:
+                bubble.next_action = "Rejected locally; do not post this bubble."
+            elif status == BubbleStatus.USED:
+                bubble.next_action = "Posted manually or used; capture learning before archiving."
+            save_bubbles(root, bubbles)
+            return bubble
+    return None
 
 
 def seed_monetize(root: Path) -> list[MonetizeOpportunity]:

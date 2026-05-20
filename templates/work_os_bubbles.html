@@ -17,9 +17,25 @@
     <article class="slate-ticket">
       <span class="badge badge-ops-missing">{{ bubble.status.value }}</span>
       <strong>{{ bubble.page }} · {{ bubble.date }}</strong>
+      <small>Slate: {{ bubble.source_slate_id or 'seed/manual' }}</small>
+      <small>Platforms: {{ bubble.target_platforms | join(', ') if bubble.target_platforms else 'manual review' }}</small>
       <p>{{ bubble.bubble_text }}</p>
       <small>{{ bubble.story_prompt }}</small>
       <small>{{ bubble.trend_context }}</small>
+      {% if bubble.review_note %}<small>Review note: {{ bubble.review_note }}</small>{% endif %}
+      {% if bubble.manual_checklist %}
+      <ul class="compact-list">
+        {% for item in bubble.manual_checklist %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if bubble.status.value == 'draft' %}
+      <form method="post" action="/aurora/bubbles/review" class="inline-actions">
+        <input type="hidden" name="bubble_id" value="{{ bubble.id }}">
+        <input type="text" name="review_note" placeholder="Captain note">
+        <button type="submit" name="decision" value="approve">Approve manual post</button>
+        <button type="submit" name="decision" value="reject" class="button-secondary">Reject</button>
+      </form>
+      {% endif %}
     </article>
     {% else %}<p class="muted">No bubble drafts yet.</p>{% endfor %}
   </div>
