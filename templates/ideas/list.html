@@ -42,7 +42,7 @@
   </div>
   <p>
     <span class="badge {% if idea.status == 'approved' %}badge-completed{% elif idea.status == 'rejected' %}badge-failed{% else %}badge-pending{% endif %}">
-      {{ idea.status | replace('_', ' ') | title }}
+      {{ (idea.status or 'unknown') | replace('_', ' ') | title }}
     </span>
     {% for tag in idea.tags %}
     <span style="display:inline-block; padding:.2rem .5rem; margin:.1rem; border:1px solid var(--border,#d1d5db); border-radius:999px; font-size:.8rem;">{{ tag }}</span>
