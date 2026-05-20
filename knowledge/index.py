@@ -36,7 +36,7 @@ class Index:
 
     def __init__(self, settings: KnowledgeSettings) -> None:
         self.settings = settings
-        self.conn = sqlite3.connect(str(settings.db_path))
+        self.conn = sqlite3.connect(str(settings.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(_SCHEMA)

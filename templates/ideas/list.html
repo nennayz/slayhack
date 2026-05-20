@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Idea Bank</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #111827; }
+    .filters, .idea { margin-bottom: 1rem; }
+    .chip { display: inline-block; padding: .35rem .6rem; margin-right: .25rem; border: 1px solid #d1d5db; border-radius: 999px; color: #111827; text-decoration: none; }
+    .idea { border: 1px solid #e5e7eb; border-radius: .75rem; padding: 1rem; }
+    .meta { color: #6b7280; font-size: .9rem; }
+    button { margin-right: .5rem; padding: .35rem .7rem; }
+    pre { white-space: pre-wrap; background: #f9fafb; padding: .75rem; border-radius: .5rem; }
+  </style>
+</head>
+<body>
+  <h1>Idea Bank</h1>
+
+  <form method="get" action="/ideas" class="filters">
+    <label>Page <input name="page" value="{{ filter_page }}" placeholder="nayzfreedom_fleet"></label>
+    <label>Status <input name="status" value="{{ filter_status }}" placeholder="new"></label>
+    <button type="submit">Filter</button>
+  </form>
+
+  <div class="filters">
+    <a class="chip" href="/ideas">All</a>
+    <a class="chip" href="/ideas?status=new">New</a>
+    <a class="chip" href="/ideas?status=approved">Approved</a>
+    <a class="chip" href="/ideas?status=rejected">Rejected</a>
+  </div>
+
+  {% if ideas %}
+    {% for idea in ideas %}
+      <article class="idea">
+        <h2>{{ idea.title }}</h2>
+        <p class="meta">
+          UID: {{ idea.uid }} | Page: {{ idea.page }} | Status: {{ idea.status }} | Tags: {{ idea.tags | join(', ') }}
+        </p>
+        <pre>{{ idea.body }}</pre>
+        <form method="post" action="/ideas/{{ idea.uid }}/approve" style="display:inline">
+          <button type="submit">Approve</button>
+        </form>
+        <form method="post" action="/ideas/{{ idea.uid }}/reject" style="display:inline">
+          <button type="submit">Reject</button>
+        </form>
+      </article>
+    {% endfor %}
+  {% else %}
+    <p>No ideas found for the selected filters.</p>
+  {% endif %}
+</body>
+</html>
