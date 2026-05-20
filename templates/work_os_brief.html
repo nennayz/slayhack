@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-map">
+  <div>
+    <p class="eyebrow">Daily Work Command Center</p>
+    <h1>Today's Work Brief</h1>
+    <p class="hero-copy">One low-noise operating brief across planner, tickets, publish queue, bubbles, and monetize research.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora/planner">Planner</a>
+    <a class="button button-secondary" href="/aurora/bubbles">Bubbles</a>
+    <a class="button button-secondary" href="/aurora/monetize">Monetize</a>
+    <a class="button" href="/freedom/daily-brief">Nami brief</a>
+  </div>
+</section>
+<section class="panel spacious">
+  <div class="section-heading"><p class="eyebrow">Focus</p><h2>{{ brief.focus }}</h2></div>
+  <div class="manual-posting-checklist-grid">
+    {% for item in brief.priorities %}<article><span class="badge badge-ops-ready">P{{ loop.index }}</span><strong>{{ item }}</strong></article>{% endfor %}
+  </div>
+</section>
+<section class="daily-slate-grid">
+  <article class="panel"><p class="eyebrow">Decisions</p>{% for item in brief.decisions %}<p>{{ item }}</p>{% endfor %}</article>
+  <article class="panel"><p class="eyebrow">Safety</p>{% for item in brief.risks %}<p>{{ item }}</p>{% endfor %}</article>
+  <article class="panel"><p class="eyebrow">Counts</p><p>{{ plans|length }} plans · {{ tickets|length }} tickets · {{ publish_rows|length }} packages</p><p>{{ bubbles|length }} bubbles · {{ monetize|length }} monetize opportunities</p></article>
+</section>
+{% endblock %}

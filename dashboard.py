@@ -407,6 +407,7 @@ from routes.ops import router as _ops_router
 from routes.scout import router as _scout_router
 from routes.project_admin import router as _project_admin_router
 from routes.ideas import router as _ideas_router
+from routes.work_os import router as _work_os_router
 
 app.include_router(_ops_router)      # includes healthz, media, privacy, data-deletion first
 app.include_router(_captain_router)
@@ -417,6 +418,7 @@ app.include_router(_readiness_router)
 app.include_router(_scout_router)
 app.include_router(_project_admin_router)
 app.include_router(_ideas_router)
+app.include_router(_work_os_router)
 
 
 if __name__ == "__main__":
