@@ -30,7 +30,7 @@ def _auth() -> dict:
 def _client(root: Path) -> TestClient:
     app = _dm.app
     app.state.root = root
-    return TestClient(app, raise_server_exceptions=True)
+    return TestClient(app, raise_server_exceptions=True, follow_redirects=False)
 
 
 @pytest.fixture
@@ -64,22 +64,24 @@ def test_ideas_list_no_auth_returns_401(tmp_path):
     assert resp.status_code == 401
 
 
-def test_approve_idea_returns_200(tmp_path, store):
+def test_approve_idea_redirects(tmp_path, store):
     obj = _add_idea(store, "Approve Test Idea", 1)
     with patch("routes.ideas._get_store", return_value=store):
         resp = _client(tmp_path).post(f"/ideas/{obj.uid}/approve", headers=_auth())
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "approved"
-    assert data["uid"] == obj.uid
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/ideas?status=new"
+    updated = store.get(obj.uid)
+    assert updated is not None and updated.status == "approved"
 
 
-def test_reject_idea_returns_200(tmp_path, store):
+def test_reject_idea_redirects(tmp_path, store):
     obj = _add_idea(store, "Reject Test Idea", 2)
     with patch("routes.ideas._get_store", return_value=store):
         resp = _client(tmp_path).post(f"/ideas/{obj.uid}/reject", headers=_auth())
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "rejected"
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/ideas?status=new"
+    updated = store.get(obj.uid)
+    assert updated is not None and updated.status == "rejected"
 
 
 def test_approve_unknown_uid_returns_404(tmp_path, store):
@@ -108,3 +110,13 @@ def test_status_filter_approved_reflects_set_status(tmp_path, store):
             "/ideas?page=nayzfreedom_fleet&status=approved", headers=_auth()
         )
     assert resp.status_code == 200
+
+
+def test_ideas_list_renders_fleet_html(tmp_path, store):
+    _add_idea(store, "Fleet HTML Test Idea", 99)
+    with patch("routes.ideas._get_store", return_value=store):
+        resp = _client(tmp_path).get("/ideas", headers=_auth())
+    assert resp.status_code == 200
+    assert "Fleet HTML Test Idea" in resp.text
+    assert "Idea Bank" in resp.text
+    assert "Generate Ideas Now" in resp.text
