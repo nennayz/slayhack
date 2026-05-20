@@ -1,52 +1,66 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Idea Bank</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; color: #111827; }
-    .filters, .idea { margin-bottom: 1rem; }
-    .chip { display: inline-block; padding: .35rem .6rem; margin-right: .25rem; border: 1px solid #d1d5db; border-radius: 999px; color: #111827; text-decoration: none; }
-    .idea { border: 1px solid #e5e7eb; border-radius: .75rem; padding: 1rem; }
-    .meta { color: #6b7280; font-size: .9rem; }
-    button { margin-right: .5rem; padding: .35rem .7rem; }
-    pre { white-space: pre-wrap; background: #f9fafb; padding: .75rem; border-radius: .5rem; }
-  </style>
-</head>
-<body>
-  <h1>Idea Bank</h1>
+{% extends "base.html" %}
+{% block title %}Ideas — NayzFreedom Fleet{% endblock %}
 
-  <form method="get" action="/ideas" class="filters">
-    <label>Page <input name="page" value="{{ filter_page }}" placeholder="nayzfreedom_fleet"></label>
-    <label>Status <input name="status" value="{{ filter_status }}" placeholder="new"></label>
-    <button type="submit">Filter</button>
-  </form>
-
-  <div class="filters">
-    <a class="chip" href="/ideas">All</a>
-    <a class="chip" href="/ideas?status=new">New</a>
-    <a class="chip" href="/ideas?status=approved">Approved</a>
-    <a class="chip" href="/ideas?status=rejected">Rejected</a>
+{% block content %}
+<section class="hero hero-fleet compact-hero fleet-hero-readiness">
+  <p class="eyebrow">Idea Bank</p>
+  <h1>Ideas</h1>
+  <p class="hero-copy">Review AI-generated content ideas. Approve to queue for production, reject to skip.</p>
+  <div class="hero-actions">
+    <form method="post" action="/ideas/generate/nayzfreedom_fleet">
+      <button type="submit" class="button">Generate Ideas Now</button>
+    </form>
   </div>
+</section>
 
-  {% if ideas %}
-    {% for idea in ideas %}
-      <article class="idea">
-        <h2>{{ idea.title }}</h2>
-        <p class="meta">
-          UID: {{ idea.uid }} | Page: {{ idea.page }} | Status: {{ idea.status }} | Tags: {{ idea.tags | join(', ') }}
-        </p>
-        <pre>{{ idea.body }}</pre>
-        <form method="post" action="/ideas/{{ idea.uid }}/approve" style="display:inline">
-          <button type="submit">Approve</button>
-        </form>
-        <form method="post" action="/ideas/{{ idea.uid }}/reject" style="display:inline">
-          <button type="submit">Reject</button>
-        </form>
-      </article>
-    {% endfor %}
-  {% else %}
-    <p>No ideas found for the selected filters.</p>
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Filter</p>
+    <h2>Idea Queue</h2>
+  </div>
+  <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+    <a class="button button-small {% if not filter_status %}button-active{% endif %}" href="/ideas">All</a>
+    <a class="button button-small {% if filter_status == 'new' %}button-active{% endif %}" href="/ideas?status=new">New</a>
+    <a class="button button-small {% if filter_status == 'approved' %}button-active{% endif %}" href="/ideas?status=approved">Approved</a>
+    <a class="button button-small {% if filter_status == 'rejected' %}button-active{% endif %}" href="/ideas?status=rejected">Rejected</a>
+  </div>
+  {% if filter_page %}
+  <p style="color:var(--muted); font-size:.9rem;">Filtered to page: <strong>{{ filter_page }}</strong> &nbsp;<a href="/ideas{% if filter_status %}?status={{ filter_status }}{% endif %}">Clear</a></p>
   {% endif %}
-</body>
-</html>
+</section>
+
+{% if not ideas %}
+<section class="panel">
+  <p>No ideas found. Use <strong>Generate Ideas Now</strong> above or wait for the daily scheduler run.</p>
+</section>
+{% else %}
+{% for idea in ideas %}
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">{{ idea.page }} &middot; {{ idea.created_at.strftime('%Y-%m-%d') if idea.created_at else '' }}</p>
+    <h2>{{ idea.title }}</h2>
+  </div>
+  <p>
+    <span class="badge {% if idea.status == 'approved' %}badge-completed{% elif idea.status == 'rejected' %}badge-failed{% else %}badge-pending{% endif %}">
+      {{ idea.status | replace('_', ' ') | title }}
+    </span>
+    {% for tag in idea.tags %}
+    <span style="display:inline-block; padding:.2rem .5rem; margin:.1rem; border:1px solid var(--border,#d1d5db); border-radius:999px; font-size:.8rem;">{{ tag }}</span>
+    {% endfor %}
+  </p>
+  <pre style="white-space:pre-wrap; background:var(--surface,#f9fafb); padding:.75rem; border-radius:.5rem; font-size:.9rem;">{{ idea.body }}</pre>
+  <p style="color:var(--muted); font-size:.8rem;">UID: {{ idea.uid }}</p>
+  {% if idea.status == 'new' %}
+  <div style="display:flex; gap:.5rem; margin-top:.5rem;">
+    <form method="post" action="/ideas/{{ idea.uid }}/approve">
+      <button type="submit" class="button">Approve</button>
+    </form>
+    <form method="post" action="/ideas/{{ idea.uid }}/reject">
+      <button type="submit" class="button button-secondary">Reject</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endfor %}
+{% endif %}
+{% endblock %}
