@@ -4,9 +4,10 @@ from knowledge.embedder import Embedder
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.store import KnowledgeStore
-from models.work_os import PlanStatus, SlateStatus, TicketStatus
+from models.work_os import ContentPlan, ContentSlate, PlanStatus, ProductionTicket, SlateStatus, TicketStatus
 from work_os_store import (
     create_ticket_for_plan,
+    build_daily_work_brief,
     create_today_slate,
     load_plans,
     load_slates,
@@ -96,3 +97,118 @@ def test_save_plan_reload_preserves_existing_plans(tmp_path):
     updated, created = sync_approved_ideas_into_planner(tmp_path, store)
     assert created == 1
     assert len(updated) == 2
+
+
+def _plan(page: str = "nayzfreedom_fleet", status: PlanStatus = PlanStatus.DRAFT) -> ContentPlan:
+    return ContentPlan(
+        page=page,
+        hook="Daily brief hook",
+        angle="Daily brief angle",
+        production_brief="Daily brief production brief",
+        status=status,
+    )
+
+
+def test_daily_brief_next_action_prefers_draft_plan_review(tmp_path):
+    plan = _plan(status=PlanStatus.DRAFT)
+    save_plans(tmp_path, [plan])
+
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Review draft plans"
+    assert brief.next_best_action.href == "/aurora/planner"
+    assert brief.next_best_action.count == 1
+    assert any(section.key == "draft_plans_waiting_review" and section.item_count == 1 for section in brief.sections)
+
+
+def test_daily_brief_recommends_slate_for_approved_plan_without_today_slate(tmp_path):
+    plan = _plan(status=PlanStatus.APPROVED)
+    save_plans(tmp_path, [plan])
+
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Create today's slate"
+    assert brief.next_best_action.count == 1
+
+
+def test_daily_brief_recommends_approving_draft_slate_before_ticket(tmp_path):
+    plan = _plan(status=PlanStatus.APPROVED)
+    save_plans(tmp_path, [plan])
+    slate = create_today_slate(tmp_path, page=plan.page)
+    assert slate is not None
+
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Approve today's slate"
+    assert brief.next_best_action.count == 1
+
+
+def test_daily_brief_recommends_ticket_after_approved_slate(tmp_path):
+    plan = _plan(status=PlanStatus.APPROVED)
+    save_plans(tmp_path, [plan])
+    slate = ContentSlate(
+        page=plan.page,
+        daily_focus="Approved daily focus",
+        plan_ids=[plan.id],
+        status=SlateStatus.APPROVED,
+    )
+    from work_os_store import save_slates
+
+    save_slates(tmp_path, [slate])
+
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Create production tickets"
+    assert brief.next_best_action.count == 1
+
+
+def test_daily_brief_recommends_queued_ticket_and_survives_reload(tmp_path):
+    plan = _plan(status=PlanStatus.TICKETED)
+    ticket = ProductionTicket(
+        plan_id=plan.id,
+        page=plan.page,
+        ticket_type=plan.content_type,
+        brief=plan.production_brief,
+        status=TicketStatus.QUEUED,
+    )
+    save_plans(tmp_path, [plan])
+    from work_os_store import save_tickets
+
+    save_tickets(tmp_path, [ticket])
+
+    brief = build_daily_work_brief(tmp_path)
+    reloaded = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Run or review queued production"
+    assert reloaded.next_best_action is not None
+    assert reloaded.next_best_action.label == "Run or review queued production"
+    assert any(section.key == "queued_production_tickets" and section.item_count == 1 for section in reloaded.sections)
+
+
+def test_daily_brief_recommends_publish_queue_after_production_queue(tmp_path):
+    queue = tmp_path / "output" / "publish_queue.jsonl"
+    queue.parent.mkdir(parents=True)
+    queue.write_text('{"package_uid": "pkg-brief", "caption": "ready for review"}\n')
+
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Review publish queue"
+    assert brief.next_best_action.href == "/aurora/publish-queue"
+    assert any(section.key == "publish_queue_pending_review" and section.item_count == 1 for section in brief.sections)
+
+
+def test_daily_brief_empty_state_does_not_seed_work_objects(tmp_path):
+    brief = build_daily_work_brief(tmp_path)
+
+    assert brief.next_best_action is not None
+    assert brief.next_best_action.label == "Sync planner or scout for the next idea"
+    assert load_plans(tmp_path) == []
+    assert load_slates(tmp_path) == []
+    assert load_tickets(tmp_path) == []
+    assert any("Live auto-posting remains locked" in risk for risk in brief.risks)

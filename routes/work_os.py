@@ -42,6 +42,20 @@ def _knowledge_store(root):
         return None
 
 
+def _approved_ideas_waiting_planning_count(root, store) -> int:
+    if store is None:
+        return 0
+    planned_source_uids = {plan.source_idea_uid for plan in load_plans(root) if plan.source_idea_uid}
+    try:
+        return sum(
+            1
+            for idea in store.recent(kind="idea", status="approved", limit=100, order="asc")
+            if idea.uid not in planned_source_uids
+        )
+    except Exception:  # noqa: BLE001 - daily brief must render without KS availability
+        return 0
+
+
 @router.get("/aurora/planner", response_class=HTMLResponse)
 def work_os_planner(request: Request, _: str = Depends(verify_auth)) -> HTMLResponse:
     root = _root(request)
@@ -156,7 +170,12 @@ def work_os_publish_queue_review(
 @router.get("/aurora/work-brief", response_class=HTMLResponse)
 def work_os_daily_brief(request: Request, _: str = Depends(verify_auth)) -> HTMLResponse:
     root = _root(request)
-    brief = build_daily_work_brief(root)
+    store = _knowledge_store(root)
+    approved_ideas_waiting_planning_count = _approved_ideas_waiting_planning_count(root, store)
+    brief = build_daily_work_brief(
+        root,
+        approved_ideas_waiting_planning_count=approved_ideas_waiting_planning_count,
+    )
     return templates.TemplateResponse(
         request,
         "work_os_brief.html",
@@ -164,9 +183,12 @@ def work_os_daily_brief(request: Request, _: str = Depends(verify_auth)) -> HTML
             "request": request,
             "brief": brief,
             "plans": load_plans(root),
+            "draft_plans": [plan for plan in load_plans(root) if plan.status == PlanStatus.DRAFT],
             "slates": load_slates(root),
             "tickets": load_tickets(root),
+            "queued_tickets": [ticket for ticket in load_tickets(root) if ticket.status.value == "queued"],
             "publish_rows": publish_queue_rows(root),
+            "pending_publish_rows": [row for row in publish_queue_rows(root) if row["status"] == "pending"],
             "bubbles": load_bubbles(root),
             "monetize": load_monetize(root),
         },

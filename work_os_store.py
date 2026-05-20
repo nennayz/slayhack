@@ -13,6 +13,8 @@ from models.work_os import (
     BubbleStatus,
     ContentPlan,
     ContentSlate,
+    DailyBriefAction,
+    DailyBriefSection,
     DailyWorkBrief,
     MonetizeOpportunity,
     PlanContentType,
@@ -475,26 +477,223 @@ def seed_monetize(root: Path) -> list[MonetizeOpportunity]:
     return opportunities
 
 
-def build_daily_work_brief(root: Path) -> DailyWorkBrief:
-    plans, slates, tickets = seed_content_planner(root)
+def _action(
+    label: str,
+    reason: str,
+    href: str,
+    priority: int,
+    category: str,
+    count: int,
+) -> DailyBriefAction:
+    return DailyBriefAction(
+        label=label,
+        reason=reason,
+        href=href,
+        priority=priority,
+        category=category,
+        count=count,
+    )
+
+
+def _section(
+    key: str,
+    title: str,
+    item_count: int,
+    next_action: str,
+    href: str = "",
+    empty_message: str = "Nothing waiting here.",
+) -> DailyBriefSection:
+    return DailyBriefSection(
+        key=key,
+        title=title,
+        item_count=item_count,
+        next_action=next_action,
+        href=href,
+        empty_message=empty_message,
+    )
+
+
+def build_daily_work_brief(
+    root: Path,
+    *,
+    approved_ideas_waiting_planning_count: int = 0,
+    seed_if_empty: bool = False,
+) -> DailyWorkBrief:
+    plans = load_plans(root)
+    slates = load_slates(root)
+    tickets = load_tickets(root)
+    if seed_if_empty and not plans and not slates and not tickets:
+        plans, slates, tickets = seed_content_planner(root)
     queue = publish_queue_rows(root)
-    bubbles = generate_bubbles(root)
-    monetize = seed_monetize(root)
+    bubbles = load_bubbles(root)
+    monetize = load_monetize(root)
+
+    today = datetime.now().date()
+    draft_plans = [plan for plan in plans if plan.status == PlanStatus.DRAFT]
+    approved_plans = [plan for plan in plans if plan.status == PlanStatus.APPROVED]
+    ticketable_plans = [plan for plan in plans if plan.status in {PlanStatus.APPROVED, PlanStatus.TICKETED}]
+    today_slates = [slate for slate in slates if slate.date == today]
+    draft_today_slates = [slate for slate in today_slates if slate.status == SlateStatus.DRAFT]
+    ticket_plan_ids = {ticket.plan_id for ticket in tickets}
+    plans_without_tickets = [plan for plan in ticketable_plans if plan.id not in ticket_plan_ids]
+    queued_tickets = [ticket for ticket in tickets if ticket.status == TicketStatus.QUEUED]
+    pending_publish_rows = [row for row in queue if row["status"] == ReviewStatus.PENDING.value]
+    bubble_drafts = [bubble for bubble in bubbles if bubble.status == BubbleStatus.DRAFT]
+
+    action_queue: list[DailyBriefAction] = []
+    if approved_ideas_waiting_planning_count:
+        action_queue.append(_action(
+            "Sync approved ideas into planner",
+            f"{approved_ideas_waiting_planning_count} approved idea(s) are not planned yet.",
+            "/aurora/planner",
+            10,
+            "planner",
+            approved_ideas_waiting_planning_count,
+        ))
+    if draft_plans:
+        action_queue.append(_action(
+            "Review draft plans",
+            f"{len(draft_plans)} draft plan(s) need Captain approve/reject.",
+            "/aurora/planner",
+            20,
+            "planner",
+            len(draft_plans),
+        ))
+    if approved_plans and not today_slates:
+        action_queue.append(_action(
+            "Create today's slate",
+            f"{len(approved_plans)} approved plan(s) are ready for a daily slate.",
+            "/aurora/planner",
+            30,
+            "slate",
+            len(approved_plans),
+        ))
+    if draft_today_slates:
+        action_queue.append(_action(
+            "Approve today's slate",
+            f"{len(draft_today_slates)} slate(s) are drafted for today.",
+            "/aurora/planner",
+            40,
+            "slate",
+            len(draft_today_slates),
+        ))
+    if plans_without_tickets:
+        action_queue.append(_action(
+            "Create production tickets",
+            f"{len(plans_without_tickets)} approved/ticketed plan(s) do not have tickets yet.",
+            "/aurora/planner",
+            50,
+            "ticket",
+            len(plans_without_tickets),
+        ))
+    if queued_tickets:
+        action_queue.append(_action(
+            "Run or review queued production",
+            f"{len(queued_tickets)} production ticket(s) are queued.",
+            "/aurora/planner",
+            60,
+            "production",
+            len(queued_tickets),
+        ))
+    if pending_publish_rows:
+        action_queue.append(_action(
+            "Review publish queue",
+            f"{len(pending_publish_rows)} package(s) are waiting manual publish review.",
+            "/aurora/publish-queue",
+            70,
+            "publish",
+            len(pending_publish_rows),
+        ))
+    if not action_queue:
+        action_queue.append(_action(
+            "Sync planner or scout for the next idea",
+            "No Work OS blockers are waiting; bring in the next approved idea before production.",
+            "/aurora/planner",
+            90,
+            "planner",
+            0,
+        ))
+
+    sections = [
+        _section(
+            "approved_ideas_waiting_planning",
+            "Approved ideas waiting planning",
+            approved_ideas_waiting_planning_count,
+            "Sync approved Knowledge Store ideas into draft ContentPlans.",
+            "/aurora/planner",
+            "No approved ideas are waiting for planner sync.",
+        ),
+        _section(
+            "draft_plans_waiting_review",
+            "Draft plans waiting Captain review",
+            len(draft_plans),
+            "Approve or reject each draft plan before slate/ticket creation.",
+            "/aurora/planner",
+            "No draft plans are waiting for Captain review.",
+        ),
+        _section(
+            "todays_slate",
+            "Today's slate",
+            len(today_slates),
+            "Create or approve today's slate before production handoff.",
+            "/aurora/planner",
+            "No slate exists for today yet.",
+        ),
+        _section(
+            "queued_production_tickets",
+            "Queued production tickets",
+            len(queued_tickets),
+            "Run production from queued tickets; keep QA/manual gates intact.",
+            "/aurora/planner",
+            "No queued production tickets.",
+        ),
+        _section(
+            "publish_queue_pending_review",
+            "Publish queue pending review",
+            len(pending_publish_rows),
+            "Review packages locally before any manual posting.",
+            "/aurora/publish-queue",
+            "No publish packages are pending review.",
+        ),
+        _section(
+            "bubble_drafts",
+            "Bubble drafts",
+            len(bubble_drafts),
+            "Review bubble/status drafts manually.",
+            "/aurora/bubbles",
+            "No bubble drafts are waiting.",
+        ),
+        _section(
+            "monetize_opportunities",
+            "Monetize opportunities",
+            len(monetize),
+            "Research and qualify offers only; checkout remains locked.",
+            "/aurora/monetize",
+            "No monetize opportunities are queued.",
+        ),
+        _section(
+            "locked_gates",
+            "Risks / locked gates",
+            5,
+            "Keep live posting, checkout, affiliate, sensitive personal data, investment, and music automation locked.",
+            "",
+            "Safety gates remain locked.",
+        ),
+    ]
+
     return DailyWorkBrief(
-        focus="Run the Work OS loop manually: approve slate, move tickets, review publish packages, capture learning.",
-        priorities=[
-            f"Review {len(slates)} content slate(s).",
-            f"Move {sum(1 for item in tickets if item.status == TicketStatus.QUEUED)} queued production ticket(s).",
-            f"Review {sum(1 for row in queue if row['status'] == ReviewStatus.PENDING.value)} publish package(s).",
-        ],
+        focus="Run the Work OS loop manually: plan, approve, ticket, produce, review publish packages, capture learning.",
+        priorities=[action.label for action in action_queue[:3]],
         decisions=[
-            "Which plan gets Captain approval today?",
-            "Which production ticket should run first?",
-            "Which package is safe to post manually?",
+            action.reason for action in action_queue[:3]
         ],
         risks=[
             "Live auto-posting remains locked.",
-            "Affiliate/checkout work stays in opportunity research until QA and approval.",
-            f"{len(bubbles)} bubble draft(s) and {len(monetize)} monetize opportunity item(s) are advisory only.",
+            "Checkout and affiliate automation remain locked until Captain approval.",
+            "Sensitive personal data, investment assistant, and music catalog automation remain outside this brief.",
+            f"{len(bubble_drafts)} bubble draft(s) and {len(monetize)} monetize opportunity item(s) are advisory/manual only.",
         ],
+        next_best_action=action_queue[0],
+        action_queue=action_queue,
+        sections=sections,
     )

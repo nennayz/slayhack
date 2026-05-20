@@ -46,11 +46,22 @@ def test_work_os_planner_syncs_approved_ks_ideas(client, tmp_path):
     assert "approved" in approve.text
 
 
-def test_work_os_daily_brief_and_nami_brief_render(client):
+def test_work_os_daily_brief_and_nami_brief_render(client, tmp_path):
     work = client.get("/aurora/work-brief", headers=_auth())
     assert work.status_code == 200
     assert "Today&apos;s Work Brief" in work.text or "Today's Work Brief" in work.text
+    assert "Next Best Action" in work.text
+    assert "Action Queue" in work.text
+    assert "Approved ideas waiting planning" in work.text
+    assert "Draft plans waiting Captain review" in work.text
+    assert "Today&apos;s slate" in work.text or "Today's slate" in work.text
+    assert "Queued production tickets" in work.text
+    assert "Publish queue pending review" in work.text
+    assert "Bubble drafts" in work.text
+    assert "Monetize opportunities" in work.text
+    assert "Risks / locked gates" in work.text
     assert "Live auto-posting remains locked" in work.text
+    assert not (tmp_path / "output" / "work_os" / "content_plans.json").exists()
 
     nami = client.get("/freedom/daily-brief", headers=_auth())
     assert nami.status_code == 200
