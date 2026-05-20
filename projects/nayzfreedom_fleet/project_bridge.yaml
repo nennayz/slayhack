@@ -1,0 +1,55 @@
+project: slay_hack
+display_name: "Slay Hack"
+brand_name: "Slay Hack"
+social_handle: "@slayobjects"
+website: "slayhack.com"
+pm: "Slay"
+parent_system: "NayzFreedom Fleet"
+
+drive_root: "/Users/nennayz/Library/CloudStorage/GoogleDrive-nennay@gmail.com/My Drive/Slay Hack"
+master_file: "Slay Hack Master File/Project Slay Hack - Master Operating File.md"
+
+current_phase: ebook_product_launch
+primary_goal: "Build the e-book product business system while continuing social view growth."
+audience: "Women in the USA, ages 18-44, evolved from the original Gen Z positioning."
+
+pm_review_sources:
+  - "Slay Hack Master File/Project Slay Hack - Master Operating File.md"
+  - "Ebook Project/20260517-Ebook-Knowledge-Base.md"
+  - "Ebook Project/20260517-Slay-Ebook-Universe-Blueprint.md"
+  - "Ebook Project/20260517-SlayShop-Hormozi-Strategy.md"
+  - "Data Analysis/20260422-slayhack-analytics-report.md"
+  - "SlayHack_Content_Tracker_v2.xlsx"
+
+active_source_map:
+  master_operating_file: "Slay Hack Master File/Project Slay Hack - Master Operating File.md"
+  ebook_knowledge_base: "Ebook Project/20260517-Ebook-Knowledge-Base.md"
+  ebook_universe: "Ebook Project/20260517-Slay-Ebook-Universe-Blueprint.md"
+  ebook_funnel: "Ebook Project/20260517-SlayShop-Hormozi-Strategy.md"
+  analytics: "Data Analysis/20260422-slayhack-analytics-report.md"
+  content_tracker: "SlayHack_Content_Tracker_v2.xlsx"
+  cleanup_manifest: "_Archive/Google_Drive_Cleanup_20260517/CLEANUP_MANIFEST.md"
+
+next_checkpoint:
+  title: "E-book Launch Readiness Audit"
+  owner: "Slay"
+  status: ready_for_pm_review
+  recommended_first_lane:
+    lead_magnet: "Slay Basics: 30 Hacks"
+    paid_product: "Age Like Fine Wine"
+    tripwire: "Beauty Quick Fix"
+
+fleet_integration:
+  role: "model page/project business unit"
+  rule: "Audience sees Slay Hack / @slayobjects / slayhack.com; Fleet sees Project Slay Hack under PM Slay."
+  future_project_pattern:
+    - project_charter
+    - pm_profile
+    - brand_brain
+    - audience_map
+    - content_engine
+    - product_or_monetization_map
+    - workflow_reference
+    - data_dashboard
+    - learning_loop
+    - master_operating_file

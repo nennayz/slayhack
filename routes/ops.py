@@ -1,17 +1,14 @@
 """/ops routes — operational dashboard, smoke tests, incidents, publish failures."""
 from __future__ import annotations
 
-import base64
 import hashlib
-import hmac
 import json
-import os
-from pathlib import Path
+from typing import cast
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
-from routes.deps import templates, verify_auth, _root, _ROOT
+from routes.deps import templates, verify_auth, _root
 from routes._helpers import (
     _write_ops_audit,
     _write_ops_incident,
@@ -227,7 +224,7 @@ def ops_retry_safe_instagram_failures(request: Request, user: str = Depends(veri
     root = _root(request)
     jobs = list_all_jobs(root)
     triage = _ops_publish_failure_triage(root, jobs, limit=1000)
-    rows = triage["safe_instagram_retry_rows"]
+    rows = cast(list[dict[str, object]], triage["safe_instagram_retry_rows"])
     if not rows:
         snapshot = _get_dashboard()._ops_snapshot(root)
         snapshot["action_result"] = {
@@ -237,12 +234,13 @@ def ops_retry_safe_instagram_failures(request: Request, user: str = Depends(veri
         }
         return templates.TemplateResponse(request, "ops.html", snapshot)
     for row in rows:
+        row_job_id = str(row["job_id"])
         subprocess.Popen(
             [
                 sys.executable,
                 "main.py",
                 "--publish-only",
-                row["job_id"],
+                row_job_id,
                 "--schedule",
                 "--publish-platform",
                 "instagram",

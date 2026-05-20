@@ -6,6 +6,7 @@ import sys
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, Form, HTTPException
@@ -24,16 +25,13 @@ from track_queue import enqueue_track_snapshots, job_tracking_summary, read_queu
 from routes._helpers import (
     MISSION_FILTER_KEYS,
     _build_voyage_steps,
-    _caption_readiness,
     _accepted_learning_for_job,
     _confirm_mission_learning,
     _failed_publish_platforms,
     _filter_jobs,
     _find_job_at_root,
     _live_publish_gate_summary,
-    _media_readiness,
     _mission_command,
-    _mission_filters,
     _mission_outputs,
     _publish_execution_status,
     _publish_execution_summary,
@@ -291,9 +289,10 @@ def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depe
                 oauth_client_secrets=os.getenv("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS") or None,
                 token_path=os.getenv("GOOGLE_DRIVE_OAUTH_TOKEN_FILE") or None,
             )
+            folder_id = cast(str, folder_result["folder_id"])
             uploaded = upload_file_to_drive(
                 str(zip_path),
-                folder_id=folder_result["folder_id"],
+                folder_id=folder_id,
                 dest_name=manual_kit_filename(job),
                 mime_type="application/zip",
                 credential_path=os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or None,
@@ -314,7 +313,7 @@ def sync_job_manual_kit_to_drive(job_id: str, request: Request, user: str = Depe
         "synced_by": user,
         "filename": manual_kit_filename(job),
         "folder_path": drive_folder_path(job),
-        "folder_id": folder_result["folder_id"],
+        "folder_id": folder_id,
         "file_id": uploaded.get("id"),
         "web_view_link": uploaded.get("webViewLink"),
         "web_content_link": uploaded.get("webContentLink"),

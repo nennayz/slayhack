@@ -105,12 +105,15 @@ def enforce_char_limit(reply: str, max_chars: int, router: ModelRouter | None) -
 
 def build_system_prompt(brand: object, max_chars: int) -> str:
     comment_reply_style = getattr(brand, "comment_reply_style", "").strip()
+    tone = str(getattr(brand, "tone", ""))
+    target_audience = str(getattr(brand, "target_audience", ""))
+    script_style = str(getattr(brand, "script_style", ""))
     style_section = f"\nComment reply style guide:\n{comment_reply_style}\n" if comment_reply_style else ""
     return (
         "You are a social media community manager.\n"
-        f"Brand tone: {brand.tone}\n"
-        f"Target audience: {brand.target_audience}\n"
-        f"Writing style: {brand.script_style}\n\n"
+        f"Brand tone: {tone}\n"
+        f"Target audience: {target_audience}\n"
+        f"Writing style: {script_style}\n\n"
         f"{style_section}"
         "Look at this screenshot carefully.\n\n"
         "1. Find ALL comments visible in the image, reading top to bottom.\n"

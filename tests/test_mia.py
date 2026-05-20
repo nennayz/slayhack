@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from agents.mia import MiaAgent
 from config import Config
 from models.content_job import ContentJob, PMProfile, BrandProfile, VisualIdentity

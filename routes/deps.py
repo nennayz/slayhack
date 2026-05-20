@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from ops_config import OPS_ACTIONS, OPS_PUBLIC_BASE_URL, OPS_UNITS  # noqa: F401
 
 DASHBOARD_USER = os.environ.get("DASHBOARD_USER")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD")
@@ -17,51 +18,13 @@ if not DASHBOARD_USER or not DASHBOARD_PASSWORD:
         "DASHBOARD_USER and DASHBOARD_PASSWORD must be set in environment before starting the dashboard."
     )
 
+_DASHBOARD_USER: str = DASHBOARD_USER
+_DASHBOARD_PASSWORD: str = DASHBOARD_PASSWORD
+
 _ROOT = Path(__file__).resolve().parent.parent
 
 VALID_CONTENT_TYPES = {"video", "article", "image", "infographic"}
 MAX_BRIEF_LEN = 2000
-OPS_PUBLIC_BASE_URL = os.environ.get("OPS_PUBLIC_BASE_URL", "https://fleet.nayzfreedom.cloud").rstrip("/")
-OPS_UNITS = [
-    "nayzfreedom-dashboard.service",
-    "nayzfreedom-bot.service",
-    "nayzfreedom-scheduler.timer",
-    "nayzfreedom-reporter.timer",
-    "nayzfreedom-instagram-queue.timer",
-    "nayzfreedom-backup.timer",
-    "nayzfreedom-healthcheck.timer",
-    "nayzfreedom-production-summary.timer",
-    "nayzfreedom-log-retention.timer",
-    "nayzfreedom-ops-report.timer",
-]
-OPS_ACTIONS = {
-    "backup": {
-        "label": "Run backup now",
-        "unit": "nayzfreedom-backup.service",
-        "verb": "start",
-    },
-    "instagram_queue": {
-        "label": "Run due Instagram queue now",
-        "unit": "nayzfreedom-instagram-queue.service",
-        "verb": "start",
-    },
-    "production_summary": {
-        "label": "Run production summary now",
-        "unit": "nayzfreedom-production-summary.service",
-        "verb": "start",
-    },
-    "ops_report": {
-        "label": "Send Ops report now",
-        "unit": "nayzfreedom-ops-report.service",
-        "verb": "start",
-    },
-    "restart_dashboard": {
-        "label": "Restart dashboard",
-        "unit": "nayzfreedom-dashboard.service",
-        "verb": "restart",
-        "delayed": True,
-    },
-}
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=str(_ROOT / "static")), name="static")
@@ -75,8 +38,8 @@ def _status_label(value: object) -> str:
 
 
 def verify_auth(credentials: HTTPBasicCredentials = Depends(security)) -> str:
-    correct_user = secrets.compare_digest(credentials.username, DASHBOARD_USER)
-    correct_pass = secrets.compare_digest(credentials.password, DASHBOARD_PASSWORD)
+    correct_user = secrets.compare_digest(credentials.username, _DASHBOARD_USER)
+    correct_pass = secrets.compare_digest(credentials.password, _DASHBOARD_PASSWORD)
     if not (correct_user and correct_pass):
         raise HTTPException(status_code=401, headers={"WWW-Authenticate": "Basic"})
     return credentials.username

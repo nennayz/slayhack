@@ -1,9 +1,7 @@
 from __future__ import annotations
 import subprocess
 import sys
-from pathlib import Path
-from unittest.mock import call, patch, MagicMock
-import pytest
+from unittest.mock import patch, MagicMock
 import scheduler as sched_module
 
 
@@ -38,6 +36,18 @@ def test_run_job_skips_child_pipeline_lock(tmp_path):
 
     assert result["failed"] is False
     assert mock_run.call_args.kwargs["env"]["NAYZ_SKIP_PIPELINE_LOCK"] == "1"
+
+
+def test_scheduler_lock_recovers_stale_pid(tmp_path, monkeypatch):
+    lock_file = tmp_path / "output" / "nayz_pipeline.lock"
+    lock_file.parent.mkdir(parents=True)
+    lock_file.write_text("999999")
+    monkeypatch.setattr("scheduler.acquire_pid_lock", lambda path: (True, 12345, True))
+
+    resolved, acquired = sched_module._acquire_scheduler_lock(tmp_path)
+
+    assert acquired is True
+    assert resolved == lock_file
 
 
 def test_scheduler_loads_todays_brief(tmp_path, monkeypatch):
@@ -113,7 +123,7 @@ def test_scheduler_skips_blank_brief(tmp_path, monkeypatch):
     )
     monkeypatch.setattr(sched_module, "_today_name", lambda: "monday")
     with patch("scheduler.subprocess.run", return_value=_make_ok_result()) as mock_run:
-        exit_code = sched_module.run_scheduler(dry_run=False, root=tmp_path)
+        sched_module.run_scheduler(dry_run=False, root=tmp_path)
     assert mock_run.call_count == 6
 
 
@@ -136,8 +146,8 @@ def test_scheduler_uses_active_project_slugs_and_skips_alias_duplicates(tmp_path
         exit_code = sched_module.run_scheduler(dry_run=False, root=tmp_path)
     assert exit_code == 0
     projects = [c.args[0][c.args[0].index("--project") + 1] for c in mock_run.call_args_list]
-    assert "nayzfreedom_fleet" not in projects
-    assert projects.count("slay_hack") == 7
+    assert projects.count("nayzfreedom_fleet") == 7
+    assert "slay_hack" not in projects
     assert projects.count("stadium_sweethearts") == 7
 
 

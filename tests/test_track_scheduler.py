@@ -1,12 +1,6 @@
 from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
-import sys
-import pytest
-
-_google = MagicMock()
-sys.modules.setdefault("google", _google)
-sys.modules.setdefault("google.genai", _google.genai)
 
 
 def _past(hours: int = 1) -> str:

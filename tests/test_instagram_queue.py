@@ -55,6 +55,24 @@ def test_instagram_queue_publishes_due_job(mocker, tmp_path, monkeypatch):
     assert "Instagram queue run completed" in work_activity
 
 
+def test_instagram_queue_exits_when_auto_posting_disabled(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("NAYZ_AUTO_POSTING_DISABLED", "1")
+    _write_pending_job(tmp_path)
+    mock_config = mocker.patch("instagram_queue.Config.from_env")
+    mock_run = mocker.patch("instagram_queue.PublishAgent.run")
+
+    exit_code = process_instagram_queue(root=tmp_path)
+
+    assert exit_code == 0
+    mock_config.assert_not_called()
+    mock_run.assert_not_called()
+    history = json.loads((tmp_path / "logs" / "instagram_queue_history.jsonl").read_text().splitlines()[-1])
+    assert history["blocked"] is True
+    assert history["processed"] == 0
+    assert history["published"] == 0
+
+
 def test_instagram_queue_skips_future_job(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     _write_pending_job(tmp_path, due=4_102_444_800)

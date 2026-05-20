@@ -2,6 +2,7 @@ from __future__ import annotations
 import base64
 import time
 from pathlib import Path
+from typing import cast
 import openai
 from google import genai
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
@@ -130,7 +131,13 @@ class LilaAgent(BaseAgent):
             time.sleep(_VIDEO_POLL_INTERVAL)
             operation = client.operations.get(operation)
         try:
-            video_bytes = operation.result.generated_videos[0].video.video_bytes
+            result = operation.result
+            if result is None or not result.generated_videos:
+                raise RuntimeError("No generated videos returned")
+            video = result.generated_videos[0].video
+            if video is None or video.video_bytes is None:
+                raise RuntimeError("Generated video payload missing bytes")
+            video_bytes = cast(bytes, video.video_bytes)
         except Exception as e:
             raise RuntimeError(
                 f"Video generation failed for job {job.id}: {e}"
@@ -157,7 +164,10 @@ class LilaAgent(BaseAgent):
                 f"Image generation failed for job {job.id} "
                 f"({job.content_type}): {e}"
             ) from e
-        image_bytes = base64.b64decode(response.data[0].b64_json)
+        if not response.data or response.data[0].b64_json is None:
+            raise RuntimeError(f"Image generation failed for job {job.id} ({job.content_type}): missing image bytes")
+        image_b64 = cast(str, response.data[0].b64_json)
+        image_bytes = base64.b64decode(image_b64)
         out_dir = Path("output") / job.pm.page_name / job.id
         out_dir.mkdir(parents=True, exist_ok=True)
         image_path = out_dir / "image.png"

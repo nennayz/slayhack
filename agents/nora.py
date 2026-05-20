@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from typing import Any, cast
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
 from models.content_job import (
     ContentJob, ContentType, QAResult,
@@ -95,7 +96,7 @@ class NoraAgent(BaseAgent):
         user = _build_qa_user_prompt(job)
         try:
             raw = self._call_claude(system, user, max_tokens=512)
-            result = QAResult(**self._parse_json(raw))
+            result = QAResult(**cast(dict[str, Any], self._parse_json(raw)))
         except Exception:
             result = QAResult(
                 passed=False,

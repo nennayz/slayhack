@@ -1,8 +1,7 @@
 from __future__ import annotations
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 from config import Config
-from models.niche_opportunity import NicheOpportunity, NicheSignal, ScoutJob, ScoutJobStatus
+from models.niche_opportunity import NicheOpportunity, ScoutJob, ScoutJobStatus
 
 
 def _make_config() -> Config:
@@ -29,7 +28,7 @@ def test_run_dry_scout_pipeline_returns_scout_job():
 
 def test_run_scout_pipeline_saves_report(tmp_path):
     from scout_pipeline import run_scout_pipeline
-    job = run_scout_pipeline(_make_config(), triggered_by="test", dry_run=True, output_root=tmp_path)
+    run_scout_pipeline(_make_config(), triggered_by="test", dry_run=True, output_root=tmp_path)
     reports = list((tmp_path / "scout_reports").glob("*.json"))
     assert len(reports) == 1
 

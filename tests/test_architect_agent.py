@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import yaml
 from config import Config
-from models.niche_opportunity import NicheOpportunity, ScoutJob, ScoutJobStatus
+from models.niche_opportunity import NicheOpportunity, ScoutJob
 
 
 def _make_config() -> Config:

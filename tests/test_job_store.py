@@ -71,7 +71,7 @@ def test_load_job_normalizes_legacy_project_identity(tmp_path, monkeypatch):
     loaded = load_job(job.id, "Slay Hack")
     found = find_job(job.id)
 
-    assert loaded.project == "slay_hack"
+    assert loaded.project == "nayzfreedom_fleet"
     assert loaded.pm.page_name == "Slay Hack"
-    assert found.project == "slay_hack"
+    assert found.project == "nayzfreedom_fleet"
     assert found.pm.page_name == "Slay Hack"

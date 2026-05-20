@@ -2398,6 +2398,148 @@ button[type="submit"]:hover { background: var(--navy-soft); }
   font-weight: 700;
   padding: 0.32rem 0.55rem;
 }
+.slay-live-summary .stat-card strong {
+  font-size: 1.55rem;
+}
+.slay-live-grid {
+  margin-bottom: 1rem;
+}
+.slay-platform-list,
+.slay-action-list,
+.slay-top-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.slay-platform-row,
+.slay-action-row,
+.slay-top-row,
+.slay-snapshot-card {
+  background: rgba(255,255,255,0.76);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+.slay-platform-row {
+  align-items: center;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: minmax(0, 1fr) minmax(132px, auto);
+  padding: 0.9rem;
+}
+.slay-platform-row h3,
+.slay-action-row p,
+.slay-top-row strong {
+  margin: 0.35rem 0 0;
+}
+.slay-platform-row a,
+.slay-top-row a,
+.slay-snapshot-card a {
+  overflow-wrap: anywhere;
+}
+.slay-platform-metric {
+  display: grid;
+  gap: 0.1rem;
+  justify-items: end;
+  text-align: right;
+}
+.slay-platform-metric small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.slay-platform-metric strong {
+  color: var(--ink);
+  font-size: 1.45rem;
+}
+.slay-platform-metric span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.slay-platform-metric .positive {
+  color: #17603e;
+}
+.slay-platform-metric .negative {
+  color: #842029;
+}
+.slay-action-row,
+.slay-top-row {
+  padding: 0.85rem;
+}
+.slay-action-row p,
+.slay-top-row small,
+.slay-top-row span {
+  color: var(--muted);
+  display: block;
+}
+.slay-snapshot-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.slay-snapshot-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+}
+.slay-snapshot-card header {
+  align-items: start;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+.slay-snapshot-card header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.slay-snapshot-card header strong {
+  font-size: 0.84rem;
+  text-transform: capitalize;
+}
+.slay-snapshot-card dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+.slay-snapshot-card dl div {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+.slay-snapshot-card dt,
+.slay-snapshot-card dd {
+  margin: 0;
+}
+.slay-snapshot-card dt {
+  color: var(--muted);
+}
+.slay-snapshot-card dd {
+  font-weight: 750;
+  text-align: right;
+}
+.slay-snapshot-form,
+.slay-form-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+.slay-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.slay-snapshot-form label {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.78rem;
+  font-weight: 800;
+  gap: 0.35rem;
+  text-transform: uppercase;
+}
+.slay-snapshot-form input,
+.slay-snapshot-form select {
+  min-width: 0;
+}
 .manual-proof-grid {
   display: grid;
   gap: 0.45rem;
@@ -3311,6 +3453,9 @@ a:hover { color: var(--navy-soft); }
   .workflow-block summary,
   .video-package-grid,
   .video-package-detail,
+  .slay-platform-row,
+  .slay-snapshot-grid,
+  .slay-form-grid,
   .manual-kit-layout,
   .manual-posting-overview-grid,
   .manual-posting-checklist-grid,
@@ -3333,6 +3478,10 @@ a:hover { color: var(--navy-soft); }
   }
   .workflow-block summary {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .slay-platform-metric {
+    justify-items: start;
+    text-align: left;
   }
   .workflow-block summary strong,
   .workflow-block summary small {
@@ -3613,6 +3762,35 @@ body.aurora-page .manual-proof-grid span {
   background: rgba(255,255,255,0.06);
   border-color: rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.68);
+}
+body.aurora-page .slay-platform-row,
+body.aurora-page .slay-action-row,
+body.aurora-page .slay-top-row,
+body.aurora-page .slay-snapshot-card {
+  background: rgba(255,255,255,0.055);
+  border-color: rgba(255,255,255,0.1);
+}
+body.aurora-page .slay-platform-metric strong,
+body.aurora-page .slay-top-row strong,
+body.aurora-page .slay-snapshot-card dd,
+body.aurora-page .slay-snapshot-card header strong {
+  color: rgba(255,255,255,0.9);
+}
+body.aurora-page .slay-platform-metric small,
+body.aurora-page .slay-platform-metric span,
+body.aurora-page .slay-action-row p,
+body.aurora-page .slay-top-row small,
+body.aurora-page .slay-top-row span,
+body.aurora-page .slay-snapshot-card dt,
+body.aurora-page .slay-snapshot-card header span,
+body.aurora-page .slay-snapshot-form label {
+  color: rgba(255,255,255,0.56);
+}
+body.aurora-page .slay-platform-metric .positive {
+  color: #7de2d1;
+}
+body.aurora-page .slay-platform-metric .negative {
+  color: #ffb4ba;
 }
 
 /* island card */

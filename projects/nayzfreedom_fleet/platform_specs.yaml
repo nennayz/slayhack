@@ -1,8 +1,20 @@
-instagram:
-  editorial: "Hook within 3 seconds. Caption under 150 chars. Hashtags in first comment."
-facebook:
-  editorial: "Conversational tone. 1-3 sentences. Hashtags optional, inline."
 tiktok:
-  editorial: "Text overlay on video. CTA in last 3 seconds. Sound-on assumed. Trending audio boosts reach."
+  editorial: "Prioritize viral retention and comments. Use a mistake-callout hook in the first 3 words, fast pacing, sound-on assumptions, and a comment CTA. Favor 60+ second Hack videos when Creator Rewards revenue is the goal."
+  comment_max_chars: 150
+instagram:
+  editorial: "Optimize for saves and profile trust. Use polished Reels, concise captions, clear visual hierarchy, Stories or poll follow-ups, and save-first CTAs. Avoid dumping cross-posts with no engagement strategy."
+  comment_max_chars: 2200
+facebook:
+  editorial: "Optimize for shares, broad clarity, and community funnel movement. Use slightly clearer language than TikTok, longer captions when useful, and rotate CTAs to the Group, Messenger Channel, TikTok, or YouTube."
+  comment_max_chars: 8000
 youtube:
-  editorial: "Thumbnail-first mindset. Title under 60 chars. Description with timestamps. First 30 seconds must hook."
+  editorial: "Optimize for searchability and repeat viewing. Keep Shorts titles under 60 characters, make the first second visually clear, add simple descriptions, and group episodes into repeatable playlists."
+  comment_max_chars: 10000
+messenger:
+  editorial: "Use as the high-intimacy broadcast layer. Send short daily tips, polls, Q&A prompts, and exclusive previews that feed future public content ideas."
+facebook_group:
+  editorial: "Use as the community depth layer. Weekly rituals, guides, member questions, and exclusive first-look posts should become future content briefs."
+google_drive:
+  editorial: "Final production assets belong under Slay Hack > Episodes > [Pillar] > [Episode ID] or New-Creative-Formats for Producer V2. Character references belong under Slay Hack > Assets > Characters."
+notion:
+  editorial: "Use the Episode Tracker and Meme Concept Tracker as duplicate checks and delivery status sources. Do not mark work ready until assets are synced and QA has passed."

@@ -4,6 +4,7 @@ from __future__ import annotations
 import yaml
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Form
@@ -11,6 +12,7 @@ from fastapi.requests import Request
 from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 
 from routes.deps import templates, verify_auth, _root
+from slayobjects_metrics import build_slayobjects_live_dashboard, record_manual_snapshot
 from track_queue import enqueue_track_snapshots
 from routes._helpers import (
     CREW,
@@ -161,7 +163,7 @@ EBOOK_FACTORY_DEFAULTS = {
     "next_action": "Create projects/<project_slug>/ebooks.yaml before tracking e-book production in Fleet.",
     "registry_path": "",
     "registry_error": "",
-    "registry_project": "slay_hack",
+    "registry_project": "nayzfreedom_fleet",
     "has_registry": False,
     "pilot": {},
     "ebooks": [],
@@ -286,8 +288,8 @@ def _ebook_sale_gate(
     launch_assets: list[dict[str, object]],
     drive_artifacts: list[dict[str, object]],
 ) -> dict[str, object]:
-    gate = pilot.get("captain_sale_gate") if isinstance(pilot.get("captain_sale_gate"), dict) else {}
-    source_integrity = pilot.get("source_integrity") if isinstance(pilot.get("source_integrity"), dict) else {}
+    gate = cast(dict[str, object], pilot.get("captain_sale_gate")) if isinstance(pilot.get("captain_sale_gate"), dict) else {}
+    source_integrity = cast(dict[str, object], pilot.get("source_integrity")) if isinstance(pilot.get("source_integrity"), dict) else {}
     blockers: list[str] = []
 
     if not qa_gates:
@@ -381,8 +383,8 @@ def _ebook_drive_summary(rows: list[dict[str, object]]) -> dict[str, object]:
 
 
 def _ebook_drive_artifact_rows(root: Path, resolved_project: str, pilot: dict[str, object]) -> list[dict[str, object]]:
-    drive = pilot.get("drive") if isinstance(pilot.get("drive"), dict) else {}
-    raw_artifacts = drive.get("artifacts") if isinstance(drive.get("artifacts"), list) else []
+    drive = cast(dict[str, object], pilot.get("drive")) if isinstance(pilot.get("drive"), dict) else {}
+    raw_artifacts = cast(list[object], drive.get("artifacts")) if isinstance(drive.get("artifacts"), list) else []
     if not raw_artifacts:
         raw_artifacts = [
             {"key": key, "label": key.replace("_", " ").title(), "path": value}
@@ -401,12 +403,12 @@ def _ebook_drive_artifact_rows(root: Path, resolved_project: str, pilot: dict[st
     if drive_root and not drive_root.is_absolute():
         drive_root = root / drive_root
 
-    rows = []
+    rows: list[dict[str, object]] = []
     for item in raw_artifacts:
         if isinstance(item, str):
-            artifact = {"label": item, "path": item}
+            artifact: dict[str, object] = {"label": item, "path": item}
         elif isinstance(item, dict):
-            artifact = item
+            artifact = cast(dict[str, object], item)
         else:
             continue
         label = str(artifact.get("label") or artifact.get("key") or artifact.get("path") or "").strip()
@@ -464,7 +466,7 @@ def _ebook_asset_path(root: Path, raw_path: object, label: str) -> Path:
 def _ebook_launch_asset_rows(items: object) -> list[dict[str, object]]:
     if not isinstance(items, list):
         return []
-    rows = []
+    rows: list[dict[str, object]] = []
     for item in items:
         if isinstance(item, str):
             rows.append(
@@ -493,7 +495,7 @@ def _ebook_launch_asset_rows(items: object) -> list[dict[str, object]]:
 def _ebook_checkout_smoke_rows(items: object) -> list[dict[str, object]]:
     if not isinstance(items, list):
         return []
-    rows = []
+    rows: list[dict[str, object]] = []
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -523,13 +525,14 @@ def _ebook_checkout_summary(rows: list[dict[str, object]]) -> dict[str, object]:
 
 
 def _ebook_checkout_setup_gate(pilot: dict[str, object]) -> dict[str, object]:
-    gate = pilot.get("checkout_setup_gate") if isinstance(pilot.get("checkout_setup_gate"), dict) else {}
+    gate = cast(dict[str, object], pilot.get("checkout_setup_gate")) if isinstance(pilot.get("checkout_setup_gate"), dict) else {}
     rows = _ebook_checkout_smoke_rows(gate.get("smoke_checks"))
     summary = _ebook_checkout_summary(rows)
+    summary_counts = cast(dict[str, int], summary)
     status = str(gate.get("status") or "locked").strip() or "locked"
-    if rows and summary["passed"] == summary["total"]:
+    if rows and summary_counts["passed"] == summary_counts["total"]:
         status = "test_mode_passed_public_checkout_locked"
-    elif rows and summary["passed"]:
+    elif rows and summary_counts["passed"]:
         status = "test_mode_in_progress_checkout_locked"
     next_check = next((item for item in rows if item.get("status") != "PASS"), None)
     return {
@@ -581,16 +584,17 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         factory["next_action"] = "Fix the e-book registry YAML before using this dashboard surface."
         return factory
 
-    factory_meta = raw.get("factory") if isinstance(raw.get("factory"), dict) else {}
+    factory_meta = cast(dict[str, object], raw.get("factory")) if isinstance(raw.get("factory"), dict) else {}
     for key in ("state", "safe_boundary", "runbook_path", "spec_path", "next_action"):
         if factory_meta.get(key):
             factory[key] = factory_meta[key]
 
-    ebooks = raw.get("ebooks") if isinstance(raw.get("ebooks"), list) else []
-    pilot = next((item for item in ebooks if isinstance(item, dict)), {})
+    ebooks = cast(list[object], raw.get("ebooks")) if isinstance(raw.get("ebooks"), list) else []
+    pilot = cast(dict[str, object], next((item for item in ebooks if isinstance(item, dict)), {}))
+    qa_gate_items = cast(list[object], pilot.get("qa_gates")) if isinstance(pilot.get("qa_gates"), list) else []
     qa_gates = [
-        {**item, "status_class": _ebook_qa_status_class(item.get("status"))}
-        for item in pilot.get("qa_gates", [])
+        {**cast(dict[str, object], item), "status_class": _ebook_qa_status_class(cast(dict[str, object], item).get("status"))}
+        for item in qa_gate_items
         if isinstance(item, dict)
     ]
     next_missing = next((item for item in qa_gates if str(item.get("status", "")).upper() != "PASS"), None)
@@ -603,13 +607,11 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
         (item for item in launch_assets if str(item.get("status", "")).lower() != "approved"),
         None,
     )
-    monetization_lanes = raw.get("monetization_lanes") if isinstance(raw.get("monetization_lanes"), list) else []
-    active_lane = next((item for item in monetization_lanes if isinstance(item, dict)), {})
-    lane_products = active_lane.get("products") if isinstance(active_lane.get("products"), list) else []
-    offer_source = active_lane.get("offer_source") if isinstance(active_lane.get("offer_source"), dict) else {}
-    launch_copy_assets = (
-        active_lane.get("launch_copy_assets") if isinstance(active_lane.get("launch_copy_assets"), list) else []
-    )
+    monetization_lanes = cast(list[object], raw.get("monetization_lanes")) if isinstance(raw.get("monetization_lanes"), list) else []
+    active_lane = cast(dict[str, object], next((item for item in monetization_lanes if isinstance(item, dict)), {}))
+    lane_products = cast(list[object], active_lane.get("products")) if isinstance(active_lane.get("products"), list) else []
+    offer_source = cast(dict[str, object], active_lane.get("offer_source")) if isinstance(active_lane.get("offer_source"), dict) else {}
+    launch_copy_assets = cast(list[object], active_lane.get("launch_copy_assets")) if isinstance(active_lane.get("launch_copy_assets"), list) else []
     copy_asset_names = {
         str(item.get("launch_asset", "")).strip()
         for item in launch_copy_assets
@@ -647,7 +649,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
             "offer_source": offer_source,
             "launch_copy_assets": launch_copy_assets,
             "launch_copy_summary": _ebook_launch_copy_summary(
-                [item for item in launch_copy_assets if isinstance(item, dict)]
+                [cast(dict[str, object], item) for item in launch_copy_assets if isinstance(item, dict)]
             ),
             "drive_artifacts": drive_artifacts,
             "drive_summary": _ebook_drive_summary(drive_artifacts),
@@ -668,7 +670,7 @@ def _ebook_factory(root: Path, project_slug: str = "slay_hack") -> dict[str, obj
 
 def _ebook_launch_copy_asset(root: Path, project_slug: str, asset_key: str) -> tuple[dict[str, object], Path]:
     factory = _ebook_factory(root, project_slug)
-    for item in factory.get("launch_copy_assets", []):
+    for item in cast(list[object], factory.get("launch_copy_assets", [])):
         if not isinstance(item, dict):
             continue
         if str(item.get("key", "")).strip() != asset_key.strip():
@@ -680,7 +682,7 @@ def _ebook_launch_copy_asset(root: Path, project_slug: str, asset_key: str) -> t
 
 def _ebook_launch_asset_file(root: Path, project_slug: str, asset_key: str) -> tuple[dict[str, object], Path]:
     factory = _ebook_factory(root, project_slug)
-    for item in factory.get("launch_assets", []):
+    for item in cast(list[object], factory.get("launch_assets", [])):
         if not isinstance(item, dict):
             continue
         if str(item.get("key", "")).strip() != asset_key.strip():
@@ -692,12 +694,12 @@ def _ebook_launch_asset_file(root: Path, project_slug: str, asset_key: str) -> t
 
 def _manual_posted_at(job) -> datetime | None:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
-    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
-    candidates = []
+    manual_post = cast(dict[str, object], kit.get("manual_post")) if isinstance(kit.get("manual_post"), dict) else {}
+    candidates: list[object] = []
     for value in manual_post.values():
         if isinstance(value, dict):
             candidates.append(value.get("posted_at"))
-    publish_result = job.publish_result if isinstance(job.publish_result, dict) else {}
+    publish_result = cast(dict[str, object], job.publish_result) if isinstance(job.publish_result, dict) else {}
     for value in publish_result.values():
         if isinstance(value, dict) and value.get("manual") is True:
             candidates.append(value.get("published_at"))
@@ -719,12 +721,14 @@ def _manual_posted_at(job) -> datetime | None:
 
 def _manual_posting_closeout_proof(job) -> dict[str, object]:
     kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
-    drive_sync = kit.get("drive_sync") if isinstance(kit.get("drive_sync"), dict) else {}
-    manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
-    publish_result = job.publish_result if isinstance(job.publish_result, dict) else {}
+    drive_sync = cast(dict[str, object], kit.get("drive_sync")) if isinstance(kit.get("drive_sync"), dict) else {}
+    manual_post = cast(dict[str, object], kit.get("manual_post")) if isinstance(kit.get("manual_post"), dict) else {}
+    publish_result = cast(dict[str, object], job.publish_result) if isinstance(job.publish_result, dict) else {}
+    manual_post_values = list(manual_post.values())
+    publish_result_values = list(publish_result.values())
     post_url_present = any(
         isinstance(value, dict) and str(value.get("post_url") or "").strip()
-        for value in list(manual_post.values()) + list(publish_result.values())
+        for value in manual_post_values + publish_result_values
     )
     snapshots = len(job.performance)
     return {
@@ -848,14 +852,14 @@ def aurora_ebook_delivery_proof(
 ):
     root = _root(request)
     factory = _ebook_factory(root, project_slug)
-    ebooks = factory.get("ebooks") if isinstance(factory.get("ebooks"), list) else []
-    ebook = next(
-        (item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()),
-        None,
+    ebooks = cast(list[object], factory.get("ebooks")) if isinstance(factory.get("ebooks"), list) else []
+    ebook = cast(
+        dict[str, object] | None,
+        next((item for item in ebooks if isinstance(item, dict) and str(item.get("id", "")).strip() == ebook_id.strip()), None),
     )
     if ebook is None:
         raise HTTPException(status_code=404, detail=f"E-book {ebook_id!r} not found")
-    source_integrity = ebook.get("source_integrity") if isinstance(ebook.get("source_integrity"), dict) else {}
+    source_integrity = cast(dict[str, object], ebook.get("source_integrity")) if isinstance(ebook.get("source_integrity"), dict) else {}
     proof_path = _ebook_asset_path(root, source_integrity.get("proof_path", ""), "Delivery proof")
     if not proof_path.exists():
         raise HTTPException(status_code=404, detail=f"Delivery proof file {source_integrity.get('proof_path')!r} not found")
@@ -1042,7 +1046,7 @@ def aurora_ebook_record_checkout_gate(
         raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
 
     factory = _ebook_factory(root, resolved_project)
-    sale_gate = factory.get("sale_gate") if isinstance(factory.get("sale_gate"), dict) else {}
+    sale_gate = cast(dict[str, object], factory.get("sale_gate")) if isinstance(factory.get("sale_gate"), dict) else {}
     if not sale_gate.get("approved"):
         raise HTTPException(status_code=400, detail="Checkout setup is locked until Captain sale approval is recorded")
 
@@ -1128,9 +1132,9 @@ def aurora_ebook_record_sale_gate(
         raise HTTPException(status_code=404, detail=f"E-book registry {resolved_project!r} not found")
 
     factory = _ebook_factory(root, resolved_project)
-    sale_gate = factory.get("sale_gate") if isinstance(factory.get("sale_gate"), dict) else {}
+    sale_gate = cast(dict[str, object], factory.get("sale_gate")) if isinstance(factory.get("sale_gate"), dict) else {}
     if not sale_gate.get("ready"):
-        blockers = sale_gate.get("blockers") if isinstance(sale_gate.get("blockers"), list) else []
+        blockers = cast(list[object], sale_gate.get("blockers")) if isinstance(sale_gate.get("blockers"), list) else []
         detail = " ".join(str(item) for item in blockers) or "Sale approval requirements are incomplete."
         raise HTTPException(status_code=400, detail=f"Captain sale approval is locked: {detail}")
     if sale_gate.get("approved"):
@@ -1219,7 +1223,7 @@ def aurora_daily_slate(request: Request, _: str = Depends(verify_auth)):
             "accepted_learning_intake": _accepted_learning_intake(root),
             "approval_queue": approval_queue[:8],
             "approval_lane_groups": _approval_lane_groups(approval_queue),
-            "total_tickets": sum(int(card["ticket_count"]) for card in all_slate_cards),
+            "total_tickets": sum(int(str(card["ticket_count"])) for card in all_slate_cards),
             "ready_pages": sum(1 for card in all_slate_cards if card["minimum_met"]),
             "approval_count": len(approval_queue),
         },
@@ -1284,6 +1288,11 @@ def aurora_approval_queue(request: Request, _: str = Depends(verify_auth)):
 @router.get("/aurora/generation", response_class=HTMLResponse)
 def aurora_generation(request: Request, _: str = Depends(verify_auth)):
     rows = _generation_queue(_root(request))
+
+    def _publish_status(item: dict[str, object]) -> str:
+        publish_execution = cast(dict[str, object], item["publish_execution"])
+        return str(publish_execution["status"])
+
     selected_filter = request.query_params.get("filter", "all")
     valid_filters = {key for key, _ in GENERATION_FILTERS}
     if selected_filter not in valid_filters:
@@ -1300,8 +1309,8 @@ def aurora_generation(request: Request, _: str = Depends(verify_auth)):
             "dry_run_count": sum(1 for item in rows if item["status"] == "dry_run_completed"),
             "completed_count": sum(1 for item in rows if item["status"] == "completed"),
             "waiting_real_count": sum(1 for item in rows if item["waiting_for_real_video"]),
-            "ready_publish_count": sum(1 for item in rows if item["publish_execution"]["status"] == "ready_to_publish"),
-            "scheduled_handoff_count": sum(1 for item in rows if item["publish_execution"]["status"] == "scheduled"),
+            "ready_publish_count": sum(1 for item in rows if _publish_status(item) == "ready_to_publish"),
+            "scheduled_handoff_count": sum(1 for item in rows if _publish_status(item) == "scheduled"),
             "failed_count": sum(1 for item in rows if item["status"] == "failed"),
         },
     )
@@ -1769,6 +1778,67 @@ def aurora_missions(request: Request, _: str = Depends(verify_auth)):
 def aurora_metrics(request: Request, _: str = Depends(verify_auth)):
     data = _dashboard_mod.load_performance_all(_root(request))
     return templates.TemplateResponse(request, "metrics.html", {"data": data})
+
+
+@router.get("/aurora/slayobjects/live", response_class=HTMLResponse)
+def slayobjects_live_dashboard(request: Request, _: str = Depends(verify_auth)):
+    dashboard = build_slayobjects_live_dashboard(_root(request))
+    return templates.TemplateResponse(
+        request,
+        "slayobjects_live.html",
+        {
+            "dashboard": dashboard,
+            "snapshot_result": request.query_params.get("snapshot_result", ""),
+        },
+    )
+
+
+@router.post("/aurora/slayobjects/live/snapshot", response_class=HTMLResponse)
+def slayobjects_manual_snapshot(
+    request: Request,
+    platform: str = Form(...),
+    content_url: str = Form(""),
+    views: str = Form("0"),
+    reach: str = Form("0"),
+    likes: str = Form("0"),
+    comments: str = Form("0"),
+    saves: str = Form("0"),
+    shares: str = Form("0"),
+    followers: str = Form("0"),
+    note: str = Form(""),
+    user: str = Depends(verify_auth),
+):
+    root = _root(request)
+    try:
+        snapshot = record_manual_snapshot(
+            root,
+            platform=platform,
+            content_url=content_url,
+            views=views,
+            reach=reach,
+            likes=likes,
+            comments=comments,
+            saves=saves,
+            shares=shares,
+            followers=followers,
+            note=note,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _write_work_event(
+        root,
+        "implementation_step",
+        f"Recorded SlayObjects {snapshot.platform} metric snapshot",
+        actor=user,
+        result="Manual metric proof saved",
+        next_action="Review SlayObjects live dashboard and choose scale, repair, or lesson.",
+        metadata={"platform": snapshot.platform, "source": snapshot.source},
+    )
+    return RedirectResponse(
+        "/aurora/slayobjects/live?snapshot_result="
+        + quote(f"Saved {snapshot.platform} snapshot"),
+        status_code=303,
+    )
 
 
 @router.get("/aurora/new-mission", response_class=HTMLResponse)

@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import yaml
 from fastapi.testclient import TestClient
 

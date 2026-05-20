@@ -3098,7 +3098,7 @@ def test_aurora_ebooks_page_renders_empty_state_without_registry(client):
     assert resp.status_code == 200
     assert "E-book Product Factory" in resp.text
     assert "No e-book registry is ready for this project" in resp.text
-    assert "projects/slay_hack/ebooks.yaml" in resp.text
+    assert "projects/nayzfreedom_fleet/ebooks.yaml" in resp.text
     assert "Live publish and checkout stay locked until Captain approval." in resp.text
 
 
@@ -5036,6 +5036,55 @@ def test_metrics_shows_data(client):
     assert resp.status_code == 200
     assert "Slayhack" in resp.text
     assert "5,000" in resp.text
+
+
+def test_slayobjects_live_dashboard_empty_state(client):
+    resp = client.get("/aurora/slayobjects/live", headers=_auth())
+    assert resp.status_code == 200
+    assert "SlayObjects Live Dashboard" in resp.text
+    assert "TikTok" in resp.text
+    assert "Instagram" in resp.text
+    assert "Facebook" in resp.text
+    assert "Manual-ready" in resp.text
+    assert "Record first snapshot" in resp.text
+    assert "Live publish stays locked" in resp.text
+
+
+def test_slayobjects_live_dashboard_records_manual_snapshot(tmp_path, client):
+    resp = client.post(
+        "/aurora/slayobjects/live/snapshot",
+        data={
+            "platform": "tiktok",
+            "content_url": "https://www.tiktok.com/@slayobjects/video/123",
+            "views": "1,250",
+            "reach": "0",
+            "likes": "88",
+            "comments": "9",
+            "saves": "17",
+            "shares": "11",
+            "followers": "900",
+            "note": "hook test",
+        },
+        headers=_auth(),
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    assert resp.headers["location"].startswith("/aurora/slayobjects/live?snapshot_result=")
+
+    snapshot_path = tmp_path / "output" / "slayobjects_metrics" / "snapshots.jsonl"
+    saved = json.loads(snapshot_path.read_text().splitlines()[0])
+    assert saved["platform"] == "tiktok"
+    assert saved["views"] == 1250
+    assert saved["shares"] == 11
+
+    page = client.get("/aurora/slayobjects/live", headers=_auth())
+    assert page.status_code == 200
+    assert "1,250" in page.text
+    assert "Scale winning signal" in page.text
+    assert "https://www.tiktok.com/@slayobjects/video/123" in page.text
+    assert "Recorded SlayObjects tiktok metric snapshot" in (
+        tmp_path / "logs" / "work_activity.jsonl"
+    ).read_text()
 
 
 def test_trigger_get_shows_form(tmp_path, client):

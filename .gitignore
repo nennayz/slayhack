@@ -28,3 +28,9 @@ secrets/
 # Use vault-template/ as the shareable starter structure instead.
 vault/
 *.vault.local/
+
+# Tooling artifacts
+.playwright-mcp/
+.venv.py39*/
+.claude/worktrees/
+knowledge.db

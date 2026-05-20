@@ -1,7 +1,7 @@
 from __future__ import annotations
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from models.content_job import (
     BrandProfile, ContentJob, PMProfile, PostPerformance, VisualIdentity, JobStatus,
