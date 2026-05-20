@@ -16,8 +16,24 @@
       <strong>{{ item.page }} · {{ item.offer_type.value }}</strong>
       <p>{{ item.suggested_offer }}</p>
       <small>Pain: {{ item.audience_pain }}</small>
+      <small>Source plans: {{ item.source_plan_ids|join(", ") if item.source_plan_ids else item.matching_content_ids|join(", ") }}</small>
       <small>Risk: {{ item.risk_notes }}</small>
       <small>Matches: {{ item.matching_content_ids|join(", ") }}</small>
+      {% if item.review_note %}<small>Review note: {{ item.review_note }}</small>{% endif %}
+      {% if item.manual_checklist %}
+      <strong>Manual monetization checklist</strong>
+      <ul class="compact-list">
+        {% for step in item.manual_checklist %}<li>{{ step }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if item.status.value == 'new' or item.status.value == 'researching' %}
+      <form method="post" action="/aurora/monetize/review" class="inline-actions">
+        <input type="hidden" name="opportunity_id" value="{{ item.id }}">
+        <input type="text" name="review_note" placeholder="Captain note">
+        <button type="submit" name="decision" value="approve">Approve research</button>
+        <button type="submit" name="decision" value="reject" class="button-secondary">Reject</button>
+      </form>
+      {% endif %}
     </article>
     {% else %}<p class="muted">No monetize opportunities yet.</p>{% endfor %}
   </div>

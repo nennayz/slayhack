@@ -17,6 +17,8 @@ from models.work_os import (
     DailyBriefSection,
     DailyWorkBrief,
     MonetizeOpportunity,
+    MonetizeStatus,
+    OfferType,
     PlanContentType,
     PlanStatus,
     ProductionTicket,
@@ -596,22 +598,91 @@ def update_bubble_status(root: Path, bubble_id: str, status: BubbleStatus, note:
     return None
 
 
-def seed_monetize(root: Path) -> list[MonetizeOpportunity]:
+def _monetize_manual_checklist(offer_type: OfferType) -> list[str]:
+    offer_label = offer_type.value.replace("_", " ")
+    return [
+        f"Validate audience pain and demand before building the {offer_label}.",
+        "Review claims, disclosures, pricing assumptions, and brand trust manually.",
+        "No checkout, payment link, affiliate link, or sales automation is activated here.",
+        "Keep this as a local research/build candidate until Captain approves a separate launch gate.",
+    ]
+
+
+def _offer_type_for_plan(plan: ContentPlan) -> OfferType:
+    text = f"{plan.pillar} {plan.hook} {plan.angle} {plan.production_brief}".lower()
+    if plan.objective == WorkObjective.REVENUE or "lead magnet" in text or "checklist" in text:
+        return OfferType.LEAD_MAGNET
+    if plan.content_type == PlanContentType.ARTICLE or "guide" in text or "ebook" in text:
+        return OfferType.EBOOK
+    if "course" in text:
+        return OfferType.COURSE
+    return OfferType.LEAD_MAGNET
+
+
+def _monetize_from_plan(plan: ContentPlan) -> MonetizeOpportunity:
+    offer_type = _offer_type_for_plan(plan)
+    offer_label = offer_type.value.replace("_", " ")
+    return MonetizeOpportunity(
+        page=plan.page,
+        source="work_os_plan",
+        source_plan_ids=[plan.id],
+        offer_type=offer_type,
+        audience_pain=f"Audience responding to '{plan.hook}' likely needs a practical next-step resource.",
+        suggested_offer=f"Qualify a {offer_label} around: {plan.angle[:180]}",
+        matching_content_ids=[plan.id],
+        risk_notes=(
+            "Local research candidate only: checkout remains locked, affiliate automation remains locked, "
+            "and claims/disclosures require manual Captain review."
+        ),
+        status=MonetizeStatus.NEW,
+        next_action="Research demand and offer fit manually; checkout remains locked.",
+        manual_checklist=_monetize_manual_checklist(offer_type),
+    )
+
+
+def generate_monetize_opportunities(root: Path) -> list[MonetizeOpportunity]:
     opportunities = load_monetize(root)
-    if opportunities:
-        return opportunities
-    plans, _, _ = seed_content_planner(root)
-    pages = sorted({plan.page for plan in plans}) or ["nayzfreedom_fleet"]
-    for page in pages:
-        opportunities.append(MonetizeOpportunity(
-            page=page,
-            source="work_os_seed",
-            audience_pain="Audience needs a practical transformation that can become a lead magnet or low-ticket product.",
-            suggested_offer="Qualify one e-book or lead magnet from the strongest recurring content pillar before adding affiliate links.",
-            matching_content_ids=[plan.id for plan in plans if plan.page == page][:3],
-        ))
+    plans = load_plans(root)
+    if not plans and not opportunities:
+        plans, _, _ = seed_content_planner(root)
+    existing_plan_ids = {plan_id for item in opportunities for plan_id in item.source_plan_ids}
+    for plan in plans:
+        if plan.status not in {PlanStatus.APPROVED, PlanStatus.TICKETED, PlanStatus.DONE}:
+            continue
+        if plan.id in existing_plan_ids:
+            continue
+        opportunities.append(_monetize_from_plan(plan))
+        existing_plan_ids.add(plan.id)
     save_monetize(root, opportunities)
     return opportunities
+
+
+def update_monetize_status(
+    root: Path,
+    opportunity_id: str,
+    status: MonetizeStatus,
+    note: str = "",
+) -> MonetizeOpportunity | None:
+    opportunities = load_monetize(root)
+    for opportunity in opportunities:
+        if opportunity.id == opportunity_id:
+            opportunity.status = status
+            opportunity.review_note = note
+            opportunity.reviewed_at = datetime.now()
+            opportunity.updated_at = datetime.now()
+            if status == MonetizeStatus.APPROVED:
+                opportunity.next_action = "Approved for manual research/build planning; checkout remains locked."
+            elif status == MonetizeStatus.REJECTED:
+                opportunity.next_action = "Rejected locally; do not build or activate this offer."
+            elif status == MonetizeStatus.RESEARCHING:
+                opportunity.next_action = "Researching manually; do not activate checkout or affiliate links."
+            save_monetize(root, opportunities)
+            return opportunity
+    return None
+
+
+def seed_monetize(root: Path) -> list[MonetizeOpportunity]:
+    return generate_monetize_opportunities(root)
 
 
 def _action(

@@ -73,6 +73,7 @@ class MonetizeStatus(str, Enum):
     NEW = "new"
     RESEARCHING = "researching"
     APPROVED = "approved"
+    REJECTED = "rejected"
     BUILDING = "building"
     LIVE = "live"
     ARCHIVED = "archived"
@@ -164,6 +165,7 @@ class MonetizeOpportunity(BaseModel):
     id: str = Field(default_factory=lambda: _id("monetize"))
     page: str
     source: str = "manual"
+    source_plan_ids: list[str] = Field(default_factory=list)
     offer_type: OfferType = OfferType.EBOOK
     audience_pain: str
     suggested_offer: str
@@ -171,6 +173,9 @@ class MonetizeOpportunity(BaseModel):
     risk_notes: str = "Review claims, disclosure, checkout, and brand trust before launch."
     status: MonetizeStatus = MonetizeStatus.NEW
     next_action: str = "Research and qualify before building."
+    manual_checklist: list[str] = Field(default_factory=list)
+    review_note: str = ""
+    reviewed_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
 

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Form, Query
 from fastapi.requests import Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
-from models.work_os import BubbleStatus, PlanStatus, ReviewStatus, SlateStatus
+from models.work_os import BubbleStatus, MonetizeStatus, PlanStatus, ReviewStatus, SlateStatus
 from routes.deps import _root, templates, verify_auth
 from work_os_store import (
     build_daily_work_brief,
@@ -22,6 +22,7 @@ from work_os_store import (
     seed_monetize,
     sync_approved_ideas_into_planner,
     update_bubble_status,
+    update_monetize_status,
     update_plan_status,
     update_publish_review,
     update_slate_status,
@@ -268,3 +269,16 @@ def work_os_monetize(request: Request, _: str = Depends(verify_auth)) -> HTMLRes
         "work_os_monetize.html",
         {"request": request, "opportunities": opportunities},
     )
+
+
+@router.post("/aurora/monetize/review")
+def work_os_monetize_review(
+    request: Request,
+    opportunity_id: str = Form(...),
+    decision: str = Form(...),
+    review_note: str = Form(""),
+    _: str = Depends(verify_auth),
+) -> RedirectResponse:
+    status = MonetizeStatus.APPROVED if decision == "approve" else MonetizeStatus.REJECTED
+    update_monetize_status(_root(request), opportunity_id, status, review_note)
+    return RedirectResponse("/aurora/monetize", status_code=303)

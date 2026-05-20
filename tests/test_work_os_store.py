@@ -4,14 +4,16 @@ from knowledge.embedder import Embedder
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.store import KnowledgeStore
-from models.work_os import BubbleStatus, ContentPlan, ContentSlate, PlanStatus, ProductionTicket, ReviewStatus, SlateStatus, TicketStatus
+from models.work_os import BubbleStatus, ContentPlan, ContentSlate, MonetizeStatus, PlanStatus, ProductionTicket, ReviewStatus, SlateStatus, TicketStatus, WorkObjective
 from work_os_store import (
     build_daily_work_brief,
     create_ticket_for_plan,
     create_today_slate,
     export_manual_publish_checklist,
     generate_bubbles,
+    generate_monetize_opportunities,
     load_bubbles,
+    load_monetize,
     load_plans,
     load_slates,
     load_tickets,
@@ -20,6 +22,7 @@ from work_os_store import (
     save_slates,
     sync_approved_ideas_into_planner,
     update_bubble_status,
+    update_monetize_status,
     update_plan_status,
     update_publish_review,
     update_slate_status,
@@ -282,6 +285,55 @@ def test_update_bubble_status_approves_or_rejects_without_live_posting(tmp_path)
     assert rejected is not None
     assert rejected.status == BubbleStatus.REJECTED
     assert rejected.next_action == "Rejected locally; do not post this bubble."
+
+
+
+def test_generate_monetize_opportunities_from_approved_and_ticketed_plans_is_idempotent(tmp_path):
+    revenue_plan = _plan(status=PlanStatus.APPROVED)
+    revenue_plan.id = "plan-revenue"
+    revenue_plan.objective = WorkObjective.REVENUE
+    revenue_plan.hook = "AI workflow pain to paid lead magnet"
+    revenue_plan.angle = "Audience needs a checklist before buying tools"
+    ticketed_plan = _plan(status=PlanStatus.TICKETED)
+    ticketed_plan.id = "plan-ticketed"
+    ticketed_plan.pillar = "searchable-depth"
+    ticketed_plan.hook = "Save-worthy operating system guide"
+    draft_plan = _plan(status=PlanStatus.DRAFT)
+    draft_plan.id = "plan-draft"
+    save_plans(tmp_path, [revenue_plan, ticketed_plan, draft_plan])
+
+    opportunities = generate_monetize_opportunities(tmp_path)
+    opportunities_again = generate_monetize_opportunities(tmp_path)
+
+    assert len(opportunities) == 2
+    assert len(opportunities_again) == 2
+    assert {item.source_plan_ids[0] for item in opportunities_again} == {"plan-revenue", "plan-ticketed"}
+    revenue = next(item for item in opportunities_again if item.source_plan_ids == ["plan-revenue"])
+    assert revenue.offer_type.value == "lead_magnet"
+    assert revenue.status == MonetizeStatus.NEW
+    assert "checkout remains locked" in revenue.risk_notes.lower()
+    assert any("No checkout" in item for item in revenue.manual_checklist)
+    assert all("plan-draft" not in item.source_plan_ids for item in opportunities_again)
+    assert load_monetize(tmp_path)[0].source == "work_os_plan"
+
+
+def test_update_monetize_status_records_local_review_without_checkout_activation(tmp_path):
+    plan = _plan(status=PlanStatus.APPROVED)
+    plan.id = "plan-review"
+    save_plans(tmp_path, [plan])
+    opportunity = generate_monetize_opportunities(tmp_path)[0]
+
+    approved = update_monetize_status(tmp_path, opportunity.id, MonetizeStatus.APPROVED, "research this first")
+    assert approved is not None
+    assert approved.status == MonetizeStatus.APPROVED
+    assert approved.review_note == "research this first"
+    assert approved.reviewed_at is not None
+    assert "checkout remains locked" in approved.next_action.lower()
+
+    rejected = update_monetize_status(tmp_path, opportunity.id, MonetizeStatus.REJECTED, "not aligned")
+    assert rejected is not None
+    assert rejected.status == MonetizeStatus.REJECTED
+    assert rejected.next_action == "Rejected locally; do not build or activate this offer."
 
 
 def test_publish_queue_rows_include_filters_lineage_and_manual_checklist(tmp_path):

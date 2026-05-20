@@ -91,6 +91,19 @@ def test_bubbles_and_monetize_registry_render(client):
     assert monetize.status_code == 200
     assert "Opportunity Gate" in monetize.text
     assert "No checkout or affiliate automation" in monetize.text
+    assert "Manual monetization checklist" in monetize.text
+
+    opp_id = monetize.text.split('name="opportunity_id" value="', 1)[1].split('"', 1)[0]
+    reviewed = client.post(
+        "/aurora/monetize/review",
+        headers=_auth(),
+        data={"opportunity_id": opp_id, "decision": "approve", "review_note": "safe research only"},
+        follow_redirects=True,
+    )
+    assert reviewed.status_code == 200
+    assert "approved" in reviewed.text
+    assert "safe research only" in reviewed.text
+    assert "checkout remains locked" in reviewed.text.lower()
 
 
 def test_publish_queue_review_is_local_only(client, tmp_path):
