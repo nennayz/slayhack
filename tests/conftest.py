@@ -1,8 +1,15 @@
 from __future__ import annotations
 import importlib
+import os
 import sys
 import types
 from unittest.mock import MagicMock
+
+# Keep the suite hermetic even when a developer has live Telegram credentials in .env.
+# python-dotenv does not override existing keys, so these blanks prevent modules that
+# call load_dotenv() during collection from enabling real checkpoint notifications.
+os.environ["TELEGRAM_BOT_TOKEN"] = ""
+os.environ["TELEGRAM_CHAT_ID"] = ""
 
 def _ensure_google_submodule(name: str) -> types.ModuleType:
     module = sys.modules.get(name)
