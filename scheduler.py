@@ -243,6 +243,38 @@ def _run_daily_production_loop(
         logger.error("Daily production loop setup failed: %s", exc)
 
 
+def _run_daily_social_packaging(
+    active_slugs: list[str],
+    dry_run: bool = False,
+    root: Path | None = None,
+) -> None:
+    try:
+        import os
+        from knowledge.embedder import Embedder, openai_embed_fn
+        from knowledge.settings import KnowledgeSettings
+        from knowledge.store import KnowledgeStore
+        from social_packaging import run_social_packaging
+
+        settings_root = root if root is not None else _ROOT
+        settings = KnowledgeSettings.from_env(settings_root)
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        embed_fn = openai_embed_fn(settings.embed_model, api_key)
+        store = KnowledgeStore(settings, Embedder(settings.embed_model, embed_fn=embed_fn))
+
+        for slug in active_slugs:
+            try:
+                result = run_social_packaging(slug, store, root=settings_root, dry_run=dry_run)
+                logger.info(
+                    "Social packaging done: page=%s found=%d packaged=%d queued=%d skipped=%d failed=%d",
+                    slug, result.jobs_found, result.packages_created,
+                    result.queue_entries_created, result.jobs_skipped, result.jobs_failed,
+                )
+            except Exception as exc:
+                logger.error("Social packaging failed for %s: %s", slug, exc)
+    except Exception as exc:
+        logger.error("Daily social packaging setup failed: %s", exc)
+
+
 def run_scheduler(
     dry_run: bool = False,
     root: Path | None = None,
@@ -274,6 +306,7 @@ def run_scheduler(
         _run_daily_trend_scan(active_slugs, dry_run=dry_run, root=root)
         _run_daily_idea_planner(active_slugs, dry_run=dry_run, root=root)
         _run_daily_production_loop(active_slugs, dry_run=dry_run, root=root)
+        _run_daily_social_packaging(active_slugs, dry_run=dry_run, root=root)
 
     # Collect all jobs to run today across all projects
     pending: list[tuple[list[str], str, str, str]] = []  # (cmd, project_slug, key, content_type)
