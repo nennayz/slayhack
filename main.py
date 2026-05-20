@@ -12,6 +12,7 @@ from agents.publish import PublishAgent, has_publish_failures
 from activity_logger import log_action, log_command
 from config import Config, MissingAPIKeyError
 from job_store import find_job, save_job
+from lock_utils import LockAcquisitionError, acquire_pid_lock
 from models.content_job import ContentJob, JobStatus
 from orchestrator import Orchestrator
 from project_loader import load_project, ProjectNotFoundError, resolve_project_slug
@@ -24,23 +25,10 @@ _SKIP_LOCK_ENV = "NAYZ_SKIP_PIPELINE_LOCK"
 def _acquire_lock() -> bool:
     if os.getenv(_SKIP_LOCK_ENV) == "1":
         return False
-    try:
-        # O_CREAT|O_EXCL is atomic on POSIX — no race between check and create
-        fd = os.open(str(_LOCK_FILE), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
+    acquired, pid, _stale_removed = acquire_pid_lock(_LOCK_FILE)
+    if acquired:
         return True
-    except FileExistsError:
-        try:
-            pid = int(_LOCK_FILE.read_text().strip())
-        except (ValueError, OSError):
-            pid = None
-        pid_hint = f" (PID {pid})" if pid else ""
-        print(
-            f"Error: another pipeline instance is already running{pid_hint}. "
-            f"If no pipeline is running, delete {_LOCK_FILE} manually."
-        )
-        sys.exit(1)
+    raise LockAcquisitionError(_LOCK_FILE, pid)
 
 
 def _update_ks_published(job: "ContentJob", root: "Path | None" = None) -> None:
@@ -116,6 +104,11 @@ def main() -> None:
         log_action("config_error", {"error": str(e)})
         print(f"Error: {e}\nCopy .env.example to .env and fill in your API keys.")
         sys.exit(1)
+    try:
+        lock_acquired = _acquire_lock()
+    except LockAcquisitionError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
 
     if args.publish_only:
         log_command("publish_only", {"job_id": args.publish_only, "schedule": args.schedule})
@@ -124,9 +117,19 @@ def main() -> None:
         except FileNotFoundError as e:
             print(f"Error: {e}")
             sys.exit(1)
-        if job.stage not in {"emma_done", "publish_done"}:
-            print(f"Error: job {job.id} is at stage '{job.stage}', expected 'emma_done' or 'publish_done'. "
-                  "Run the full pipeline first.")
+        publish_ready = (
+            job.stage in {"emma_done", "ready_to_publish", "publish_done"}
+            or (
+                isinstance(job.publish_execution, dict)
+                and job.publish_execution.get("status") in {"ready_to_publish", "scheduled"}
+            )
+            or (job.growth_strategy is not None and job.community_faq_path is not None)
+        )
+        if not publish_ready:
+            print(
+                f"Error: job {job.id} is at stage '{job.stage}', expected a post-production or publish-ready state. "
+                "Run the full pipeline first."
+            )
             sys.exit(1)
         print(f"Publishing job {job.id} for {job.pm.page_name} (schedule={args.schedule})")
         agent = PublishAgent(config)
@@ -209,7 +212,6 @@ def main() -> None:
         if args.dry_run:
             print("[DRY-RUN MODE] No real API calls will be made.\n")
 
-    lock_acquired = _acquire_lock()
     orchestrator = Orchestrator(config, safe_prep=args.safe_prep)
     try:
         try:

@@ -29,7 +29,10 @@ secrets/
 vault/
 *.vault.local/
 
-# Knowledge Store local index (derived, never commit)
+# Tooling artifacts and derived local indexes
+.playwright-mcp/
+.venv.py39*/
+.claude/worktrees/
 knowledge.db
 knowledge.db-wal
 knowledge.db-shm

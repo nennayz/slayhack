@@ -1,5 +1,4 @@
 from __future__ import annotations
-from datetime import datetime
 from models.niche_opportunity import NicheSignal, NicheOpportunity, ScoutJob, ScoutJobStatus
 
 

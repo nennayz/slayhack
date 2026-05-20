@@ -35,11 +35,25 @@ if [ -f "$INSTALL_DIR/deploy/nayzfreedom-ops.sudoers" ]; then
     chmod 440 /etc/sudoers.d/nayzfreedom-ops
 fi
 for unit in \
+    nayzfreedom-dashboard.service \
+    nayzfreedom-bot.service \
     nayzfreedom-comment-reply-bot.service \
+    nayzfreedom-scheduler.service \
+    nayzfreedom-scheduler.timer \
+    nayzfreedom-reporter.service \
+    nayzfreedom-reporter.timer \
+    nayzfreedom-instagram-queue.service \
+    nayzfreedom-instagram-queue.timer \
+    nayzfreedom-production-summary.service \
+    nayzfreedom-production-summary.timer \
     nayzfreedom-log-retention.service \
     nayzfreedom-log-retention.timer \
     nayzfreedom-ops-report.service \
     nayzfreedom-ops-report.timer \
+    nayzfreedom-backup.service \
+    nayzfreedom-backup.timer \
+    nayzfreedom-healthcheck.service \
+    nayzfreedom-healthcheck.timer \
     nayzfreedom-track-scheduler.service \
     nayzfreedom-track-scheduler.timer; do
     cp "$INSTALL_DIR/deploy/$unit" "/etc/systemd/system/$unit"
@@ -52,8 +66,14 @@ systemctl enable --now nayzfreedom-ops-report.timer
 systemctl enable --now nayzfreedom-track-scheduler.timer
 systemctl restart nayzfreedom-dashboard.service
 systemctl status nayzfreedom-dashboard.service --no-pager
-systemctl restart nayzfreedom-bot.service
-systemctl status nayzfreedom-bot.service --no-pager
+if grep -q '^TELEGRAM_BOT_TOKEN=.\+' "$INSTALL_DIR/.env" && grep -q '^TELEGRAM_CHAT_ID=.\+' "$INSTALL_DIR/.env"; then
+    systemctl enable --now nayzfreedom-bot.service
+    systemctl restart nayzfreedom-bot.service
+    systemctl status nayzfreedom-bot.service --no-pager
+else
+    systemctl disable --now nayzfreedom-bot.service 2>/dev/null || true
+    echo "Bot not started: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is missing."
+fi
 comment_chat_map_path="$(grep -E '^COMMENT_CHAT_MAP_PATH=.' "$INSTALL_DIR/.env" | tail -n 1 | cut -d= -f2-)"
 comment_chat_map_path="${comment_chat_map_path:-$INSTALL_DIR/secrets/comment_chat_map.yaml}"
 if grep -q '^COMMENT_BOT_TOKEN=.\+' "$INSTALL_DIR/.env" && grep -q '^GEMINI_API_KEY=.\+' "$INSTALL_DIR/.env" && [ -f "$comment_chat_map_path" ]; then

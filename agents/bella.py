@@ -8,7 +8,7 @@ from models.content_job import (
     Script, Article, ImageCaption, InfographicContent, BellaOutput,
 )
 
-_bella_output_adapter = TypeAdapter(BellaOutput)
+_bella_output_adapter: TypeAdapter[BellaOutput] = TypeAdapter(BellaOutput)
 
 _DRY_RUN_OUTPUTS: dict[ContentType, BellaOutput] = {
     ContentType.VIDEO: Script(

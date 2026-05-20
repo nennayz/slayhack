@@ -7,6 +7,7 @@ import tempfile
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from models.content_job import ContentJob, ContentType
@@ -256,10 +257,12 @@ def _seedance_prompts(job: ContentJob) -> str:
 def _provider_prompt_doc(job: ContentJob, title: str, instruction: str) -> str:
     lines = [f"# {title}", "", instruction, ""]
     for scene in _video_scenes(job):
+        end_second = cast(int, scene.get("end_second", 0)) if isinstance(scene.get("end_second", 0), int) else 0
+        start_second = cast(int, scene.get("start_second", 0)) if isinstance(scene.get("start_second", 0), int) else 0
         lines.extend(
             [
                 f"## Scene {scene.get('number')} - {scene.get('purpose')}",
-                f"Duration: {scene.get('end_second', 0) - scene.get('start_second', 0)} seconds",
+                f"Duration: {end_second - start_second} seconds",
                 "",
                 str(scene.get("prompt") or scene.get("visual_direction") or "").strip(),
                 "",
@@ -317,9 +320,11 @@ def _video_scenes(job: ContentJob) -> list[dict[str, object]]:
 
 def _scene_duration(scene: dict[str, object]) -> int:
     try:
-        return int(scene.get("end_second", 0)) - int(scene.get("start_second", 0))
+        end_second_raw = scene.get("end_second", 0)
+        start_second_raw = scene.get("start_second", 0)
+        return int(str(end_second_raw or 0)) - int(str(start_second_raw or 0))
     except (TypeError, ValueError):
-        return int(scene.get("duration_seconds", 8) or 8)
+        return int(str(scene.get("duration_seconds", 8) or 8))
 
 
 def _caption_text(job: ContentJob) -> str:

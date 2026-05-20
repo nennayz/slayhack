@@ -1,7 +1,5 @@
 from __future__ import annotations
-import pytest
-from pathlib import Path
-import tempfile, textwrap, yaml
+import yaml
 from models.trend_scan_job import TrendHit, TrendScanJob, TrendScanJobStatus
 
 

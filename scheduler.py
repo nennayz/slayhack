@@ -6,9 +6,15 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
+
 import yaml
+from dotenv import load_dotenv
 from activity_logger import log_action, log_command
+from lock_utils import acquire_pid_lock
 from project_loader import list_project_slugs
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -67,20 +73,18 @@ def _scheduler_lock_file(root: Path | None) -> Path:
 def _acquire_scheduler_lock(root: Path | None) -> tuple[Path, bool]:
     lock_file = _scheduler_lock_file(root)
     lock_file.parent.mkdir(parents=True, exist_ok=True)
-    if lock_file.exists():
-        try:
-            pid = int(lock_file.read_text().strip())
-        except (ValueError, OSError):
-            pid = None
-        pid_hint = f" (PID {pid})" if pid else ""
-        logger.error(
-            "another pipeline instance is already running%s; delete %s manually if stale",
-            pid_hint,
-            lock_file,
-        )
-        return lock_file, False
-    lock_file.write_text(str(os.getpid()))
-    return lock_file, True
+    acquired, pid, stale_removed = acquire_pid_lock(lock_file)
+    if acquired:
+        if stale_removed:
+            logger.warning("Recovered stale scheduler lock at %s", lock_file)
+        return lock_file, True
+    pid_hint = f" (PID {pid})" if pid else ""
+    logger.error(
+        "another pipeline instance is already running%s; delete %s manually if stale",
+        pid_hint,
+        lock_file,
+    )
+    return lock_file, False
 
 
 def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_type: str) -> dict:
@@ -96,10 +100,10 @@ def _run_job(cmd: list[str], cwd: Path, project_slug: str, key: str, content_typ
         logger.info("OK: project=%s key=%s", project_slug, key)
         return {"project": project_slug, "brief": key, "content_type": content_type, "failed": False}
     except subprocess.TimeoutExpired as exc:
-        proc = getattr(exc, "process", None)
-        if proc:
-            proc.kill()
-            proc.communicate()
+        process = cast(Any, getattr(exc, "process", None))
+        if process is not None:
+            process.kill()
+            process.communicate()
         logger.error("TIMEOUT: project=%s key=%s", project_slug, key)
         return {"project": project_slug, "brief": key, "content_type": content_type,
                 "exit_code": None, "failed": True}

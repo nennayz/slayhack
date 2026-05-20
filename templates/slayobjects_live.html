@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block body_class %}aurora-page{% endblock %}
+{% block content %}
+<section class="page-header ops-header fleet-page-header fleet-header-logbook">
+  <div>
+    <p class="eyebrow">SlayHack</p>
+    <h1>SlayObjects Live Dashboard</h1>
+    <p class="muted">@slayobjects measurement board for TikTok, Instagram, and Facebook. Live publish stays locked.</p>
+  </div>
+  <div class="inline-actions">
+    <a class="button button-secondary" href="/aurora">Back to Aurora</a>
+    <a class="button button-secondary" href="/aurora/metrics">Weekly metrics</a>
+  </div>
+</section>
+
+{% include "_aurora_flow.html" %}
+
+{% if snapshot_result %}
+<section class="ops-action-result">
+  <span class="badge badge-ops-ready">{{ snapshot_result }}</span>
+</section>
+{% endif %}
+
+<section class="stat-grid wide slay-live-summary">
+  <article class="stat-card">
+    <span>Platforms tracked</span>
+    <strong>{{ dashboard.summary.platforms_tracked }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Total views</span>
+    <strong>{{ "{:,}".format(dashboard.summary.total_views) }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Total reach</span>
+    <strong>{{ "{:,}".format(dashboard.summary.total_reach) }}</strong>
+  </article>
+  <article class="stat-card">
+    <span>Total interactions</span>
+    <strong>{{ "{:,}".format(dashboard.summary.total_interactions) }}</strong>
+  </article>
+</section>
+
+<section class="content-grid slay-live-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Live status</p>
+      <h2>Connected sources</h2>
+    </div>
+    <div class="slay-platform-list">
+      {% for item in dashboard.platforms %}
+      <div class="slay-platform-row {{ item.state }}">
+        <div>
+          <span class="badge badge-ops-{{ 'ready' if item.latest_snapshot else 'missing' }}">{{ item.api_state }}</span>
+          <h3>{{ item.label }}</h3>
+          <a href="{{ item.url }}" target="_blank" rel="noreferrer">{{ item.handle }}</a>
+        </div>
+        <div class="slay-platform-metric">
+          <small>{{ item.primary_metric }}</small>
+          <strong>{{ "{:,}".format(item.latest_value) }}</strong>
+          {% if item.delta is not none %}
+          <span class="{{ 'positive' if item.delta >= 0 else 'negative' }}">{{ "{:+,}".format(item.delta) }}</span>
+          {% else %}
+          <span>first proof needed</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Captain Attention</p>
+      <h2>What needs action next</h2>
+    </div>
+    <div class="slay-action-list">
+      {% for action in dashboard.captain_actions %}
+      <div class="slay-action-row">
+        <span class="badge badge-ops-{{ action.state }}">{{ action.label }}</span>
+        <p>{{ action.detail }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="section-heading">
+    <p class="eyebrow">Platform proof</p>
+    <h2>Latest snapshots</h2>
+  </div>
+  <div class="slay-snapshot-grid">
+    {% for item in dashboard.platforms %}
+    <article class="slay-snapshot-card">
+      <header>
+        <span>{{ item.label }}</span>
+        <strong>{{ item.state | replace('_', ' ') }}</strong>
+      </header>
+      {% if item.latest_snapshot %}
+      {% set snap = item.latest_snapshot %}
+      <dl>
+        <div><dt>Captured</dt><dd>{{ snap.captured_at }}</dd></div>
+        <div><dt>Views</dt><dd>{{ "{:,}".format(snap.views) }}</dd></div>
+        <div><dt>Reach</dt><dd>{{ "{:,}".format(snap.reach) }}</dd></div>
+        <div><dt>Likes</dt><dd>{{ "{:,}".format(snap.likes) }}</dd></div>
+        <div><dt>Comments</dt><dd>{{ "{:,}".format(snap.comments) }}</dd></div>
+        <div><dt>Saves</dt><dd>{{ "{:,}".format(snap.saves) }}</dd></div>
+        <div><dt>Shares</dt><dd>{{ "{:,}".format(snap.shares) }}</dd></div>
+        <div><dt>Engagement</dt><dd>{{ snap.engagement_rate }}%</dd></div>
+      </dl>
+      {% if snap.content_url %}
+      <a href="{{ snap.content_url }}" target="_blank" rel="noreferrer">Open proof</a>
+      {% endif %}
+      {% else %}
+      <p class="muted">No snapshot recorded yet. Add a manual proof or connect the API collector.</p>
+      {% endif %}
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="content-grid slay-live-grid">
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Top content</p>
+      <h2>Current winners</h2>
+    </div>
+    {% if dashboard.top_content %}
+    <div class="slay-top-list">
+      {% for item in dashboard.top_content %}
+      <div class="slay-top-row">
+        <strong>{{ item.platform_label }}</strong>
+        <span>{{ "{:,}".format(item.views or item.reach) }} views/reach</span>
+        <small>{{ "{:,}".format(item.interactions) }} interactions - {{ item.engagement_rate }}%</small>
+        {% if item.content_url %}<a href="{{ item.content_url }}" target="_blank" rel="noreferrer">Open content</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No top content yet. First snapshot unlocks the winner board.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <div class="section-heading">
+      <p class="eyebrow">Manual proof</p>
+      <h2>Record a snapshot</h2>
+    </div>
+    <form class="slay-snapshot-form" method="post" action="/aurora/slayobjects/live/snapshot">
+      <label>
+        Platform
+        <select name="platform">
+          <option value="tiktok">TikTok</option>
+          <option value="instagram">Instagram</option>
+          <option value="facebook">Facebook</option>
+        </select>
+      </label>
+      <label>
+        Content URL
+        <input name="content_url" type="url" placeholder="https://...">
+      </label>
+      <div class="slay-form-grid">
+        <label>Views <input name="views" inputmode="numeric" value="0"></label>
+        <label>Reach <input name="reach" inputmode="numeric" value="0"></label>
+        <label>Likes <input name="likes" inputmode="numeric" value="0"></label>
+        <label>Comments <input name="comments" inputmode="numeric" value="0"></label>
+        <label>Saves <input name="saves" inputmode="numeric" value="0"></label>
+        <label>Shares <input name="shares" inputmode="numeric" value="0"></label>
+        <label>Followers <input name="followers" inputmode="numeric" value="0"></label>
+      </div>
+      <label>
+        Note
+        <input name="note" placeholder="hook, topic, or source note">
+      </label>
+      <button type="submit">Record snapshot</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

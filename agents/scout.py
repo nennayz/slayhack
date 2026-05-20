@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 import requests
 
@@ -53,7 +54,7 @@ class ScoutAgent:
         return job
 
     def _fetch_all_for_niche(self, niche: str) -> NicheSignal:
-        raw: dict = {"niche": niche}
+        raw: dict[str, Any] = {"niche": niche}
         raw["brave"] = self._fetch_brave(niche)
         raw["google_trends"] = self._fetch_google_trends(niche)
         raw["reddit"] = self._fetch_reddit(niche)
@@ -64,10 +65,11 @@ class ScoutAgent:
         if not self.config.brave_search_api_key:
             return []
         try:
+            params: dict[str, str | int] = {"q": f"{niche} viral trend social media 2026", "count": 5}
             resp = requests.get(
                 _BRAVE_URL,
                 headers={"Accept": "application/json", "X-Subscription-Token": self.config.brave_search_api_key},
-                params={"q": f"{niche} viral trend social media 2026", "count": 5},
+                params=params,
                 timeout=10,
             )
             resp.raise_for_status()
@@ -79,7 +81,7 @@ class ScoutAgent:
 
     def _fetch_google_trends(self, niche: str) -> dict:
         try:
-            from pytrends.request import TrendReq
+            from pytrends.request import TrendReq  # type: ignore[import-untyped]
             with _GTRENDS_LOCK:
                 time.sleep(2)
                 pt = TrendReq(hl="en-US", tz=300)
@@ -98,7 +100,7 @@ class ScoutAgent:
 
     def _fetch_reddit(self, niche: str) -> dict:
         try:
-            import praw
+            import praw  # type: ignore[import-untyped]
             if not self.config.reddit_client_id:
                 return {}
             reddit = praw.Reddit(
@@ -122,16 +124,17 @@ class ScoutAgent:
         if not self.config.meta_access_token:
             return {}
         try:
+            params: dict[str, str | int] = {
+                "search_terms": niche,
+                "ad_reached_countries": '["US"]',
+                "ad_active_status": "ACTIVE",
+                "limit": 5,
+                "fields": "id,ad_creative_body,ad_snapshot_url",
+                "access_token": self.config.meta_access_token,
+            }
             resp = requests.get(
                 _META_ADS_URL,
-                params={
-                    "search_terms": niche,
-                    "ad_reached_countries": '["US"]',
-                    "ad_active_status": "ACTIVE",
-                    "limit": 5,
-                    "fields": "id,ad_creative_body,ad_snapshot_url",
-                    "access_token": self.config.meta_access_token,
-                },
+                params=params,
                 timeout=10,
             )
             if resp.status_code == 400:

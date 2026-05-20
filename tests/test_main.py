@@ -6,6 +6,8 @@ from knowledge.embedder import Embedder
 from knowledge.object import ContentObject
 from knowledge.settings import KnowledgeSettings
 from knowledge.store import KnowledgeStore
+from lock_utils import LockAcquisitionError
+import main as main_module
 from models.content_job import ContentJob, ContentType, PostPerformance
 
 
@@ -47,40 +49,70 @@ def _make_job(idea_uid: str | None = None, has_performance: bool = True) -> Cont
 
 
 def test_update_ks_published_transitions_status(tmp_path):
-    """When idea_uid + performance both set, status transitions to published."""
     store, settings = _make_store(tmp_path)
     stored = _add_idea(store, "in_production")
     job = _make_job(idea_uid=stored.uid, has_performance=True)
 
-    with patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings), \
-         patch("knowledge.store.KnowledgeStore", return_value=store):
+    with (
+        patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings),
+        patch("knowledge.store.KnowledgeStore", return_value=store),
+    ):
         from main import _update_ks_published
+
         _update_ks_published(job, root=tmp_path)
 
     assert store.get(stored.uid).status == "published"
 
 
 def test_update_ks_published_noop_when_no_idea_uid(tmp_path):
-    """Jobs without idea_uid (pre-SP-3) are silently skipped — no error."""
     store, settings = _make_store(tmp_path)
     job = _make_job(idea_uid=None, has_performance=True)
 
-    with patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings), \
-         patch("knowledge.store.KnowledgeStore", return_value=store):
+    with (
+        patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings),
+        patch("knowledge.store.KnowledgeStore", return_value=store),
+    ):
         from main import _update_ks_published
-        _update_ks_published(job, root=tmp_path)  # must not raise
+
+        _update_ks_published(job, root=tmp_path)
 
 
 def test_update_ks_published_noop_when_no_performance(tmp_path):
-    """Jobs without performance data don't transition KS status."""
     store, settings = _make_store(tmp_path)
     stored = _add_idea(store, "in_production")
     job = _make_job(idea_uid=stored.uid, has_performance=False)
 
-    with patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings), \
-         patch("knowledge.store.KnowledgeStore", return_value=store):
+    with (
+        patch("knowledge.settings.KnowledgeSettings.from_env", return_value=settings),
+        patch("knowledge.store.KnowledgeStore", return_value=store),
+    ):
         from main import _update_ks_published
+
         _update_ks_published(job, root=tmp_path)
 
-    # status must remain unchanged
     assert store.get(stored.uid).status == "in_production"
+
+
+def test_main_lock_recovers_stale_pid(monkeypatch, tmp_path):
+    lock_file = tmp_path / "pipeline.lock"
+    monkeypatch.setattr(main_module, "_LOCK_FILE", lock_file)
+    monkeypatch.delenv(main_module._SKIP_LOCK_ENV, raising=False)
+    monkeypatch.setattr(main_module, "acquire_pid_lock", lambda path: (True, 12345, True))
+
+    assert main_module._acquire_lock() is True
+
+
+def test_main_lock_raises_when_active(monkeypatch, tmp_path):
+    lock_file = tmp_path / "pipeline.lock"
+    monkeypatch.setattr(main_module, "_LOCK_FILE", lock_file)
+    monkeypatch.delenv(main_module._SKIP_LOCK_ENV, raising=False)
+    monkeypatch.setattr(main_module, "acquire_pid_lock", lambda path: (False, 4321, False))
+
+    try:
+        main_module._acquire_lock()
+        raised = False
+    except LockAcquisitionError as exc:
+        raised = True
+        assert "4321" in str(exc)
+
+    assert raised is True

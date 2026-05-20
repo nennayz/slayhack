@@ -1,141 +1,29 @@
 from __future__ import annotations
-import json
-import time
-from datetime import datetime, timezone
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from openai import OpenAI
+from datetime import datetime, timezone
+
 from activity_logger import log_action
 from agents.bella import BellaAgent
-from agents.lila import LilaAgent
-from agents.nora import NoraAgent
-from agents.roxy import RoxyAgent
 from agents.emma import EmmaAgent
+from agents.lila import LilaAgent
+from agents.mia import MiaAgent
+from agents.nora import NoraAgent
 from agents.publish import PublishAgent, has_publish_failures
+from agents.roxy import RoxyAgent
+from agents.zoe import ZoeAgent
 from checkpoint import pause
 from config import Config
-from job_store import save_job, load_recent_performance
-from models.content_job import ContentJob, JobStatus
-from tools.agent_tools import get_tool_definitions
-
-
-@dataclass
-class _ToolBlock:
-    id: str
-    name: str
-    input: dict
-
-_ROBIN_SYSTEM = """You are Robin, Chief of Staff at NayzFreedom.
-
-You act directly on behalf of the owner. Every decision you make optimizes for maximum business benefit — reach, engagement, and brand growth — not just task completion.
-
-Before recommending strategy, review past job performance data provided in context. If no performance data exists, proceed without it.
-
-The brief and content type have already been selected by the Captain from the
-Idea Bank — do NOT call run_mia or run_zoe. Start directly with run_bella.
-
-## Team workflow (follow this order):
-1. run_bella — write content based on the brief and content_type
-2. After Bella completes, check job.content_type:
-   - video, image, or infographic → run_lila
-   - article → skip run_lila, go directly to step 3
-3. request_checkpoint (stage: "content_review") — show content and visual for approval
-4. run_nora — QA review. If QA fails and retry < max_retries, re-run relevant agent.
-5. request_checkpoint (stage: "qa_review") — show QA result
-6. run_roxy and run_emma — call BOTH in the same response (parallel)
-7. request_checkpoint (stage: "final_approval") — final sign-off before publishing
-8. run_publish — publish to Meta. Pass schedule=true for Roxy's recommended time.
-
-Never skip a checkpoint. After run_publish completes, declare the job complete.
-"""
-
-
-def _compact_messages(messages: list[dict], keep_recent_pairs: int = 3) -> list[dict]:
-    """Trim Robin's older assistant text blocks to prevent context bloat.
-
-    Keeps the initial brief and the most recent round-trips in full.
-    Older assistant turns keep tool call metadata but drop text content.
-    Tool results are already minimal so left as-is.
-    """
-    if len(messages) < 1 + keep_recent_pairs * 2:
-        return messages
-
-    first = messages[:1]
-    old = messages[1: -(keep_recent_pairs * 2)]
-    recent = messages[-(keep_recent_pairs * 2):]
-
-    compacted: list[dict] = []
-    for msg in old:
-        if msg.get("role") == "assistant" and msg.get("tool_calls"):
-            slim = dict(msg)
-            slim["content"] = ""
-            compacted.append(slim)
-        else:
-            compacted.append(msg)
-
-    return first + compacted + recent
-
-
-def _openai_tools() -> list[dict]:
-    tools = []
-    for tool in get_tool_definitions():
-        tools.append(
-            {
-                "type": "function",
-                "function": {
-                    "name": tool["name"],
-                    "description": tool["description"],
-                    "parameters": tool["input_schema"],
-                },
-            }
-        )
-    return tools
-
-
-def _tool_blocks_from_openai(message) -> list[_ToolBlock]:
-    blocks = []
-    for call in message.tool_calls or []:
-        try:
-            tool_input = json.loads(call.function.arguments or "{}")
-        except json.JSONDecodeError:
-            tool_input = {}
-        blocks.append(_ToolBlock(id=call.id, name=call.function.name, input=tool_input))
-    return blocks
-
-
-def _assistant_message_from_openai(message) -> dict:
-    payload = {"role": "assistant", "content": message.content or ""}
-    if message.tool_calls:
-        payload["tool_calls"] = [
-            {
-                "id": call.id,
-                "type": "function",
-                "function": {
-                    "name": call.function.name,
-                    "arguments": call.function.arguments or "{}",
-                },
-            }
-            for call in message.tool_calls
-        ]
-    return payload
-
-
-def _is_rate_limit_error(exc: Exception) -> bool:
-    if exc.__class__.__name__ in ("RateLimitError", "APIStatusError"):
-        status = getattr(exc, "status_code", None)
-        if status in (429, 529):
-            return True
-    if exc.__class__.__name__ == "RateLimitError":
-        return True
-    return getattr(exc, "status_code", None) in (429, 529)
+from job_store import save_job
+from models.content_job import CheckpointDecision, ContentJob, ContentType, Idea, JobStatus
 
 
 class Orchestrator:
     def __init__(self, config: Config, safe_prep: bool = False):
         self.config = config
-        self.client = OpenAI(api_key=config.openai_api_key)
-        self.model = config.openai_robin_model
         self.agents = {
+            "mia": MiaAgent(config),
+            "zoe": ZoeAgent(config),
             "bella": BellaAgent(config),
             "lila": LilaAgent(config),
             "nora": NoraAgent(config),
@@ -145,215 +33,310 @@ class Orchestrator:
         }
         self._unattended: bool = False
         self.safe_prep = safe_prep
-        self._rate_limit_sleep_seconds = 2.0
-
-    def _create_chat_completion(self, **kwargs):
-        attempts = 4
-        for attempt in range(attempts):
-            try:
-                return self.client.chat.completions.create(**kwargs)
-            except Exception as exc:
-                if not _is_rate_limit_error(exc) or attempt == attempts - 1:
-                    raise
-                sleep_seconds = self._rate_limit_sleep_seconds * (2 ** attempt)
-                log_action("orchestrator_rate_limit_retry", {
-                    "model": kwargs.get("model", self.model),
-                    "attempt": attempt + 1,
-                    "sleep_seconds": sleep_seconds,
-                })
-                time.sleep(sleep_seconds)
 
     def run(self, job: ContentJob, unattended: bool = False) -> ContentJob:
         self._unattended = unattended
         job.status = JobStatus.RUNNING
         log_action("orchestrator_start", {"job_id": job.id, "unattended": unattended})
-        system_prompt = _ROBIN_SYSTEM.format(
-            pm_name=job.pm.name,
-            page_name=job.pm.page_name,
-        )
-        perf_summary = load_recent_performance(job.pm.page_name)
-        first_message = f"Brief: {job.brief}\nPlatforms: {', '.join(job.platforms)}"
-        if perf_summary:
-            first_message = f"{perf_summary}\n\n{first_message}"
-        messages: list[dict] = [{"role": "user", "content": first_message}]
 
-        while True:
-            response = self._create_chat_completion(
-                model=self.model,
-                max_tokens=4096,
-                tools=_openai_tools(),
-                tool_choice="auto",
-                messages=[{"role": "system", "content": system_prompt}, *messages],
+        # SP-3: ideas are approved upstream by IdeaPlanner and converted to ContentJob.
+        # Robin starts from Bella; Mia/Zoe and idea selection remain only for legacy helpers.
+        if job.content_type is None:
+            raise ValueError("ContentJob.content_type must be set before Orchestrator.run")
+
+        self._run_step_if_needed(job, "run_bella", lambda j: j.bella_output is None)
+        self._run_step_if_needed(job, "run_lila", lambda j: self._needs_lila(j) and not self._visual_ready(j))
+
+        if self._needs_content_review(job):
+            self._dispatch(
+                "request_checkpoint",
+                {"stage": "content_review", "summary": self._content_review_summary(job)},
+                job,
             )
-            choice = response.choices[0]
-            message = choice.message
-            tool_blocks = _tool_blocks_from_openai(message)
+            save_job(job)
 
-            if not tool_blocks and choice.finish_reason == "stop":
-                if has_publish_failures(job.publish_result):
-                    job.status = JobStatus.FAILED
-                elif self.safe_prep and not (
-                    isinstance(job.publish_execution, dict)
-                    and job.publish_execution.get("status") == "ready_to_publish"
-                ):
-                    job.status = JobStatus.AWAITING_APPROVAL
-                else:
-                    job.status = JobStatus.COMPLETED
+        qa_terminal = self._run_qa_cycle(job)
+        if qa_terminal:
+            save_job(job)
+            log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
+            return job
+
+        if job.growth_strategy is None or job.community_faq_path is None:
+            self._run_parallel_post_production(job)
+            save_job(job)
+
+        if not self._checkpoint_recorded(job, "final_approval"):
+            self._dispatch(
+                "request_checkpoint",
+                {"stage": "final_approval", "summary": self._final_approval_summary(job)},
+                job,
+            )
+            save_job(job)
+
+        if self.safe_prep:
+            if not (
+                isinstance(job.publish_execution, dict)
+                and job.publish_execution.get("status") == "ready_to_publish"
+            ):
+                self._dispatch("run_publish", {"schedule": True}, job)
                 save_job(job)
-                log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
-                return job
+            job.status = JobStatus.AWAITING_APPROVAL
+            log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
+            return job
 
-            if not tool_blocks:
-                job.status = JobStatus.FAILED
+        if not self._publish_complete(job):
+            self._dispatch("run_publish", {"schedule": True}, job)
+            save_job(job)
+
+        job.status = JobStatus.FAILED if has_publish_failures(job.publish_result) else JobStatus.COMPLETED
+        save_job(job)
+        log_action("orchestrator_complete", {"job_id": job.id, "status": job.status.value})
+        return job
+
+    def _run_step_if_needed(self, job: ContentJob, tool_name: str, predicate) -> None:
+        if predicate(job):
+            self._dispatch(tool_name, {}, job)
+            save_job(job)
+
+    def _run_qa_cycle(self, job: ContentJob) -> bool:
+        while True:
+            if job.qa_result is None:
+                self._dispatch("run_nora", {}, job)
                 save_job(job)
-                raise RuntimeError(f"Unexpected finish_reason: {choice.finish_reason}")
 
-            checkpoint_blocks = [b for b in tool_blocks if b.name == "request_checkpoint"]
-            agent_blocks = [b for b in tool_blocks if b.name != "request_checkpoint"]
-
-            tool_results = []
-
-            # Checkpoints run sequentially — they block for user input
-            for block in checkpoint_blocks:
-                result = self._dispatch(block.name, block.input, job)
+            if self._needs_qa_review(job):
+                self._dispatch(
+                    "request_checkpoint",
+                    {"stage": "qa_review", "summary": self._qa_review_summary(job)},
+                    job,
+                )
                 save_job(job)
-                tool_results.append({
-                    "role": "tool",
-                    "tool_call_id": block.id,
-                    "content": json.dumps(result),
-                })
 
-            # Independent agent calls (e.g. run_roxy + run_emma) run concurrently
-            if len(agent_blocks) > 1:
-                results_map: dict[str, dict] = {}
-                with ThreadPoolExecutor(max_workers=len(agent_blocks)) as executor:
-                    future_to_block = {
-                        executor.submit(self._dispatch, b.name, b.input, job): b
-                        for b in agent_blocks
-                    }
-                    for future in as_completed(future_to_block):
-                        blk = future_to_block[future]
-                        results_map[blk.id] = future.result()
+            if job.qa_result is None:
+                continue
+            if job.qa_result.passed:
+                return False
+            if not job.qa_result.send_back_to or job.nora_retry_count >= job.pm.brand.nora_max_retries:
+                job.status = JobStatus.AWAITING_APPROVAL
+                return True
+
+            self._prepare_retry(job, job.qa_result.send_back_to)
+            if self._needs_content_review(job):
+                self._dispatch(
+                    "request_checkpoint",
+                    {"stage": "content_review", "summary": self._content_review_summary(job)},
+                    job,
+                )
                 save_job(job)
-                for block in agent_blocks:
-                    tool_results.append({
-                        "role": "tool",
-                        "tool_call_id": block.id,
-                        "content": json.dumps(results_map[block.id]),
-                    })
-            else:
-                for block in agent_blocks:
-                    result = self._dispatch(block.name, block.input, job)
-                    save_job(job)
-                    tool_results.append({
-                        "role": "tool",
-                        "tool_call_id": block.id,
-                        "content": json.dumps(result),
-                    })
 
-            messages.append(_assistant_message_from_openai(message))
-            messages.extend(tool_results)
-            messages = _compact_messages(messages)
+    def _prepare_retry(self, job: ContentJob, target: str) -> None:
+        if target == "bella":
+            job.bella_output = None
+            job.visual_prompt = None
+            job.image_path = None
+            job.video_path = None
+            self._dispatch("run_bella", {}, job)
+            save_job(job)
+            if self._needs_lila(job):
+                self._dispatch("run_lila", {}, job)
+                save_job(job)
+        elif target == "lila":
+            job.visual_prompt = None
+            job.image_path = None
+            job.video_path = None
+            self._dispatch("run_lila", {}, job)
+            save_job(job)
+        job.qa_result = None
+
+    def _run_parallel_post_production(self, job: ContentJob) -> None:
+        clones = {
+            "roxy": job.model_copy(deep=True),
+            "emma": job.model_copy(deep=True),
+        }
+        completed: dict[str, ContentJob] = {}
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_to_name = {
+                executor.submit(self._run_agent_job, name, clones[name]): name
+                for name in ("roxy", "emma")
+            }
+            for future in as_completed(future_to_name):
+                name = future_to_name[future]
+                completed[name] = future.result()
+
+        roxy_job = completed["roxy"]
+        emma_job = completed["emma"]
+        job.growth_strategy = roxy_job.growth_strategy
+        job.community_faq_path = emma_job.community_faq_path
+        job.stage = "emma_done"
+
+    def _run_agent_job(self, agent_name: str, job: ContentJob) -> ContentJob:
+        return self.agents[agent_name].run(job)
 
     def _dispatch(self, tool_name: str, tool_input: dict, job: ContentJob) -> dict:
         if tool_name == "request_checkpoint":
-            stage = tool_input.get("stage")
+            stage = tool_input.get("stage", "checkpoint")
+            summary = tool_input.get("summary", "")
             options = tool_input.get("options", [])
-            # For idea_selection, always build options from job.ideas so
-            # Telegram shows numbered buttons even when Robin omits them.
             if stage == "idea_selection" and job.ideas:
-                option_ideas = job.ideas
-                if self._unattended and job.content_type:
-                    matching = [i for i in job.ideas if i.content_type == job.content_type]
-                    if matching:
-                        option_ideas = matching
-                options = [f"{i.number}: {i.title}" for i in option_ideas]
-            log_action("request_checkpoint", {
-                "job_id": job.id,
-                "stage": stage,
-                "options": options,
-            })
-            result = pause(
-                stage=stage,
-                summary=tool_input.get("summary"),
-                options=options,
-                job=job,
-                unattended=self._unattended,
-            )
+                options = self._idea_options(job)
+            checkpoint = pause(stage, summary, options, job, unattended=self._unattended)
             if stage == "idea_selection" and job.ideas is not None:
-                try:
-                    # Support both "1" and "1: Title" formats
-                    decision_num = int(result.decision.split(":")[0].strip())
-                    matched = next(
-                        (i for i in job.ideas if i.number == decision_num), None
-                    )
-                    if matched is not None:
-                        job.selected_idea = matched
-                        job.content_type = matched.content_type
-                except ValueError:
-                    pass  # non-numeric input — leave selected_idea and content_type as-is
-            return {"decision": result.decision}
+                decision_raw = str(checkpoint.decision).strip()
+                selected_idea = self._select_idea(job.ideas, decision_raw, requested_content_type=job.content_type)
+                if selected_idea is not None:
+                    job.selected_idea = selected_idea
+                    job.content_type = selected_idea.content_type
+                    checkpoint.decision = str(selected_idea.number)
+                    job.stage = "idea_selection"
+            if not job.checkpoint_log or job.checkpoint_log[-1].stage != stage or job.checkpoint_log[-1].decision != checkpoint.decision:
+                job.checkpoint_log.append(CheckpointDecision(stage=stage, decision=checkpoint.decision))
+            log_action("checkpoint_recorded", {"job_id": job.id, "stage": stage, "decision": checkpoint.decision})
+            return {"status": "paused", "stage": stage, "decision": checkpoint.decision}
 
         agent_name = tool_name.replace("run_", "")
-        if agent_name not in self.agents:
-            return {"error": f"Unknown tool: {tool_name}"}
-
-        kwargs = {}
-        if agent_name == "publish" and "schedule" in tool_input:
-            kwargs["schedule"] = bool(tool_input["schedule"])
+        schedule = bool(tool_input.get("schedule", False))
+        log_action("run_agent", {"job_id": job.id, "agent": agent_name, "stage_before": job.stage})
         if agent_name == "publish" and self.safe_prep:
-            self._mark_safe_publish_handoff(job)
-            log_action("safe_prep_publish_handoff", {
-                "job_id": job.id,
-                "stage": job.stage,
-                "platforms": job.platforms,
-            })
+            self._prepare_publish_handoff(job, schedule=schedule)
             return {"status": "safe_prep", "stage": job.stage}
-        self.agents[agent_name].run(job, **kwargs)
-        log_action("run_agent", {
-            "job_id": job.id,
-            "agent": agent_name,
-            "stage": job.stage,
-        })
+        agent = self.agents[agent_name]
+        result_job = agent.run(job, schedule=schedule)
+        job.status = result_job.status
         return {"status": "ok", "stage": job.stage}
 
-    def _mark_safe_publish_handoff(self, job: ContentJob) -> ContentJob:
-        """Record publish readiness without calling any external publisher API."""
-        created_at = datetime.now(timezone.utc).isoformat()
-        hashtags = job.growth_strategy.hashtags if job.growth_strategy else []
-        caption = job.growth_strategy.caption if job.growth_strategy else ""
-        package = {
+    def _prepare_publish_handoff(self, job: ContentJob, schedule: bool) -> None:
+        requested_at = datetime.now(timezone.utc)
+        growth = job.growth_strategy
+        best_utc = growth.best_post_time_utc if growth else None
+        best_thai = growth.best_post_time_thai if growth else None
+        caption = growth.caption if growth else None
+        hashtags = list(growth.hashtags) if growth else []
+        editorial_guidance = growth.editorial_guidance if growth else {}
+        job.publish_package = {
             "status": "completed",
+            "requested_at": requested_at.isoformat(),
             "owners": ["Roxy", "Emma"],
             "caption": caption,
             "hashtags": hashtags,
-            "faq_path": job.community_faq_path,
-            "publish_notes": "Safe production prep stopped before external publish.",
-            "created_at": created_at,
-            "next_action": "Captain review required before dashboard handoff. Live publishing remains locked.",
-            "source": "safe_prep_cli",
+            "best_post_time_utc": best_utc,
+            "best_post_time_thai": best_thai,
+            "community_faq_path": job.community_faq_path,
+            "editorial_guidance": editorial_guidance,
         }
-        job.publish_package = package
+        next_action = (
+            "Captain approved schedule handoff. Use dashboard scheduling or publish-only when ready."
+            if schedule
+            else "Captain approved manual publish handoff. Use dashboard scheduling or publish-only when ready."
+        )
         job.publish_execution = {
             "status": "ready_to_publish",
             "owners": ["Roxy", "Emma"],
-            "platforms": list(job.platforms),
-            "caption": caption,
-            "hashtags": hashtags,
-            "faq_path": job.community_faq_path,
-            "video_path": job.video_path,
-            "image_path": job.image_path,
-            "created_at": created_at,
-            "next_action": "Captain review required before dashboard handoff. Live publishing remains locked.",
-            "source": "safe_prep_cli",
+            "requested_at": requested_at.isoformat(),
+            "schedule_requested": schedule,
+            "best_post_time_utc": best_utc,
+            "best_post_time_thai": best_thai,
+            "next_action": next_action,
         }
-        job.publish_result = {
+        publish_payload = {
             str(platform): {
                 "status": "ready_to_publish",
                 "dry_run": True,
-                "reason": "Safe production prep stopped before external platform API call.",
+                "scheduled": schedule,
+                "requested_at": requested_at.isoformat(),
             }
             for platform in job.platforms
         }
+        job.publish_result = publish_payload
         job.stage = "ready_to_publish"
-        return job
+
+    def _idea_options(self, job: ContentJob) -> list[str]:
+        if not job.ideas:
+            return []
+        return [f"{idea.number}. {idea.title}" for idea in job.ideas]
+
+    def _select_idea(
+        self,
+        ideas: list[Idea],
+        decision_raw: str,
+        requested_content_type: ContentType | None = None,
+    ) -> Idea | None:
+        if self._unattended and requested_content_type is not None:
+            for idea in ideas:
+                if idea.content_type == requested_content_type:
+                    return idea
+        try:
+            selected_num = int(decision_raw)
+        except ValueError:
+            return None
+        return next((idea for idea in ideas if idea.number == selected_num), None)
+
+    def _needs_lila(self, job: ContentJob) -> bool:
+        return job.content_type in {ContentType.VIDEO, ContentType.IMAGE, ContentType.INFOGRAPHIC}
+
+    def _visual_ready(self, job: ContentJob) -> bool:
+        if job.content_type == ContentType.VIDEO:
+            return bool(job.visual_prompt and job.video_path)
+        if job.content_type == ContentType.IMAGE:
+            return bool(job.visual_prompt and job.image_path)
+        if job.content_type == ContentType.INFOGRAPHIC:
+            return bool(job.visual_prompt)
+        return True
+
+    def _checkpoint_count(self, job: ContentJob, stage: str) -> int:
+        return sum(1 for entry in job.checkpoint_log if entry.stage == stage)
+
+    def _checkpoint_recorded(self, job: ContentJob, stage: str) -> bool:
+        return self._checkpoint_count(job, stage) > 0
+
+    def _needs_content_review(self, job: ContentJob) -> bool:
+        return self._checkpoint_count(job, "content_review") <= job.nora_retry_count
+
+    def _needs_qa_review(self, job: ContentJob) -> bool:
+        return job.qa_result is not None and self._checkpoint_count(job, "qa_review") <= job.nora_retry_count
+
+    def _publish_complete(self, job: ContentJob) -> bool:
+        return job.stage == "publish_done" or (
+            isinstance(job.publish_result, dict)
+            and any(isinstance(value, dict) and value.get("status") in {"published", "scheduled"} for value in job.publish_result.values())
+        )
+
+    def _idea_selection_summary(self, job: ContentJob) -> str:
+        lines = [f"Choose the strongest idea for: {job.brief}"]
+        for idea in job.ideas or []:
+            lines.append(f"{idea.number}. {idea.title} [{idea.content_type.value}] — {idea.hook}")
+        return "\n".join(lines)
+
+    def _content_review_summary(self, job: ContentJob) -> str:
+        parts = [f"Review content for {job.pm.page_name}."]
+        if job.content_type is not None:
+            parts.append(f"Content type: {job.content_type.value}.")
+        if job.visual_prompt:
+            parts.append("Visual direction is ready.")
+        if job.video_path:
+            parts.append(f"Video draft: {job.video_path}")
+        if job.image_path:
+            parts.append(f"Image draft: {job.image_path}")
+        return " ".join(parts)
+
+    def _qa_review_summary(self, job: ContentJob) -> str:
+        result = job.qa_result
+        if result is None:
+            return "QA result pending."
+        if result.passed:
+            return "QA passed. Approve to continue into growth + community packaging."
+        details = ["QA failed."]
+        if result.script_feedback:
+            details.append(f"Script feedback: {result.script_feedback}")
+        if result.visual_feedback:
+            details.append(f"Visual feedback: {result.visual_feedback}")
+        if result.send_back_to:
+            details.append(f"Retry target: {result.send_back_to}")
+        return " ".join(details)
+
+    def _final_approval_summary(self, job: ContentJob) -> str:
+        best_time = job.growth_strategy.best_post_time_thai if job.growth_strategy else "not set"
+        faq_path = job.community_faq_path or "not created"
+        return (
+            f"Growth strategy and community FAQ are ready. Best Thai post time: {best_time}. "
+            f"FAQ path: {faq_path}. Approve to publish."
+        )

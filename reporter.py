@@ -2,12 +2,15 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
 from models.content_job import ContentJob, PostPerformance
 from notifier import send_weekly_report
+
+load_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,

@@ -5,29 +5,27 @@ import hashlib
 import hmac
 import json
 import os
-import secrets
 import shutil
 import struct
 import subprocess
 import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from typing import cast
 from urllib.parse import quote
 
 import requests
 import yaml
-from fastapi import HTTPException, Request
-from crew_registry import CREW, WORKFLOW_STEPS, get_crew_member
+from crew_registry import CREW, WORKFLOW_STEPS, get_crew_member  # noqa: F401
 from dashboard_store import (
-    active_jobs,
-    attention_jobs,
-    command_brief,
-    fleet_status,
+    active_jobs,  # noqa: F401
+    attention_jobs,  # noqa: F401
+    command_brief,  # noqa: F401
+    fleet_status,  # noqa: F401
     list_all_jobs,
-    load_performance_all,
+    load_performance_all,  # noqa: F401
     summarize_jobs,
 )
-from job_store import find_job, save_job
 from models.aurora_workflow import (
     CalendarSlate,
     CrossTeamRequest,
@@ -40,66 +38,20 @@ from models.aurora_workflow import (
     VideoProductionPackage,
     StoryboardScene,
 )
-from models.content_job import ContentJob, ContentType, GrowthStrategy, JobStatus, PostPerformance, QAResult
+from models.content_job import ContentJob, ContentType, GrowthStrategy, JobStatus, PostPerformance, QAResult  # noqa: F401
+from ops_config import OPS_ACTIONS, OPS_PUBLIC_BASE_URL, OPS_UNITS, OPTIONAL_SERVICE_ENV
 from project_loader import (
     list_project_slugs,
     load_project,
     load_project_page_name,
-    project_slug_matches,
+    project_slug_matches,  # noqa: F401
     resolve_project_slug,
 )
 from work_activity import read_recent_work_activity, work_activity_status, write_work_activity
 from track_queue import parse_track_at, read_queue, summarize_track_queue
 from track_scheduler import recent_track_scheduler_history
 
-
-OPS_PUBLIC_BASE_URL = os.environ.get("OPS_PUBLIC_BASE_URL", "https://fleet.nayzfreedom.cloud").rstrip("/")
-OPS_UNITS = [
-    "nayzfreedom-dashboard.service",
-    "nayzfreedom-bot.service",
-    "nayzfreedom-scheduler.timer",
-    "nayzfreedom-reporter.timer",
-    "nayzfreedom-instagram-queue.timer",
-    "nayzfreedom-backup.timer",
-    "nayzfreedom-healthcheck.timer",
-    "nayzfreedom-production-summary.timer",
-    "nayzfreedom-log-retention.timer",
-    "nayzfreedom-ops-report.timer",
-    "nayzfreedom-track-scheduler.timer",
-]
-OPS_ACTIONS = {
-    "backup": {
-        "label": "Run backup now",
-        "unit": "nayzfreedom-backup.service",
-        "verb": "start",
-    },
-    "instagram_queue": {
-        "label": "Run due Instagram queue now",
-        "unit": "nayzfreedom-instagram-queue.service",
-        "verb": "start",
-    },
-    "production_summary": {
-        "label": "Run production summary now",
-        "unit": "nayzfreedom-production-summary.service",
-        "verb": "start",
-    },
-    "ops_report": {
-        "label": "Send Ops report now",
-        "unit": "nayzfreedom-ops-report.service",
-        "verb": "start",
-    },
-    "track_scheduler": {
-        "label": "Run tracking queue now",
-        "unit": "nayzfreedom-track-scheduler.service",
-        "verb": "start",
-    },
-    "restart_dashboard": {
-        "label": "Restart dashboard",
-        "unit": "nayzfreedom-dashboard.service",
-        "verb": "restart",
-        "delayed": True,
-    },
-}
+_ROOT = Path(".").resolve()
 
 def _status_label(value: object) -> str:
     raw = getattr(value, "value", str(value))
@@ -491,7 +443,7 @@ def _latest_performance_signals(jobs, limit: int = 6) -> list[dict[str, object]]
                 "recorded_at": recorded_at.isoformat() if perf.recorded_at else "",
                 "_recorded_at": recorded_at,
             })
-    rows = sorted(rows, key=lambda item: item["_recorded_at"], reverse=True)
+    rows = sorted(rows, key=lambda item: cast(datetime, item["_recorded_at"]), reverse=True)
     for row in rows:
         row.pop("_recorded_at", None)
     return rows[:limit]
@@ -500,7 +452,10 @@ def _latest_performance_signals(jobs, limit: int = 6) -> list[dict[str, object]]
 def _tracking_failure_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for run in recent_track_scheduler_history(root, limit=20):
-        for job in run.get("jobs", []):
+        jobs = run.get("jobs", [])
+        if not isinstance(jobs, list):
+            continue
+        for job in jobs:
             if not isinstance(job, dict):
                 continue
             state = str(job.get("state", ""))
@@ -766,9 +721,9 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
     tracking_rows = _tracking_readiness_rows(root, jobs, limit=6)
     actions: list[dict[str, object]] = []
     route_count = sum(
-        1
+        True
         for card in slate_cards
-        for ticket in card.get("tickets", [])
+        for ticket in cast(list[dict[str, object]], card.get("tickets", []))
         if isinstance(ticket, dict) and not ticket.get("has_mission")
     )
     shipyard_rows = [
@@ -786,9 +741,10 @@ def _captain_action_console(root: Path, jobs) -> list[dict[str, object]]:
 
     next_ticket = next(
         (
-            (card, card.get("next_ticket"))
+            (card, cast(dict[str, object], card.get("next_ticket")))
             for card in slate_cards
-            if isinstance(card.get("next_ticket"), dict) and not card["next_ticket"].get("has_mission")
+            if isinstance(card.get("next_ticket"), dict)
+            and not cast(dict[str, object], card["next_ticket"]).get("has_mission")
         ),
         None,
     )
@@ -1092,7 +1048,7 @@ def _systemctl_args(verb: str, unit: str) -> list[str]:
 
 def _ops_action_buttons() -> list[dict[str, str]]:
     return [
-        {"key": key, "label": str(config["label"])}
+        {"key": key, "label": str(cast(dict[str, object], config)["label"])}
         for key, config in OPS_ACTIONS.items()
     ]
 
@@ -1102,11 +1058,12 @@ def _run_ops_action(action: str) -> dict[str, str]:
     if config is None:
         return {"name": action, "state": "Failed", "detail": "Unknown Ops action."}
 
-    label = str(config["label"])
-    unit = str(config["unit"])
-    verb = str(config["verb"])
+    config_map = cast(dict[str, object], config)
+    label = str(config_map["label"])
+    unit = str(config_map["unit"])
+    verb = str(config_map["verb"])
 
-    if config.get("delayed"):
+    if config_map.get("delayed"):
         code = (
             "import subprocess,time;"
             "time.sleep(1);"
@@ -1465,7 +1422,8 @@ def _ops_publish_failure_triage(root: Path, jobs, limit: int = 12) -> dict[str, 
                     "sample": error[:160],
                 },
             )
-            group["count"] = int(group["count"]) + 1
+            group_count = cast(int, group["count"])
+            group["count"] = group_count + 1
             row = {
                 "job_id": job.id,
                 "platform": str(platform),
@@ -1677,8 +1635,8 @@ def _ops_daily_summary(
 ) -> list[dict[str, str]]:
     summary = summarize_jobs(jobs)
     unit_failures = sum(item["state"] != "Ready" for item in units)
-    publish_counts = publish_summary["counts"]
-    track_counts = track_summary["counts"]
+    publish_counts = cast(dict[str, int], publish_summary["counts"])
+    track_counts = cast(dict[str, int], track_summary["counts"])
     ig_attention = publish_counts["instagram_failed"] + publish_counts["instagram_retrying"]
     track_attention = track_counts["overdue"] + track_counts["invalid"]
     if summary["failed"] or incident_summary["open"] or unit_failures or backup["state"] == "Failed" or publish_counts["instagram_failed"] or track_attention:
@@ -1891,7 +1849,7 @@ def _sha256(path: Path) -> str | None:
 def _crew_asset_audit(root: Path) -> dict[str, object]:
     static_root = root / "static" / "crew" / "original"
     review_root = root / "review" / "crew_final_style_v7"
-    rows = []
+    rows: list[dict[str, str]] = []
     matched_review = 0
     concept_files = {"nami.png", "genie.png"}
     if not static_root.exists():
@@ -1952,12 +1910,15 @@ def _latest_learning_brief(root: Path) -> dict | None:
 def _manual_closeout_learning_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for job in list_all_jobs(root):
-        kit = job.manual_post_kit if isinstance(job.manual_post_kit, dict) else {}
-        closeout = kit.get("closeout") if isinstance(kit.get("closeout"), dict) else {}
+        kit = cast(dict[str, object], job.manual_post_kit) if isinstance(job.manual_post_kit, dict) else {}
+        closeout_raw = kit.get("closeout")
+        closeout = cast(dict[str, object], closeout_raw) if isinstance(closeout_raw, dict) else {}
         if closeout.get("status") != "closed":
             continue
-        manual_post = kit.get("manual_post") if isinstance(kit.get("manual_post"), dict) else {}
-        proof = closeout.get("proof_summary") if isinstance(closeout.get("proof_summary"), dict) else {}
+        manual_post_raw = kit.get("manual_post")
+        manual_post = cast(dict[str, object], manual_post_raw) if isinstance(manual_post_raw, dict) else {}
+        proof_raw = closeout.get("proof_summary")
+        proof = cast(dict[str, object], proof_raw) if isinstance(proof_raw, dict) else {}
         platforms = sorted(
             str(platform)
             for platform, value in manual_post.items()
@@ -1995,11 +1956,11 @@ def _manual_closeout_learning_rows(root: Path, limit: int = 8) -> list[dict[str,
 
 def _manual_closeout_undrafted_learning_rows(root: Path, limit: int = 8) -> list[dict[str, object]]:
     registry = _daily_brief_draft_registry(root)
-    drafted_source_ids = {
-        str(source_id)
-        for draft in registry["rows"]
-        for source_id in (draft.get("source_job_ids") if isinstance(draft.get("source_job_ids"), list) else [])
-    }
+    drafted_source_ids: set[str] = set()
+    for draft in cast(list[dict[str, object]], registry["rows"]):
+        source_job_ids = draft.get("source_job_ids")
+        if isinstance(source_job_ids, list):
+            drafted_source_ids.update(str(source_id) for source_id in source_job_ids)
     return [
         row
         for row in _manual_closeout_learning_rows(root, limit=limit)
@@ -2012,13 +1973,16 @@ def _manual_closeout_learning_brief_intake(rows: list[dict[str, object]]) -> str
         return "No closed manual posting lessons are ready for the daily brief yet."
     lines = ["## Manual Posting Lessons", ""]
     for row in rows:
-        platforms = ", ".join(str(platform) for platform in row.get("platforms", [])) or "manual platform"
+        platforms_raw = row.get("platforms", [])
+        platforms = ", ".join(
+            str(platform) for platform in (platforms_raw if isinstance(platforms_raw, list) else [])
+        ) or "manual platform"
         lines.extend(
             [
                 f"- {row['page_name']} / {platforms}: {row['brief']}",
                 f"  - Source job: {row['job_id']}",
                 f"  - Lesson: {row['learning_note']}",
-                f"  - Proof: post URL={row['proof_summary']['post_url_present']}, 24h={row['proof_summary']['snapshot_24h_present']}, 72h={row['proof_summary']['snapshot_72h_present']}",
+                f"  - Proof: post URL={cast(dict[str, object], row['proof_summary'])['post_url_present']}, 24h={cast(dict[str, object], row['proof_summary'])['snapshot_24h_present']}, 72h={cast(dict[str, object], row['proof_summary'])['snapshot_72h_present']}",
             ]
         )
     return "\n".join(lines)
@@ -2206,11 +2170,15 @@ def _learning_category(note: str) -> str:
 
 def _accepted_learning_intake(root: Path, limit: int = 4) -> dict[str, object]:
     registry = _daily_brief_draft_registry(root)
-    accepted = [row for row in registry["rows"] if row.get("status") == "accepted"]
-    lessons = []
+    registry_rows = cast(list[dict[str, object]], registry["rows"])
+    accepted = [row for row in registry_rows if row.get("status") == "accepted"]
+    lessons: list[dict[str, object]] = []
     for artifact in accepted[:limit]:
         body = str(artifact.get("body") or "")
-        source_job_ids = [str(item) for item in artifact.get("source_job_ids", [])]
+        source_job_ids = [
+            str(item)
+            for item in cast(list[object], artifact.get("source_job_ids", []))
+        ]
         for line in body.splitlines():
             stripped = line.strip()
             if not stripped.startswith("- Lesson:"):
@@ -2229,7 +2197,13 @@ def _accepted_learning_intake(root: Path, limit: int = 4) -> dict[str, object]:
     return {
         "artifacts": accepted[:limit],
         "lessons": lessons,
-        "source_job_ids": sorted({job_id for row in accepted[:limit] for job_id in row.get("source_job_ids", [])}),
+        "source_job_ids": sorted(
+            {
+                str(job_id)
+                for row in accepted[:limit]
+                for job_id in cast(list[object], row.get("source_job_ids", []))
+            }
+        ),
     }
 
 
@@ -2289,8 +2263,8 @@ def _apply_accepted_learning_to_next_mission(
     cards = [card for card in _daily_slate_cards(root) if card["project"] == resolved]
     if not cards or not cards[0].get("next_ticket"):
         raise ValueError(f"No Daily Slate ticket is ready for project {resolved!r}")
-    ticket = cards[0]["next_ticket"]
-    mission = ticket.get("mission") if isinstance(ticket.get("mission"), dict) else None
+    ticket = cast(dict[str, object], cards[0]["next_ticket"])
+    mission = cast(dict[str, object], ticket.get("mission")) if isinstance(ticket.get("mission"), dict) else None
     if mission:
         job = _find_job_at_root(root, str(mission["job_id"]))
         created = False
@@ -2299,13 +2273,16 @@ def _apply_accepted_learning_to_next_mission(
         created = True
 
     applied_at = datetime.now(timezone.utc).isoformat()
+    intake_artifacts = cast(list[dict[str, object]], intake["artifacts"])
+    intake_source_job_ids = cast(list[object], intake["source_job_ids"])
+    intake_lessons = cast(list[dict[str, object]], intake["lessons"])
     learning_payload = {
         "status": "applied",
         "applied_by": actor,
         "applied_at": applied_at,
-        "source_artifacts": [row["path"] for row in intake["artifacts"]],
-        "source_job_ids": intake["source_job_ids"],
-        "lessons": intake["lessons"],
+        "source_artifacts": [str(row["path"]) for row in intake_artifacts],
+        "source_job_ids": [str(source_job_id) for source_job_id in intake_source_job_ids],
+        "lessons": [dict(lesson) for lesson in intake_lessons],
         "next_action": "Use these accepted manual posting lessons while shaping this mission. Live publish stays locked.",
     }
     if isinstance(job.production_ticket, dict):
@@ -2316,8 +2293,8 @@ def _apply_accepted_learning_to_next_mission(
         job.production_ticket = {"accepted_learning": learning_payload}
     _save_job_at_root(root, job)
 
-    applied_sources = []
-    for source_job_id in intake["source_job_ids"]:
+    applied_sources: list[str] = []
+    for source_job_id in [str(item) for item in intake_source_job_ids]:
         try:
             source_job = _find_job_at_root(root, source_job_id)
         except FileNotFoundError:
@@ -2341,9 +2318,9 @@ def _apply_accepted_learning_to_next_mission(
     return {
         "job_id": job.id,
         "project": resolved,
-        "ticket_id": ticket["ticket_id"],
+        "ticket_id": str(ticket["ticket_id"]),
         "created": created,
-        "source_job_ids": intake["source_job_ids"],
+        "source_job_ids": [str(source_job_id) for source_job_id in intake_source_job_ids],
         "applied_source_job_ids": applied_sources,
     }
 
@@ -2358,13 +2335,24 @@ def _accepted_learning_for_job(job: ContentJob) -> dict[str, object]:
             )
             source_job_ids = learning.get("source_job_ids") if isinstance(learning.get("source_job_ids"), list) else []
             confirmed = bool(learning.get("learning_confirmed_at"))
+            lessons_list = cast(list[object], lessons)
+            source_artifacts_list = cast(list[object], source_artifacts)
+            source_job_ids_list = cast(list[object], source_job_ids)
             return {
                 "present": True,
                 "status": "Learning ready for execution" if confirmed else "Needs planning confirmation",
                 "state": "ready" if confirmed else "missing",
-                "source_artifacts": [str(item) for item in source_artifacts],
-                "source_job_ids": [str(item) for item in source_job_ids],
-                "lessons": lessons,
+                "source_artifacts": [str(item) for item in source_artifacts_list],
+                "source_job_ids": [str(item) for item in source_job_ids_list],
+                "lessons": [
+                    {
+                        "category": str(item.get("category") or "Content angle"),
+                        "note": str(item.get("note") or ""),
+                    }
+                    if isinstance(item, dict)
+                    else {"category": "Content angle", "note": str(item)}
+                    for item in lessons_list
+                ],
                 "confirmed": confirmed,
                 "learning_confirmed_at": str(learning.get("learning_confirmed_at") or ""),
                 "learning_confirmed_by": str(learning.get("learning_confirmed_by") or ""),
@@ -2430,10 +2418,10 @@ def _captain_learning_runbook_proof(root: Path, runbook: dict[str, object]) -> d
         if not matched:
             continue
         action, label = matched
-        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-        source_job_ids = metadata.get("source_job_ids") if isinstance(metadata.get("source_job_ids"), list) else []
+        metadata = cast(dict[str, object], item.get("metadata")) if isinstance(item.get("metadata"), dict) else {}
+        source_job_ids = cast(list[object], metadata.get("source_job_ids")) if isinstance(metadata.get("source_job_ids"), list) else []
         target_mission = str(metadata.get("job_id") or metadata.get("target_job_id") or "")
-        next_step = runbook.get("next_step") if isinstance(runbook.get("next_step"), dict) else None
+        next_step = cast(dict[str, object], runbook.get("next_step")) if isinstance(runbook.get("next_step"), dict) else None
         next_missing = str(next_step.get("label")) if next_step else "None"
         loop_state = str(runbook.get("state") or "")
         return {
@@ -2450,7 +2438,7 @@ def _captain_learning_runbook_proof(root: Path, runbook: dict[str, object]) -> d
             "target_mission": target_mission,
             "next_action": str(item.get("next_action") or ""),
         }
-    next_step = runbook.get("next_step") if isinstance(runbook.get("next_step"), dict) else None
+    next_step = cast(dict[str, object], runbook.get("next_step")) if isinstance(runbook.get("next_step"), dict) else None
     return {
         "present": False,
         "summary": "No runbook proof recorded yet.",
@@ -2465,9 +2453,10 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
     closeout_rows = [row for row in manual_rows if row.get("can_closeout")]
     registry = _daily_brief_draft_registry(root)
     undrafted_lessons = _manual_closeout_undrafted_learning_rows(root)
+    registry_rows = cast(list[dict[str, object]], registry["rows"])
     draft_rows = [
         row
-        for row in registry["rows"]
+        for row in registry_rows
         if row.get("status") in {"draft", "reviewed", "legacy", "needs_edits"}
     ]
     actionable_draft = next(
@@ -2477,21 +2466,24 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
     accepted_intake = _accepted_learning_intake(root)
     slate_cards = _daily_slate_cards(root)
     apply_target = next((card for card in slate_cards if card.get("next_ticket")), None)
-    accepted_source_ids = set(str(item) for item in accepted_intake.get("source_job_ids", []))
-    applied_jobs = []
-    unconfirmed_jobs = []
+    accepted_source_ids = set(
+        str(item)
+        for item in cast(list[object], accepted_intake.get("source_job_ids", []))
+    )
+    applied_jobs: list[dict[str, object]] = []
+    unconfirmed_jobs: list[dict[str, object]] = []
     for job in jobs:
         learning = _accepted_learning_for_job(job)
         if not learning.get("present"):
             continue
-        source_ids = set(str(item) for item in learning.get("source_job_ids", []))
+        source_ids = set(str(item) for item in cast(list[object], learning.get("source_job_ids", [])))
         if not accepted_source_ids or source_ids & accepted_source_ids:
             applied_jobs.append({"job_id": job.id, "brief": job.brief, "url": f"/jobs/{job.id}", "learning": learning})
         if not learning.get("confirmed"):
             unconfirmed_jobs.append({"job_id": job.id, "brief": job.brief, "url": f"/jobs/{job.id}", "learning": learning})
 
     accepted_waiting_apply = bool(accepted_intake.get("artifacts")) and not applied_jobs
-    steps = [
+    steps: list[dict[str, object]] = [
         {
             "key": "capture_closeout",
             "label": "Capture closeout lesson",
@@ -2543,7 +2535,7 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
             "key": "apply_learning",
             "label": "Apply learning to next mission",
             "status": "needs_action" if accepted_waiting_apply else "clear",
-            "count": len(accepted_intake.get("artifacts", [])),
+            "count": len(cast(list[object], accepted_intake.get("artifacts", []))),
             "detail": (
                 "Accepted learning is ready to apply to the next Daily Slate mission."
                 if accepted_waiting_apply
@@ -2552,7 +2544,7 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
             "action_label": "Apply learning to next mission" if accepted_waiting_apply and apply_target else "Open Daily Slate",
             "action_url": "/learning-runbook/apply-learning" if accepted_waiting_apply and apply_target else "/aurora/daily-slate",
             "action_method": "post" if accepted_waiting_apply and apply_target else "get",
-            "action_payload": {"project_slug": apply_target["project"]} if accepted_waiting_apply and apply_target else {},
+            "action_payload": {"project_slug": str(apply_target["project"])} if accepted_waiting_apply and apply_target else {},
         },
         {
             "key": "confirm_learning",
@@ -2569,16 +2561,19 @@ def _captain_learning_runbook(root: Path, jobs: list[ContentJob] | None = None) 
             "action_label": "Confirm learning used in plan" if unconfirmed_jobs else "Open mission",
             "action_url": "/learning-runbook/confirm-learning" if unconfirmed_jobs else "/aurora/generation",
             "action_method": "post" if unconfirmed_jobs else "get",
-            "action_payload": {"job_id": unconfirmed_jobs[0]["job_id"]} if unconfirmed_jobs else {},
+            "action_payload": {"job_id": str(unconfirmed_jobs[0]["job_id"])} if unconfirmed_jobs else {},
             "secondary_label": "Open mission" if unconfirmed_jobs else "",
-            "secondary_url": unconfirmed_jobs[0]["url"] if unconfirmed_jobs else "",
+            "secondary_url": str(unconfirmed_jobs[0]["url"]) if unconfirmed_jobs else "",
         },
     ]
 
-    next_step = next((step for step in steps if step["status"] == "needs_action"), None)
-    runbook = {
+    next_step = cast(
+        dict[str, object] | None,
+        next((step for step in steps if str(step["status"]) == "needs_action"), None),
+    )
+    runbook: dict[str, object] = {
         "state": "Needs Captain" if next_step else "Learning loop clear",
-        "summary": next_step["detail"] if next_step else "Closeout, draft review, apply, and confirmation gates are clear.",
+        "summary": str(next_step["detail"]) if next_step else "Closeout, draft review, apply, and confirmation gates are clear.",
         "next_step": next_step,
         "steps": steps,
         "applied_jobs": applied_jobs,
@@ -2594,8 +2589,8 @@ def _captain_attention_lane(
     attention_items: list[ContentJob],
     active_items: list[ContentJob],
 ) -> dict[str, object]:
-    next_step = learning_runbook.get("next_step") if isinstance(learning_runbook.get("next_step"), dict) else None
-    proof = learning_runbook.get("proof") if isinstance(learning_runbook.get("proof"), dict) else {}
+    next_step = cast(dict[str, object], learning_runbook.get("next_step")) if isinstance(learning_runbook.get("next_step"), dict) else None
+    proof = cast(dict[str, object], learning_runbook.get("proof")) if isinstance(learning_runbook.get("proof"), dict) else {}
     manual_rows = manual_posting_rows or []
     manual_priority = next(
         (
@@ -2868,6 +2863,7 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
         "nayzfreedom-reporter.timer",
         "setup.sh",
         "update.sh",
+        "healthcheck.sh",
     ]
     missing_deploy = [name for name in required_deploy_files if not (deploy_dir / name).exists()]
     projects = list_project_slugs(root)
@@ -2878,6 +2874,23 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
         root / "static" / "ships" / "aurora-hero.webp",
     ]
     missing_static = [path.name for path in static_required if not path.exists()]
+    openai_ready = bool(os.environ.get("OPENAI_API_KEY"))
+    public_base_url = os.environ.get("PUBLIC_BASE_URL") or os.environ.get("OPS_PUBLIC_BASE_URL")
+    meta_publish_keys = [
+        os.environ.get("META_ACCESS_TOKEN", ""),
+        os.environ.get("META_PAGE_ID", ""),
+        os.environ.get("META_IG_USER_ID", ""),
+    ]
+    drive_ready = bool(os.environ.get("GOOGLE_DRIVE_MANUAL_KITS_FOLDER_ID")) and bool(
+        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        or (
+            os.environ.get("GOOGLE_DRIVE_OAUTH_CLIENT_SECRETS")
+            and os.environ.get("GOOGLE_DRIVE_OAUTH_TOKEN_FILE")
+        )
+    )
+    optional_missing = [
+        unit for unit, vars_required in OPTIONAL_SERVICE_ENV.items() if not all(os.environ.get(name) for name in vars_required)
+    ]
 
     return [
         {
@@ -2886,9 +2899,19 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
             "detail": "Basic Auth environment variables are configured.",
         },
         {
+            "label": "Core model access",
+            "state": "Ready" if openai_ready else "Missing",
+            "detail": "OPENAI_API_KEY is configured for agent and dashboard actions." if openai_ready else "Set OPENAI_API_KEY before running the pipeline.",
+        },
+        {
+            "label": "Public base URL",
+            "state": "Ready" if public_base_url else "Missing",
+            "detail": "PUBLIC_BASE_URL / OPS_PUBLIC_BASE_URL is configured for privacy and media links." if public_base_url else "Set PUBLIC_BASE_URL so readiness and public media links are stable.",
+        },
+        {
             "label": "Project config",
             "state": "Ready" if projects else "Missing",
-            "detail": f"{len(projects)} project profile{'s' if len(projects) != 1 else ''} configured.",
+            "detail": f"{len(projects)} canonical project profile{'s' if len(projects) != 1 else ''} configured.",
         },
         {
             "label": "Mission output",
@@ -2903,7 +2926,22 @@ def _readiness_checks(root: Path) -> list[dict[str, str]]:
         {
             "label": "Deploy files",
             "state": "Ready" if not missing_deploy else "Missing",
-            "detail": "Systemd services, timers, setup, and update scripts are present." if not missing_deploy else f"Missing: {', '.join(missing_deploy)}.",
+            "detail": "Systemd services, timers, setup, update, and healthcheck scripts are present." if not missing_deploy else f"Missing: {', '.join(missing_deploy)}.",
+        },
+        {
+            "label": "Meta publish credentials",
+            "state": "Ready" if all(meta_publish_keys) else "Waiting",
+            "detail": "META_ACCESS_TOKEN, META_PAGE_ID, and META_IG_USER_ID are configured." if all(meta_publish_keys) else "Add Meta publish credentials before enabling live publishing.",
+        },
+        {
+            "label": "Drive sync",
+            "state": "Ready" if drive_ready else "Waiting",
+            "detail": "Manual kits folder and Google Drive credentials are configured." if drive_ready else "Drive sync not configured yet; add manual kits folder + Google credentials for backup automation.",
+        },
+        {
+            "label": "Optional services",
+            "state": "Ready" if not optional_missing else "Waiting",
+            "detail": "All optional service credentials are present." if not optional_missing else f"Missing env for: {', '.join(optional_missing)}.",
         },
         {
             "label": "Privacy boundary",
@@ -3095,7 +3133,7 @@ def _video_package_for_ticket(ticket: ProductionTicket) -> VideoProductionPackag
 def _video_package_rows(slate: CalendarSlate | None) -> list[dict[str, object]]:
     if slate is None:
         return []
-    packages = []
+    packages: list[dict[str, object]] = []
     for ticket in slate.tickets:
         package = _video_package_for_ticket(ticket)
         if package is None:
@@ -3353,11 +3391,11 @@ def _generation_row_matches_filter(item: dict[str, object], selected: str) -> bo
     if selected == "package_complete":
         return item["packaging_label"] == "Publish package complete"
     if selected == "ready_to_publish":
-        return item["publish_execution"]["status"] == "ready_to_publish"
+        return cast(dict[str, object], item["publish_execution"])["status"] == "ready_to_publish"
     if selected == "scheduled":
-        return item["publish_execution"]["status"] == "scheduled"
+        return cast(dict[str, object], item["publish_execution"])["status"] == "scheduled"
     if selected == "publish_failed":
-        return item["publish_execution"]["status"] == "failed"
+        return cast(dict[str, object], item["publish_execution"])["status"] == "failed"
     return True
 
 
@@ -4099,12 +4137,12 @@ def _approval_lane_groups(rows: list[dict[str, object]]) -> list[dict[str, objec
 
 
 def _approval_lane_filters(groups: list[dict[str, object]], selected: str) -> list[dict[str, object]]:
-    total = sum(len(group["rows"]) for group in groups)
+    total = sum(len(cast(list[object], group["rows"])) for group in groups)
     return [{"key": "all", "label": "All lanes", "count": total, "active": selected == "all"}] + [
         {
             "key": str(group["key"]),
             "label": str(group["label"]),
-            "count": len(group["rows"]),
+            "count": len(cast(list[object], group["rows"])),
             "active": selected == group["key"],
         }
         for group in groups
@@ -4258,14 +4296,14 @@ def _manual_posting_lane_filters(
     groups: list[dict[str, object]],
     selected: str,
 ) -> list[dict[str, object]]:
-    total = sum(len(group["rows"]) for group in groups)
+    total = sum(len(cast(list[object], group["rows"])) for group in groups)
     return [
         {"key": "all", "label": "All", "count": total, "active": selected == "all"},
         *[
             {
                 "key": str(group["key"]),
                 "label": str(group["label"]),
-                "count": len(group["rows"]),
+                "count": len(cast(list[object], group["rows"])),
                 "active": selected == group["key"],
             }
             for group in groups
@@ -4337,7 +4375,7 @@ def _manual_posting_tracking_steps(
     snapshots: int,
     queue_summary: dict[str, object],
 ) -> list[dict[str, str]]:
-    rows = queue_summary.get("rows") if isinstance(queue_summary.get("rows"), list) else []
+    rows = cast(list[dict[str, object]], queue_summary.get("rows")) if isinstance(queue_summary.get("rows"), list) else []
     queued_rows = [row for row in rows if str(row.get("status")) in {"future", "due now", "overdue", "invalid"}]
     steps = []
     labels = [("24h snapshot", 24), ("72h snapshot", 72)]
@@ -4383,17 +4421,18 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
 
     job_queue = [entry for entry in queue_entries if entry.get("job_id") == job.id]
     queue_summary = summarize_track_queue(job_queue, limit=4)
-    counts = queue_summary["counts"]
+    counts = cast(dict[str, int], queue_summary["counts"])
     snapshots = len(job.performance)
     first_post = _manual_posting_first_post(posts, publish_platforms)
+    closeout_map = cast(dict[str, object], closeout) if isinstance(closeout, dict) else {}
     proof_summary = _manual_posting_proof_summary(
         drive_status=drive_status,
         post_url=first_post.get("post_url", ""),
         snapshots=snapshots,
-        queued_count=int(counts["total"]),
-        closeout=closeout,
+        queued_count=counts["total"],
+        closeout=closeout_map,
     )
-    closeout_status = str(closeout.get("status") or "open")
+    closeout_status = str(closeout_map.get("status") or "open")
     next_entry = min(
         job_queue,
         key=lambda entry: parse_track_at(entry.get("track_at")) or datetime.max.replace(tzinfo=timezone.utc),
@@ -4403,7 +4442,7 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
     if closeout_status == "closed":
         lane = "tracking_complete"
         state = "ready"
-        if isinstance(closeout.get("learning_applied"), dict):
+        if isinstance(closeout_map.get("learning_applied"), dict):
             status = "Learning applied"
             next_action = "Manual proof is closed and the accepted lesson is applied to a Daily Slate mission."
         else:
@@ -4451,6 +4490,9 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
         status = "Tracking queue missing"
         next_action = "Manual post is recorded, but no snapshot checks are queued."
 
+    closeout_proof_summary = cast(dict[str, object], closeout_map.get("proof_summary")) if isinstance(closeout_map.get("proof_summary"), dict) else {}
+    closeout_learning_applied = cast(dict[str, object], closeout_map.get("learning_applied")) if isinstance(closeout_map.get("learning_applied"), dict) else {}
+
     return {
         "job_id": job.id,
         "brief": job.brief,
@@ -4474,15 +4516,15 @@ def _manual_posting_row(job: ContentJob, queue_entries: list[dict]) -> dict[str,
             snapshots=snapshots,
             queue_summary=queue_summary,
         ),
-        "queued_count": int(counts["total"]),
+        "queued_count": counts["total"],
         "proof_summary": proof_summary,
         "closeout": {
             "status": closeout_status,
-            "closed_at": str(closeout.get("closed_at") or ""),
-            "closed_by": str(closeout.get("closed_by") or ""),
-            "learning_note": str(closeout.get("learning_note") or ""),
-            "proof_summary": closeout.get("proof_summary") if isinstance(closeout.get("proof_summary"), dict) else {},
-            "learning_applied": closeout.get("learning_applied") if isinstance(closeout.get("learning_applied"), dict) else {},
+            "closed_at": str(closeout_map.get("closed_at") or ""),
+            "closed_by": str(closeout_map.get("closed_by") or ""),
+            "learning_note": str(closeout_map.get("learning_note") or ""),
+            "proof_summary": closeout_proof_summary,
+            "learning_applied": closeout_learning_applied,
         },
         "can_closeout": has_manual_post and snapshots >= 2 and closeout_status != "closed",
         "can_requeue_tracking": has_manual_post and not job_queue and snapshots < 2,
@@ -4495,7 +4537,7 @@ def _manual_posting_learning_completion(
     jobs_by_id: dict[str, ContentJob],
 ) -> dict[str, str]:
     job_id = str(row.get("job_id") or "")
-    closeout = row.get("closeout") if isinstance(row.get("closeout"), dict) else {}
+    closeout = cast(dict[str, object], row.get("closeout")) if isinstance(row.get("closeout"), dict) else {}
     closeout_status = str(closeout.get("status") or "open")
     lane = str(row.get("lane") or "")
     if closeout_status != "closed":
@@ -4523,7 +4565,7 @@ def _manual_posting_learning_completion(
             "detail": str(row.get("next_action") or "Resolve the manual posting lane before learning closeout."),
         }
 
-    applied = closeout.get("learning_applied") if isinstance(closeout.get("learning_applied"), dict) else {}
+    applied = cast(dict[str, object], closeout.get("learning_applied")) if isinstance(closeout.get("learning_applied"), dict) else {}
     if applied:
         target_job_id = str(applied.get("applied_to_job_id") or "")
         target_job = jobs_by_id.get(target_job_id)
@@ -4540,10 +4582,11 @@ def _manual_posting_learning_completion(
             "detail": f"Applied to {target_job_id}; confirm accepted learning before generation.",
         }
 
+    registry_rows = cast(list[dict[str, object]], registry.get("rows", []))
     drafts = [
         row
-        for row in registry.get("rows", [])
-        if job_id in [str(item) for item in row.get("source_job_ids", [])]
+        for row in registry_rows
+        if job_id in [str(item) for item in cast(list[object], row.get("source_job_ids", []))]
     ]
     if any(row.get("status") == "accepted" for row in drafts):
         return {
@@ -4604,8 +4647,8 @@ def _manual_posting_lane_summaries(
 ) -> list[dict[str, object]]:
     summaries = []
     for group in groups:
-        rows = group["rows"] if isinstance(group.get("rows"), list) else []
-        lead = rows[0] if rows else {}
+        rows = cast(list[dict[str, object]], group["rows"]) if isinstance(group.get("rows"), list) else []
+        lead = cast(dict[str, object], rows[0]) if rows else {}
         key = str(group["key"])
         summaries.append(
             {

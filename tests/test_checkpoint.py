@@ -1,6 +1,6 @@
 import sys
 from unittest.mock import patch, MagicMock
-from checkpoint import pause, CheckpointResult
+from checkpoint import pause
 from models.content_job import ContentJob, PMProfile, BrandProfile, VisualIdentity, ContentType
 
 
@@ -23,7 +23,7 @@ def test_pause_approve(capsys):
 def test_pause_records_to_checkpoint_log():
     job = make_job()
     with patch("builtins.input", return_value="skip"):
-        result = pause("ideation", "Pick an idea.", ["1", "2", "3"], job)
+        pause("ideation", "Pick an idea.", ["1", "2", "3"], job)
     assert len(job.checkpoint_log) == 1
     assert job.checkpoint_log[0].stage == "ideation"
     assert job.checkpoint_log[0].decision == "skip"

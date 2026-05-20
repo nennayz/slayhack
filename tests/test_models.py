@@ -2,12 +2,11 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 from models.content_job import (
     ContentJob, PMProfile, BrandProfile, VisualIdentity,
-    Idea, Script, QAResult, GrowthStrategy, CheckpointDecision,
-    PostPerformance, JobStatus, ContentType,
+    Idea, Script, QAResult, GrowthStrategy, JobStatus, ContentType,
     Article, ImageCaption, InfographicContent, BellaOutput,
 )
 
-_BELLA_OUTPUT_ADAPTER = TypeAdapter(BellaOutput)
+_BELLA_OUTPUT_ADAPTER: TypeAdapter[BellaOutput] = TypeAdapter(BellaOutput)
 
 
 def make_brand():

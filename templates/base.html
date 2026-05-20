@@ -28,12 +28,13 @@
       </div>
     </div>
     <details class="nav-group nav-dropdown">
-      <summary class="{{ 'active' if request.url.path in ['/aurora/daily-slate', '/aurora/approval-queue', '/aurora/generation', '/aurora/manual-posting', '/aurora/learning', '/project-admin', '/readiness', '/freedom', '/lyra'] or request.url.path.startswith('/aurora/crew') or request.url.path.startswith('/ideas') or request.url.path.startswith('/scout') else '' }}">More</summary>
+      <summary class="{{ 'active' if request.url.path in ['/aurora/daily-slate', '/aurora/approval-queue', '/aurora/generation', '/aurora/manual-posting', '/aurora/learning', '/aurora/slayobjects/live', '/project-admin', '/readiness', '/freedom', '/lyra'] or request.url.path.startswith('/aurora/crew') or request.url.path.startswith('/ideas') or request.url.path.startswith('/scout') else '' }}">More</summary>
       <div class="nav-group-links">
         <a class="{{ 'active' if request.url.path == '/aurora/daily-slate' else '' }}" href="/aurora/daily-slate">Slate</a>
         <a class="{{ 'active' if request.url.path == '/aurora/approval-queue' else '' }}" href="/aurora/approval-queue">Approvals</a>
         <a class="{{ 'active' if request.url.path == '/aurora/generation' else '' }}" href="/aurora/generation">Generation</a>
         <a class="{{ 'active' if request.url.path == '/aurora/manual-posting' else '' }}" href="/aurora/manual-posting">Manual</a>
+        <a class="{{ 'active' if request.url.path == '/aurora/slayobjects/live' else '' }}" href="/aurora/slayobjects/live">SlayObjects</a>
         <a class="{{ 'active' if request.url.path == '/aurora/learning' else '' }}" href="/aurora/learning">Learning</a>
         <a class="{{ 'active' if request.url.path.startswith('/aurora/crew') else '' }}" href="/aurora/crew">Crew</a>
         <a class="{{ 'active' if request.url.path.startswith('/ideas') else '' }}" href="/ideas">Ideas</a>

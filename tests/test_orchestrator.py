@@ -1,83 +1,35 @@
-import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
+from models.content_job import Article, CheckpointDecision, ContentType, GrowthStrategy, Idea, JobStatus, QAResult
 from orchestrator import Orchestrator
 from tests.test_mia import make_config, make_job
-from models.content_job import ContentType, Idea, JobStatus
 
 
-def _make_tool_use_block(name, tool_id="t1", input_data=None):
-    block = MagicMock()
-    block.name = name
-    block.id = tool_id
-    block.input = input_data or {}
-    return block
-
-
-def _make_end_turn_response():
-    resp = MagicMock()
-    message = MagicMock()
-    message.content = "All done!"
-    message.tool_calls = None
-    resp.choices = [MagicMock(finish_reason="stop", message=message)]
-    return resp
-
-
-def _make_tool_call_response(blocks):
-    calls = []
-    for block in blocks:
-        call = MagicMock()
-        call.id = block.id
-        call.function.name = block.name
-        call.function.arguments = json.dumps(block.input)
-        calls.append(call)
-    message = MagicMock()
-    message.content = ""
-    message.tool_calls = calls
-    resp = MagicMock()
-    resp.choices = [MagicMock(finish_reason="tool_calls", message=message)]
-    return resp
-
-
-def test_orchestrator_dry_run_completes(mocker, tmp_path, monkeypatch):
+def test_orchestrator_dry_run_completes(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
-
-    # SP-3: Robin starts from run_bella (no run_mia/run_zoe/idea_selection)
-    tool_sequence = [
-        [_make_tool_use_block("run_bella", "t1")],
-        [_make_tool_use_block("run_lila", "t2")],
-        [_make_tool_use_block("request_checkpoint", "t3",
-            {"stage": "content_review", "summary": "Review content"})],
-        [_make_tool_use_block("run_nora", "t4")],
-        [_make_tool_use_block("request_checkpoint", "t5",
-            {"stage": "qa_review", "summary": "QA passed"})],
-        [_make_tool_use_block("run_roxy", "t6")],
-        [_make_tool_use_block("run_emma", "t7")],
-        [_make_tool_use_block("request_checkpoint", "t8",
-            {"stage": "final_approval", "summary": "Ready to publish?"})],
-    ]
-
-    call_count = [0]
-    def mock_create(**kwargs):
-        i = call_count[0]
-        call_count[0] += 1
-        if i < len(tool_sequence):
-            return _make_tool_call_response(tool_sequence[i])
-        return _make_end_turn_response()
-
-    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.side_effect = mock_create
+    monkeypatch.setattr("orchestrator.pause", lambda *args, **kwargs: CheckpointDecision(stage=args[0], decision="1" if args[0] == "idea_selection" else "approved"))
 
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
-    job.content_type = ContentType.VIDEO   # SP-3: set by idea_to_content_job before Orchestrator.run
-    result = orch.run(job, unattended=True)
+    job.content_type = ContentType.VIDEO
+    result = orch.run(job)
 
     assert result.status == JobStatus.COMPLETED
+    assert result.trend_data is None
+    assert result.ideas is None
+    assert result.selected_idea is None
     assert result.bella_output is not None
-    assert len(result.checkpoint_log) == 3   # content_review, qa_review, final_approval
+    assert result.growth_strategy is not None
+    assert result.community_faq_path is not None
+    assert [entry.stage for entry in result.checkpoint_log] == [
+        "content_review",
+        "qa_review",
+        "final_approval",
+    ]
 
 
-def test_orchestrator_sets_content_type_at_idea_selection(mocker, tmp_path, monkeypatch):
+def test_orchestrator_dispatch_idea_selection_sets_content_type(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
 
@@ -88,9 +40,7 @@ def test_orchestrator_sets_content_type_at_idea_selection(mocker, tmp_path, monk
         Idea(number=2, title="Morning Routine", hook="h2", angle="Lifestyle", content_type=ContentType.ARTICLE),
     ]
 
-    mock_checkpoint = MagicMock()
-    mock_checkpoint.decision = "2"
-    mocker.patch("orchestrator.pause", return_value=mock_checkpoint)
+    mocker.patch("orchestrator.pause", return_value=CheckpointDecision(stage="idea_selection", decision="2"))
 
     orch._dispatch(
         "request_checkpoint",
@@ -98,6 +48,7 @@ def test_orchestrator_sets_content_type_at_idea_selection(mocker, tmp_path, monk
         job,
     )
 
+    assert job.selected_idea is not None
     assert job.content_type == ContentType.ARTICLE
     assert job.selected_idea.number == 2
 
@@ -115,85 +66,77 @@ def test_orchestrator_unattended_selects_matching_content_type(tmp_path, monkeyp
         Idea(number=2, title="Article idea", hook="h2", angle="Editorial", content_type=ContentType.ARTICLE),
     ]
 
+    monkeypatch.setattr("orchestrator.pause", lambda *args, **kwargs: CheckpointDecision(stage="idea_selection", decision="1"))
+
     orch._dispatch(
         "request_checkpoint",
         {"stage": "idea_selection", "summary": "pick one", "options": []},
         job,
     )
 
+    assert job.selected_idea is not None
     assert job.selected_idea.number == 2
     assert job.content_type == ContentType.ARTICLE
 
 
-def test_orchestrator_raises_on_unexpected_stop_reason(mocker, tmp_path, monkeypatch):
-    import pytest
+def test_orchestrator_resume_skips_completed_stages(mocker, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "output").mkdir()
-
-    message = MagicMock()
-    message.content = ""
-    message.tool_calls = None
-    resp = MagicMock()
-    resp.choices = [MagicMock(finish_reason="length", message=message)]
-    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = resp
+    monkeypatch.setattr("orchestrator.pause", lambda *args, **kwargs: CheckpointDecision(stage=args[0], decision="approved"))
 
     orch = Orchestrator(make_config())
     job = make_job(dry_run=True)
-    with pytest.raises(RuntimeError, match="length"):
-        orch.run(job)
-    assert job.status == JobStatus.FAILED
+    job.trend_data = {"trends": ["already"]}
+    job.ideas = [Idea(number=1, title="Existing", hook="Hook", angle="Angle", content_type=ContentType.ARTICLE)]
+    job.selected_idea = job.ideas[0]
+    job.content_type = ContentType.ARTICLE
+    job.bella_output = Article(heading="Existing heading", body="Existing body", cta="Existing CTA")
+    job.checkpoint_log.append(CheckpointDecision(stage="content_review", decision="approved"))
+    job.qa_result = QAResult(passed=True)
+    job.checkpoint_log.append(CheckpointDecision(stage="qa_review", decision="approved"))
 
-
-def test_orchestrator_retries_rate_limit_errors(mocker, tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "output").mkdir()
-
-    class FakeRateLimitError(Exception):
-        status_code = 429
-
-    create = mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create
-    create.side_effect = [
-        FakeRateLimitError("rate limit"),
-        _make_end_turn_response(),
-    ]
-    sleep = mocker.patch("orchestrator.time.sleep")
-
-    orch = Orchestrator(make_config())
-    orch._rate_limit_sleep_seconds = 0.01
-    job = make_job(dry_run=True)
-    result = orch.run(job)
-
-    assert result.status == JobStatus.COMPLETED
-    assert create.call_count == 2
-    sleep.assert_called_once_with(0.01)
-
-
-def test_orchestrator_marks_publish_failures_failed(mocker, tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "output").mkdir()
-
-    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = _make_end_turn_response()
-    orch = Orchestrator(make_config())
-    job = make_job(dry_run=True)
-    job.publish_result = {"facebook": {"status": "failed", "error": "blocked"}}
-    result = orch.run(job)
-
-    assert result.status == JobStatus.FAILED
-
-
-def test_orchestrator_safe_prep_end_turn_without_handoff_awaits_approval(mocker, tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "output").mkdir()
-
-    mocker.patch("orchestrator.OpenAI").return_value.chat.completions.create.return_value = _make_end_turn_response()
-    orch = Orchestrator(make_config(), safe_prep=True)
-    job = make_job(dry_run=False)
-    job.stage = "zoe_done"
+    mia_run = mocker.patch.object(orch.agents["mia"], "run", wraps=orch.agents["mia"].run)
+    zoe_run = mocker.patch.object(orch.agents["zoe"], "run", wraps=orch.agents["zoe"].run)
+    bella_run = mocker.patch.object(orch.agents["bella"], "run", wraps=orch.agents["bella"].run)
 
     result = orch.run(job, unattended=True)
 
-    assert result.status == JobStatus.AWAITING_APPROVAL
-    assert result.stage == "zoe_done"
+    assert result.status == JobStatus.COMPLETED
+    mia_run.assert_not_called()
+    zoe_run.assert_not_called()
+    bella_run.assert_not_called()
+    assert result.growth_strategy is not None
+    assert result.community_faq_path is not None
+
+
+def test_orchestrator_parallel_post_production_merges_results_without_shared_state(mocker, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "output").mkdir()
+
+    orch = Orchestrator(make_config())
+    job = make_job(dry_run=True)
+
+    roxy_result = job.model_copy(deep=True)
+    roxy_result.growth_strategy = GrowthStrategy(
+        hashtags=["#test"],
+        caption="Caption",
+        best_post_time_utc="12:00",
+        best_post_time_thai="19:00",
+    )
+    roxy_result.stage = "roxy_done"
+
+    emma_result = job.model_copy(deep=True)
+    emma_result.community_faq_path = "output/faq.md"
+    emma_result.stage = "emma_done"
+
+    mocker.patch.object(orch, "_run_agent_job", side_effect=[roxy_result, emma_result])
+
+    orch._run_parallel_post_production(job)
+
+    assert job.growth_strategy is not None
+    assert job.growth_strategy.caption == "Caption"
+    assert job.community_faq_path == "output/faq.md"
+    assert job.stage == "emma_done"
 
 
 def test_orchestrator_safe_prep_intercepts_publish(tmp_path, monkeypatch):
@@ -202,9 +145,7 @@ def test_orchestrator_safe_prep_intercepts_publish(tmp_path, monkeypatch):
 
     orch = Orchestrator(make_config(), safe_prep=True)
     job = make_job(dry_run=False)
-    job.growth_strategy = __import__(
-        "models.content_job", fromlist=["GrowthStrategy"]
-    ).GrowthStrategy(
+    job.growth_strategy = GrowthStrategy(
         hashtags=["#test"],
         caption="Safe caption",
         best_post_time_utc="12:00",
@@ -218,6 +159,9 @@ def test_orchestrator_safe_prep_intercepts_publish(tmp_path, monkeypatch):
     publish_agent.run.assert_not_called()
     assert result == {"status": "safe_prep", "stage": "ready_to_publish"}
     assert job.stage == "ready_to_publish"
+    assert job.publish_package is not None
+    assert job.publish_execution is not None
+    assert job.publish_result is not None
     assert job.publish_package["status"] == "completed"
     assert job.publish_execution["status"] == "ready_to_publish"
     assert job.publish_result["instagram"]["status"] == "ready_to_publish"

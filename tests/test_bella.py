@@ -1,10 +1,9 @@
-import pytest
 from agents.bella import BellaAgent
 from agents.base_agent import TEAM_IDENTITY
 from tests.test_mia import make_config, make_job
 from models.content_job import (
     Idea, Script, Article, ImageCaption, InfographicContent,
-    ContentType, BellaOutput,
+    ContentType,
 )
 
 

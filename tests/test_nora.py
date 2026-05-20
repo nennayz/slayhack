@@ -1,7 +1,7 @@
 from agents.nora import NoraAgent
 from tests.test_lila import make_job_with_bella_output
 from tests.test_mia import make_config
-from models.content_job import QAResult, ContentType, Article
+from models.content_job import ContentType, Article
 
 
 def make_job_for_nora(dry_run=True, video_path=None):

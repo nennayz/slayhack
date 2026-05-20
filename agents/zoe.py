@@ -4,6 +4,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
+from typing import Any, cast
 from agents.base_agent import BaseAgent, TEAM_IDENTITY
 from job_store import load_recent_performance
 from models.content_job import ContentJob, Idea, ContentType
@@ -56,7 +57,7 @@ def _write_ideas_file(job: ContentJob) -> None:
     lines = [
         f"{i.number}. **{i.title}** ({i.content_type.value})\n"
         f"   Hook: {i.hook}\n   Angle: {i.angle}"
-        for i in job.ideas
+        for i in (job.ideas or [])
     ]
     (out_dir / "ideas.md").write_text("# Ideas\n\n" + "\n\n".join(lines))
 
@@ -92,8 +93,10 @@ class ZoeAgent(BaseAgent):
             "content_type (str, one of the allowed content types). JSON only."
         )
         raw = self._call_claude(system, user, max_tokens=1024)
-        normalized = []
-        for item in self._parse_json(raw):
+        parsed = self._parse_json(raw)
+        items = cast(list[dict[str, Any]], parsed)
+        normalized: list[dict[str, Any]] = []
+        for item in items:
             item["content_type"] = _normalize_content_type(
                 item.get("content_type"),
                 allowed_types,
