@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from routes.deps import _root, templates, verify_auth
 
@@ -77,14 +77,14 @@ async def approve_idea(
     uid: str,
     request: Request,
     _: str = Depends(verify_auth),
-) -> JSONResponse:
+) -> RedirectResponse:
     root = _root(request)
     store = _get_store(root)
     try:
-        updated = store.set_status(uid, "approved")
+        store.set_status(uid, "approved")
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Idea {uid!r} not found") from exc
-    return JSONResponse({"uid": updated.uid, "status": updated.status})
+    return RedirectResponse(url="/ideas?status=new", status_code=303)
 
 
 @router.post("/{uid}/reject")
@@ -92,14 +92,14 @@ async def reject_idea(
     uid: str,
     request: Request,
     _: str = Depends(verify_auth),
-) -> JSONResponse:
+) -> RedirectResponse:
     root = _root(request)
     store = _get_store(root)
     try:
-        updated = store.set_status(uid, "rejected")
+        store.set_status(uid, "rejected")
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"Idea {uid!r} not found") from exc
-    return JSONResponse({"uid": updated.uid, "status": updated.status})
+    return RedirectResponse(url="/ideas?status=new", status_code=303)
 
 
 @router.post("/generate/{page_slug}")
